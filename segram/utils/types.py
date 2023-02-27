@@ -239,9 +239,6 @@ class Graph(MutableMapping, SegramABC):
     def __delitem__(self, key: Any) -> None:
         del self.data[key]
 
-    def __contains__(self, key: Any) -> bool:
-        return key in self.data
-
     # Properties --------------------------------------------------------------
 
     @property
