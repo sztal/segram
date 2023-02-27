@@ -1,0 +1,22 @@
+[build-system]
+requires = [ "setuptools >= 51.0", "wheel" ]
+build-backend = "setuptools.build_meta"
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "--verbose",
+    "--tb=no",
+    "--capture=no",
+    "--pdbcls=IPython.terminal.debugger:Pdb",
+]
+testpaths = [
+    "tests"
+]
+python_files = ["test_*.py", "benchmark_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "problematic: case with problematic (i.e. ambiguous) outcomes"
+]

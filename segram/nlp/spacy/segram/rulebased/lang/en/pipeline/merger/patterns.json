@@ -1,0 +1,14 @@
+[
+    {
+        "patterns": [
+            [{"POS": "VERB"}, {"DEP": "prt"}]
+        ],
+        "attrs": {}
+    },
+    {
+        "patterns": [
+            [{"ENT_IOB": "B"}, {"ENT_IOB": "I", "OP": "+"}]
+        ],
+        "attrs": {}
+    }
+]
