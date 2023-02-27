@@ -6,7 +6,7 @@ from .abc import Semantic
 from .frame import Frame
 from .elements import FrameElement
 from .elements import Actor, Action, Description, Complement
-from .particles import Particle
+from .relations import Relation
 from ..grammar import Sent, Phrase, Conjuncts
 from ..nlp import DocABC
 from ..utils.types import ChainGroup
@@ -104,10 +104,10 @@ class Story(Sequence, Semantic):
         # pylint: disable=unused-argument
         return super().__repr__()
 
-    def iter_particles(self) -> Iterator[Particle]:
-        """Iterate over semantic particles."""
+    def iter_relations(self) -> Iterator[Relation]:
+        """Iterate over semantic relations."""
         for frame in self:
-            yield from frame.iter_particles()
+            yield from frame.iter_relations()
 
     @classmethod
     def from_sents(cls, doc: DocABC, sents: Iterable[Sent]) -> Story:

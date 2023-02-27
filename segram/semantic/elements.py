@@ -5,9 +5,9 @@ from itertools import product
 from abc import abstractmethod
 from collections.abc import Iterable
 from .abc import Semantic
-from .particles import Particle
-from .particles import ActorParticle, ActionParticle
-from .particles import DescriptionParticle, ComplementParticle
+from .relations import Relation
+from .relations import ActorRelation, ActionRelation
+from .relations import DescriptionRelation, ComplementRelation
 from ..grammar import Phrase, VerbPhrase, NounPhrase, DescPhrase, PrepPhrase
 from ..grammar import Component, Conjuncts
 from ..symbols import Dep, Role
@@ -28,7 +28,7 @@ class FrameElement(Semantic):
     __parts__ = ("descriptions", "complements")
     __slots__ = ("_frame", "phrase", *__parts__)
     part_names: ClassVar[tuple[str, ...]] = ()
-    Particle: Type[Particle] = Particle
+    Relation: Type[Relation] = Relation
 
 
     def __init__(
@@ -155,14 +155,14 @@ class FrameElement(Semantic):
                         yield from elem.iter_token_roles()
         yield from sorted(set(_iter()))
 
-    def iter_particles(self) -> Iterator[tuple[Any, ...]]:
-        """Iterate over semantic particles."""
+    def iter_relations(self) -> Iterator[tuple[Any, ...]]:
+        """Iterate over semantic relations."""
         for parts in product(*(
             getattr(self, name) or (None,)
             for name in self.part_names
         )):
-            kwds = dict(zip(self.Particle.slot_names[1:], parts))
-            yield self.Particle(self.head, **kwds)
+            kwds = dict(zip(self.Relation.slot_names[1:], parts))
+            yield self.Relation(self.head, **kwds)
 
     @staticmethod
     def find_descriptions(phrase: Phrase) -> Iterator[Phrase]:
@@ -204,7 +204,7 @@ class Actor(FrameElement):
     """Actor semantic frame element."""
     __parts__ = ()
     __slots__ = (*__parts__,)
-    Particle: ClassVar[Type[Particle]] = ActorParticle
+    Relation: ClassVar[Type[Relation]] = ActorRelation
 
     @staticmethod
     def starts_from(phrase: Phrase) -> bool:
@@ -215,7 +215,7 @@ class Action(FrameElement):
     """Action semantic frame element."""
     __parts__ = ("subjects", "dobjects", "iobjects")
     __slots__ = (*__parts__,)
-    Particle: ClassVar[Type[Particle]] = ActionParticle
+    Relation: ClassVar[Type[Relation]] = ActionRelation
 
     def __init__(
         self,
@@ -256,7 +256,7 @@ class Description(FrameElement):
     """Description semantic frame element."""
     __parts__ = ("objects", "verbs")
     __slots__ = (*__parts__,)
-    Particle: ClassVar[Type[Particle]] = DescriptionParticle
+    Relation: ClassVar[Type[Relation]] = DescriptionRelation
 
     def __init__(
         self,
@@ -310,7 +310,7 @@ class Complement(FrameElement):
     """Complement semantic frame element."""
     __parts__ = ("objects",)
     __slots__ = (*__parts__,)
-    Particle: ClassVar[Type[Particle]] = ComplementParticle
+    Relation: ClassVar[Type[Relation]] = ComplementRelation
 
     def __init__(
         self,

@@ -1,4 +1,4 @@
 from .story import Story
-from .particles import Particle, ActionParticle, ActorParticle
-from .particles import DescriptionParticle, ComplementParticle
+from .relations import Relation, ActionRelation, ActorRelation
+from .relations import DescriptionRelation, ComplementRelation
 from .elements import Actor, Action, Description, Complement

@@ -1,10 +1,41 @@
 [build-system]
-requires = [ "setuptools >= 51.0", "wheel" ]
+requires = [ "setuptools >= 61.0", "wheel>=0.37" ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "segram"
+requires-python = ">=3.10"
+version = "0.0.0"
+authors = [{name = "Szymon Talaga", email = "stalaga@protonmail.com"}]
+readme = "README.rst"
+dependencies = [
+    "spacy>=3.4,<3.5",
+    "spacy-experimental>=0.6"
+]
+
+[project.optional-dependencies]
+test = [
+    "ipython",
+    "ipdb",
+    "pylint>=2.14",
+    "pytest>=7.2"
+]
+
+[project.entry-points.spacy_factories]
+segram = "segram.nlp.spacy.pipeline.factories:create_base"
+
+[tool.setuptools]
+include-package-data = true
+package-dir = { segram = "segram" }
+
+[tool.setuptools.packages.find]
+where = ["segram"]
+
+[tool.setuptools.package-data]
+nlp = ["*.json", ".json.gz"]
 
 [tool.pytest.ini_options]
-minversion = "6.0"
+minversion = "7.0"
 addopts = [
     "--verbose",
     "--tb=no",
@@ -17,6 +48,3 @@ testpaths = [
 python_files = ["test_*.py", "benchmark_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-markers = [
-    "problematic: case with problematic (i.e. ambiguous) outcomes"
-]

@@ -9,8 +9,8 @@ from ..abc import SegramABC
 
 
 @total_ordering
-class Particle(Sequence, SegramABC):
-    """Semantic particle base class."""
+class Relation(Sequence, SegramABC):
+    """Semantic relation base class."""
     __slots__ = ("head", "description", "complement")
 
     def __init__(
@@ -74,13 +74,13 @@ class Particle(Sequence, SegramABC):
         return isinstance(other, Sequence)
 
 
-class ActorParticle(Particle):
-    """Actor particle."""
+class ActorRelation(Relation):
+    """Actor relation."""
     __slots__ = ()
 
 
-class ActionParticle(Particle):
-    """Action particle."""
+class ActionRelation(Relation):
+    """Action relation."""
     __slots__ = ("subject", "dobject", "iobject")
 
     def __init__(
@@ -98,8 +98,8 @@ class ActionParticle(Particle):
         self.iobject = iobject
 
 
-class DescriptionParticle(Particle):
-    """Description particle."""
+class DescriptionRelation(Relation):
+    """Description relation."""
     __slots__ = ("object", "verb")
 
     def __init__(
@@ -115,8 +115,8 @@ class DescriptionParticle(Particle):
         self.verb = verb
 
 
-class ComplementParticle(Particle):
-    """Complement particle."""
+class ComplementRelation(Relation):
+    """Complement relation."""
     __slots__ = ("object",)
 
     def __init__(

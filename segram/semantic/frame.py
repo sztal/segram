@@ -3,7 +3,7 @@ from typing import Any, Iterator
 from types import MappingProxyType
 from functools import total_ordering
 from .abc import Semantic
-from .particles import Particle
+from .relations import Relation
 from .elements import FrameElement, Actor, Action, Description, Complement
 from ..grammar import Sent, Conjuncts
 from ..nlp import DocABC
@@ -112,7 +112,7 @@ class Frame(Semantic):
     def is_comparable_with(self, other: Any):
         return isinstance(other, Frame)
 
-    def iter_particles(self, **kwds: Any) -> Iterator[Particle]:
-        """Iterate over semantic particles."""
+    def iter_relations(self, **kwds: Any) -> Iterator[Relation]:
+        """Iterate over semantic relations."""
         for elem in self.elements:
-            yield from elem.iter_particles(**kwds)
+            yield from elem.iter_relations(**kwds)

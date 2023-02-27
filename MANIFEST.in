@@ -3,3 +3,5 @@ include CONTRIBUTING.rst
 include HISTORY.rst
 include LICENSE
 include README.rst
+include segram/nlp/**/*.json
+include segram/nlp/**/*.json.gz
