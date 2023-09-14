@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, ClassVar, Iterator
+from typing import Any, Optional, ClassVar, Iterator, Self
 from collections.abc import Sequence
 from abc import abstractmethod
 from .abc import SentElement
@@ -23,7 +23,7 @@ class Phrase(SentElement):
     sconj
         Subordinating conjunction token.
     lead
-        Lead phrase, initialized from index.i
+        Lead phrase, initialized from index.
     """
     # pylint: disable=too-many-public-methods
     __slots__ = ("head", "dep", "sconj", "_lead")
@@ -93,14 +93,17 @@ class Phrase(SentElement):
 
     @property
     def idx(self) -> int:
+        """Index of the head component."""
         return self.head.idx
 
     @property
     def lead(self) -> Phrase:
+        """Lead phrase."""
         return self.sent.pmap[self._lead] if self._lead is not None else self
 
     @property
     def is_lead(self) -> Phrase:
+        """Is the phrase a lead phrase."""
         return self.lead is self
 
     @property
@@ -116,32 +119,38 @@ class Phrase(SentElement):
 
     @property
     def children(self) -> tuple[Phrase, ...]:
+        """Child phrases."""
         return self.sent.graph[self]
 
     @property
     def parents(self) -> tuple[Phrase, ...]:
+        """Parent phrases."""
         return self.sent.graph.rev[self]
 
     @property
     def subtree(self) -> Iterator[Phrase]:
+        """Phrasal subtree."""
         yield self
         for child in self.children:
             yield from child.subtree
 
     @property
     def suptree(self) -> Iterator[Phrase]:
+        """Phrasal supertree."""
         yield self
         for parent in self.parents:
             yield from parent.suptree
 
     @property
     def depth(self) -> int:
+        """Depth of the phrase within the phrasal tree of the sentence."""
         if (parents := self.parents):
             return min(p.depth + 1 for p in parents)
         return 0
 
     @property
     def conjuncts(self) -> Conjuncts:
+        """Group of conjoined phrases."""
         if (conjs := self.sent.conjs.get(self.lead)):
             return conjs.copy(members=[
                 m for m in conjs.members if m is not self
@@ -150,6 +159,7 @@ class Phrase(SentElement):
 
     @property
     def subj(self) -> Sequence[Phrase]:
+        """Subject phrases."""
         subjects = []
         for c in self.children:
             if c.dep & Dep.subj:
@@ -159,41 +169,49 @@ class Phrase(SentElement):
         return Conjuncts.get_chain(subjects)
     @property
     def dobj(self) -> Sequence[Phrase]:
+        """Direct object phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.dobj
         )
     @property
     def iobj(self) -> Sequence[Phrase]:
+        """Indirect object phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.iobj
         )
     @property
     def desc(self) -> Sequence[Phrase]:
+        """Description phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.desc
         )
     @property
     def cdesc(self) -> Sequence[Phrase]:
+        """Clausal descriptions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.cdesc
         )
     @property
     def adesc(self) -> Sequence[Phrase]:
+        """Adjectival complement descriptions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.adesc
         )
     @property
     def prep(self) -> Sequence[Phrase]:
+        """Prepositions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.prep
         )
     @property
     def pobj(self) -> Sequence[Phrase]:
+        """Prepositional objects."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.pobj
         )
     @property
     def subcl(self) -> Sequence[Phrase]:
+        """Subclauses."""
         return Conjuncts.get_chain(
             c for c in self.children
             if (c.dep & Dep.subcl) \
@@ -201,21 +219,25 @@ class Phrase(SentElement):
         )
     @property
     def relcl(self) -> Sequence[Phrase]:
+        """Relative clausses."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.relcl
         )
     @property
     def xcomp(self) -> Sequence[Phrase]:
+        """Open clausal complements."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.xcomp
         )
     @property
     def appos(self) -> Sequence[Phrase]:
+        """Appositional modifiers."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.appos
         )
     @property
     def nmod(self) -> Sequence[Phrase]:
+        """Nominal modifiers."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.nmod
         )
@@ -252,7 +274,7 @@ class Phrase(SentElement):
         yield from sorted(set(_iter()), key=lambda x: x[0])
 
     @classmethod
-    def from_component(cls, comp: Component, **kwds: Any) -> Phrase:
+    def from_component(cls, comp: Component, **kwds: Any) -> Self:
         """Construct from a grammar component."""
         for typ in cls.types.values():
             if not issubclass(typ, Phrase) \
@@ -273,7 +295,7 @@ class Phrase(SentElement):
         }
 
     @classmethod
-    def from_data(cls, sent: "Sent", data: dict[str, Any]) -> Phrase:
+    def from_data(cls, sent: "Sent", data: dict[str, Any]) -> Self:
         """Construct from sentence and data dictionary."""
         data = data.copy()
         doc = sent.doc

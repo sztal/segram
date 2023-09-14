@@ -4,7 +4,7 @@ Grammar components are groups of associated tokens controlled
 by a root token, e.g. a verb with its auxiliary verbs.
 """
 from __future__ import annotations
-from typing import Any, Optional, Iterable, Iterator, ClassVar, Type
+from typing import Any, Optional, Iterable, Iterator, ClassVar, Type, Self
 from .abc import SentElement
 from .conjuncts import Conjuncts
 from ..nlp.tokens import TokenABC
@@ -30,6 +30,8 @@ class Component(SentElement):
     not defining any new controlled token slots have to define
     ``__tokens__ = ()``. The same rules apply to defining component
     attributes through ``__attrs__`` class attributes.
+
+    The above requirements are checked at runtime during class creation.
 
     Attributes
     ----------
@@ -138,22 +140,26 @@ class Component(SentElement):
 
     @property
     def idx(self) -> int:
+        """Index of the component head token."""
         return self.tok.i
 
     @property
     def head(self) -> TokenABC:
+        """Component head token."""
         return self.tok
 
     @property
     def lead(self) -> Component:
+        """Head component of the lead phrase."""
         return self.phrase.lead.head
 
     @property
     def is_lead(self) -> bool:
+        """Is the controlling phrase of the component a lead phrase."""
         return self.phrase.is_lead
 
     @property
-    def conjuncts(self) -> Conjuncts:
+    def conjuncts(self) -> Conjuncts[Component]:
         return (conjs := self.phrase.conjuncts).copy(
             members=tuple(m.head for m in conjs.members)
         )
@@ -200,7 +206,7 @@ class Component(SentElement):
         cls,
         sent: "Sent",
         data: dict[str, Any]
-    ) -> Component:
+    ) -> Self:
         """Construct from :class:`~segram.nlp.DocABC` and a data dict."""
         data = data.copy()
         alias = data.pop("@class")

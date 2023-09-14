@@ -1,4 +1,4 @@
-"""Base classes for which ABCs of concret grammar classes are derived.
+"""Base classes from which ABCs of concret grammar classes are derived.
 
 Grammar classes provide building blocks for representing complex
 syntactical relationships within sentences which go beyond simple
@@ -6,7 +6,7 @@ syntax tree links and can be used to perform various tasks such as
 component and phrase detection.
 """
 from __future__ import annotations
-from typing import Any, Optional, Iterable, MutableMapping
+from typing import Any, Optional, Iterable, MutableMapping, Self
 from typing import Type, ClassVar, Final
 from abc import abstractmethod
 from functools import total_ordering
@@ -35,26 +35,17 @@ class GrammarNamespace(Namespace):
 class Grammar(SegramWithDocABC):
     """Abstract base class for grammar classes.
 
-    All grammar classes must be defined as **slots** classes,
-    which is necessary for ensuring low-memory footprint
+    All grammar classes must be defined as **slots** classes.
+    This is necessary for ensuring low-memory footprint
     and better computational efficiency. Even classes with no
     new slots need to declare ``__slots__ = ()``.
-    This requirement is checked at class construction by
-    :class:`~GrammarMeta` metaclass. Other class-specific
-    requirements of this sort as well as their related validation
-    checks may be implemented as class methods ``cls_init_hook``
-    on specialized grammar classes. This allows abstract base classes
-    further down the inheritance chain to check for more complex
-    requirements as well as apply dynamic class customizations.
-
-    Notes
-    -----
-    The main general rule for creating abstract and concrete grammar
-    classes is that any method can, and if possible should, be defined
-    on an abstract class, unless it is a constructor-like method
-    creating any new concrete grammar objects. Such methods must be
-    declared as abstract methods on abstract base classes and implemented
-    on concrete classes.
+    This requirement is checked during class construction.
+    Other class-specific requirements of this sort as well as
+    their related validation checks may be implemented on specialized grammar
+    classes using the standard ``__init_subclass__`` interface.
+    This allows abstract base classes further down the inheritance chain
+    to check for more complex requirements as well as apply dynamic class
+    customizations.
     """
     __slots__ = ()
     alias: ClassVar[str] = "Grammar"
@@ -167,6 +158,7 @@ class GrammarElement(Grammar):
 
     @property
     def hashdata(self) -> tuple[Any, ...]:
+        """Data tuple used for hashing."""
         return (*super().hashdata, self.idx)
 
 
@@ -182,7 +174,7 @@ class DocElement(GrammarElement):
 
     @classmethod
     @abstractmethod
-    def from_data(cls, doc: DocABC, data: dict[str, Any]) -> Grammar:
+    def from_data(cls, doc: DocABC, data: dict[str, Any]) -> Self:
         """Construct from sentence and a data dictionary."""
         # pylint: disable=arguments-renamed
         raise NotImplementedError
@@ -195,7 +187,7 @@ class DocElement(GrammarElement):
 
     # Methods -----------------------------------------------------------------
 
-    def copy(self, **kwds: Any) -> SentElement:
+    def copy(self, **kwds: Any) -> Self:
         return self.__class__(**{ "doc": self.doc, **self.data, **kwds })
 
 

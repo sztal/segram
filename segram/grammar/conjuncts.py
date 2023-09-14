@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Iterator
+from typing import Optional, Iterator, Self
 from collections.abc import Iterable
 from ..nlp import TokenABC
 from ..utils.types import Group, ChainGroup
@@ -46,7 +46,7 @@ class Conjuncts(Group):
         cls,
         sent: "Sent",
         data: dict[str, Optional[int] | list[int]],
-    ) -> Conjuncts:
+    ) -> Self:
         """Construct from data dictionary.
 
         Parameters

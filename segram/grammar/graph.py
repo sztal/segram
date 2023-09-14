@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, Self
 from ..utils.types import Graph
 
 
@@ -56,7 +56,7 @@ class PhraseGraph(Graph):
         print(self.to_str(**kwds))
 
     @classmethod
-    def from_data(cls, sent: "Sent", data: dict[int, tuple[int, int]]) -> PhraseGraph:
+    def from_data(cls, sent: "Sent", data: dict[int, tuple[int, int]]) -> Self:
         """Construct from data dictionary.
 
         Parameters

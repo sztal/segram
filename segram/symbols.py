@@ -145,8 +145,42 @@ class Dep(Symbol):
 
     Attributes
     ----------
+    root
+        Sentence root.
     subj
         Subject.
+    dobj
+        Direct object.
+    iobj
+        Indirect object.
+    pobj
+        Prepositional object.
+    prep
+        Preposition.
+    subcl
+        Subclause.
+    relcl
+        Relative clause.
+    acl
+        Clausal modifier of noun (adnominal clause).
+    xcomp
+        Open clausal complement.
+    desc
+        Description.
+    cdesc
+        Clausal description.
+    adesc
+        Adjectival complement description.
+    nmod
+        Modifier of nominal.
+    appos
+        Appositional modifier.
+    agent
+        Agent token (introducing passive subjects).
+    conj
+        Conjunct.
+    misc
+        Miscellaneous (all other dependency roles).
     """
     root   = auto()
     subj   = auto()

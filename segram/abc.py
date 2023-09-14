@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, ClassVar, Type
+from typing import Any, Optional, ClassVar, Type, Self
 from abc import ABC, abstractmethod
 from .utils.docstrings import inherit_docstring
 from .utils.diff import iter_diffs, IDiffType
@@ -72,7 +72,7 @@ class SegramABC(ABC):
         """
         init_class_attrs(cls, attrs, **kwds)
 
-    def copy(self, **kwds: Any) -> SegramABC:
+    def copy(self, **kwds: Any) -> Self:
         """Copy self and modify attributes with ``**kwds``."""
         return self.__class__(**{ **self.data, **kwds })
 
