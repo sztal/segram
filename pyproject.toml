@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "segram"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 version = "0.0.0"
 authors = [{name = "Szymon Talaga", email = "stalaga@protonmail.com"}]
 readme = "README.rst"
 dependencies = [
-    "spacy>=3.4,<3.5",
-    "spacy-experimental>=0.6"
+    "spacy>=3.4,<=3.5",
+    "spacy-experimental==0.6.1"
 ]
 
 [project.optional-dependencies]
@@ -35,7 +35,7 @@ where = ["segram"]
 nlp = ["*.json", ".json.gz"]
 
 [tool.pytest.ini_options]
-minversion = "7.0"
+minversion = "7.2"
 addopts = [
     "--verbose",
     "--tb=no",
