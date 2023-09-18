@@ -193,8 +193,8 @@ class ChainGroup(Group, SegramABC):
 
     def to_str(self, *, color: bool = True, **kwds: Any) -> str:
         """Represent as string."""
-        return ", ".join(g.to_str(color=color, **kwds) for g in self.members) \
-            or "()"
+        s = ", ".join(g.to_str(color=color, **kwds) for g in self.members)
+        return f"({s})"
 
 
 class Graph(MutableMapping, SegramABC):
