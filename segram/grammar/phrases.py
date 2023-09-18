@@ -163,6 +163,11 @@ class Phrase(SentElement):
         return self.sent.conjs.get(self.lead)
 
     @property
+    def verb(self) -> Optional[Phrase]:
+        """Return ``self`` if VP or nothing otherwise."""
+        return self if isinstance(self, VerbPhrase) else None
+
+    @property
     def subj(self) -> Sequence[Phrase]:
         """Subject phrases."""
         subjects = []
@@ -263,8 +268,19 @@ class Phrase(SentElement):
             for t, r in self.iter_token_roles()
         )
 
-    def iter_token_roles(self) -> Iterator[TokenABC, Role | None]:
-        """Iterate over token-role pairs."""
+    def iter_token_roles(
+        self,
+        *,
+        subcl: bool = False
+    ) -> Iterator[TokenABC, Role | None]:
+        """Iterate over token-role pairs.
+
+        Parameters
+        ----------
+        subcl
+            Should tokens be marked as parts of a subclause.
+            This is used for graying out subclauses when printing.
+        """
         def _iter():
             role = self.dep.role if self.dep else None
             yield from self.head.iter_token_roles(role=role)
@@ -276,8 +292,14 @@ class Phrase(SentElement):
                         yield pconj, None
                     if (cconj := conjs.cconj):
                         yield cconj, None
-                yield from child.iter_token_roles()
-        yield from sorted(set(_iter()), key=lambda x: x[0])
+                is_vp = isinstance(child, VerbPhrase)
+                yield from child.iter_token_roles(subcl=is_vp)
+        toks = sorted(set(_iter()), key=lambda x: x[0])
+        if subcl:
+            for tok, _ in toks:
+                yield tok, Role.SUBCL
+        else:
+            yield from toks
 
     @classmethod
     def from_component(cls, comp: Component, **kwds: Any) -> Self:
