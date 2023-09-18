@@ -11,7 +11,6 @@ from .relations import DescriptionRelation, ComplementRelation
 from ..grammar import Phrase, VerbPhrase, NounPhrase, DescPhrase, PrepPhrase
 from ..grammar import Component, Conjuncts
 from ..symbols import Dep, Role
-from ..utils.types import Group
 from ..nlp import DocABC, TokenABC
 
 
@@ -106,10 +105,6 @@ class FrameElement(Semantic):
     @property
     def frame(self) -> "Frame":
         return self._frame
-
-    @property
-    def subtree(self) -> Group[Phrase]:
-        return Group(self.phrase.subtree)
 
     @property
     def idx(self) -> int:
