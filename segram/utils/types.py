@@ -1,10 +1,11 @@
 from __future__ import annotations
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Callable, Self, Optional
 from functools import total_ordering
 from collections.abc import Mapping, MutableMapping
 from collections.abc import Sequence, Iterable, Iterator
 from graphlib import TopologicalSorter, CycleError
 from .meta import get_cname
+from .matching import match_spec
 from ..abc import SegramABC
 
 
@@ -49,13 +50,7 @@ class Namespace(MutableMapping):
 
 @total_ordering
 class Group(Sequence, SegramABC):
-    """Group of arbitrary coordinated objects.
-
-    Subclasses can define additional slots corresponding
-    to coordinating objects (e.g. coordinating conjunctions),
-    which can be jointly returned as a single tuple through
-    ``cconjs`` property, in which case they will be included
-    automatically in comparison methods and ``__repr__()``.
+    """Group of arbitrary objects.
 
     Attributes
     ----------
@@ -64,21 +59,11 @@ class Group(Sequence, SegramABC):
         Stored as a tuple, so it is not mutable
         and can be hashed if the stored objects
         are hashable themselves.
-    lead
-        Lead object. Defaults to the first members.
     """
-    __slots__ = ("members", "_lead")
-    __cconjs__ = ()
-    cconj_names: ClassVar[tuple[str, ...]] = ()
+    __slots__ = ("members",)
 
-
-    def __init__(
-        self,
-        members: Iterable[Any] = (),
-        lead: int = 0
-    ) -> None:
+    def __init__(self, members: Iterable[Any] = ()) -> None:
         self.members = tuple(members)
-        self._lead = lead
 
     def __repr__(self) -> str:
         return self.to_str(color=True)
@@ -102,32 +87,15 @@ class Group(Sequence, SegramABC):
     def __len__(self) -> int:
         return len(self.members)
 
-    def __init_subclass__(cls) -> None:
-        cls.init_class_attrs({
-            "__cconjs__": "cconj_names"
-        }, check_slots=True)
-
     # Properties --------------------------------------------------------------
 
     @property
-    def lead(self) -> Any:
-        return self.members[self._lead]
-
-    @property
-    def cconjs(self) -> tuple[Any, ...]:
-        return tuple(getattr(self, name) for name in self.cconj_names)
-
-    @property
     def hashdata(self) -> tuple[Any, ...]:
-        return (self.members, self.lead, tuple(self.cconjs))
+        return (*self.members,)
 
     @property
     def data(self) -> dict[str, Any]:
-        return {
-            "members": self.members,
-            "lead": self._lead,
-            **{ name: getattr(self, name) for name in self.cconj_names }
-        }
+        return { "members": self.members }
 
     # Methods -----------------------------------------------------------------
 
@@ -136,30 +104,59 @@ class Group(Sequence, SegramABC):
 
     def to_str(self, *, color: bool = False, **kwds: Any) -> str:
         # pylint: disable=unused-argument
-        coords = \
-            "|".join(
-                self.as_str(c, color=color, **kwds)
-                for c in self.cconjs if c
-            ).strip()
-        if coords:
-            coords = f"[{coords}]"
         members = ", ".join(self.as_str(m, color=color, **kwds) for m in self.members)
-        return f"{coords}({members})"
+        return f"({members})"
+
+    def select(self, spec: Optional[Mapping] = None, **kwds: Any) -> Self:
+        """Select group members based on specification.
+
+        Parameters
+        ----------
+        spec, **kwds
+            See :func:`segram.utils.matching.match_spec` for details.
+        """
+        return self.copy(
+            members=[ m for m in self if match_spec(m, spec, **kwds) ],
+        )
+
+    def match(
+        self,
+        spec: Optional[Mapping] = None,
+        /,
+        n: int | Callable[[int], bool] = -1,
+        **kwds: Any
+    ) -> bool:
+        """Match group members against specification(s).
+
+        Parameters
+        ----------
+        spec, **kwds
+            See :func:`segram.utils.matching.match_spec` for details.
+        n
+            Number of expected matches. Any non-zero number if ``n < 0``.
+            Alternatively a callable predicate can be passed.
+        """
+        matched = len(self.select(spec, **kwds))
+        if isinstance(n, Callable):
+            return n(matched)
+        if n < 0:
+            return matched > 0
+        if n > 0:
+            return n == matched
+        return matched == 0
 
 
 @total_ordering
-class ChainGroup(Sequence, SegramABC):
+class ChainGroup(Group, SegramABC):
     """Chain of groups.
 
-    Attributes
-    ----------
-    chain
-        Sequence of group objects.
+    Here each member is expected to be an instance
+    of a :class:`Group` subclass.
     """
-    __slots__ = ("chain",)
+    __slots__ = ()
 
-    def __init__(self, chain: Iterable[Group] = ()) -> None:
-        self.chain = tuple(chain)
+    def __init__(self, members: Iterable[Group] = ()) -> None:
+        super().__init__(tuple(members))
 
     def __repr__(self) -> str:
         return self.to_str(color=True)
@@ -187,11 +184,7 @@ class ChainGroup(Sequence, SegramABC):
 
     @property
     def flat(self) -> tuple[Any, ...]:
-        return tuple(m for g in self.chain for m in g)
-
-    @property
-    def hashdata(self) -> tuple[Any, ...]:
-        return self.chain
+        return tuple(m for g in self.members for m in g)
 
     # Methods -----------------------------------------------------------------
 
@@ -200,7 +193,7 @@ class ChainGroup(Sequence, SegramABC):
 
     def to_str(self, *, color: bool = True, **kwds: Any) -> str:
         """Represent as string."""
-        return ", ".join(g.to_str(color=color, **kwds) for g in self.chain) \
+        return ", ".join(g.to_str(color=color, **kwds) for g in self.members) \
             or "()"
 
 

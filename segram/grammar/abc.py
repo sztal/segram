@@ -6,7 +6,7 @@ syntax tree links and can be used to perform various tasks such as
 component and phrase detection.
 """
 from __future__ import annotations
-from typing import Any, Optional, Iterable, MutableMapping, Self
+from typing import Any, Optional, Iterable, Mapping, MutableMapping, Self
 from typing import Type, ClassVar, Final
 from abc import abstractmethod
 from functools import total_ordering
@@ -15,6 +15,7 @@ from ..nlp import DocABC, SpanABC, TokenABC
 from ..utils.registries import grammars
 from ..abc import SegramWithDocABC
 from ..utils.types import Namespace
+from ..utils.matching import match_spec
 
 
 class GrammarNamespace(Namespace):
@@ -80,6 +81,13 @@ class Grammar(SegramWithDocABC):
             and (tpath := t.ppath()) != cls.ppath():
                 raise TypeError(f"'{alias}' already defined by '{tpath}'")
             cls.types[alias] = cls
+
+    # Properties --------------------------------------------------------------
+
+    @property
+    def text(self) -> str:
+        """Raw text of element."""
+        return self.to_str()
 
     # Methods -----------------------------------------------------------------
 
@@ -160,6 +168,20 @@ class GrammarElement(Grammar):
     def hashdata(self) -> tuple[Any, ...]:
         """Data tuple used for hashing."""
         return (*super().hashdata, self.idx)
+
+    # Methods -----------------------------------------------------------------
+
+    def match(self, *specs: Mapping, **kwds: Any) -> bool:
+        """Match element properties against specification(s).
+
+        Parameters
+        ----------
+        *specs
+            Element properties specification(s).
+        **kwds
+            Passed to :func:`segram.utils.matching.check_match`.
+        """
+        return match_spec(self, *specs, **kwds)
 
 
 class DocElement(GrammarElement):
