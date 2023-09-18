@@ -150,12 +150,17 @@ class Phrase(SentElement):
 
     @property
     def conjuncts(self) -> Conjuncts:
-        """Group of conjoined phrases."""
+        """Conjoined phrases."""
         if (conjs := self.sent.conjs.get(self.lead)):
             return conjs.copy(members=[
                 m for m in conjs.members if m is not self
             ])
         return Conjuncts()
+
+    @property
+    def group(self) -> Conjuncts:
+        """Group of self and its conjoined phrases."""
+        return self.sent.conjs.get(self.lead)
 
     @property
     def subj(self) -> Sequence[Phrase]:
@@ -167,6 +172,7 @@ class Phrase(SentElement):
             elif c.dep & Dep.agent:
                 subjects.extend(c.subj)
         return Conjuncts.get_chain(subjects)
+
     @property
     def dobj(self) -> Sequence[Phrase]:
         """Direct object phrases."""
