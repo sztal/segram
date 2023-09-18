@@ -333,7 +333,13 @@ class Verb(Component):
 
 
 class Noun(Component):
-    """Abstract base class for noun components."""
+    """Abstract base class for noun components.
+
+    Attributes
+    ----------
+    mod
+        Modifier tokens.
+    """
     __role__ = Role.NOUN
     __tags__ = POS.NOUN | POS.PROPN | POS.PRON
     __slots__ = ()

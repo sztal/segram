@@ -11,6 +11,7 @@ class SemanticNamespace(Namespace):
     Actor: Type["Actor"]
     Event: Type["Event"]
     Description: Type["Description"]
+    Complement: Type["Complement"]
 
 
 class Semantic(SegramWithDocABC):
