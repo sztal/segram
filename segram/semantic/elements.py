@@ -149,11 +149,7 @@ class FrameElement(Semantic):
         """Iterate over token-role pairs."""
         def _iter():
             yield from self.phrase.iter_token_roles()
-            for name in self.part_names:
-                if (part := getattr(self, name)):
-                    for elem in part:
-                        yield from elem.iter_token_roles()
-        yield from sorted(set(_iter()))
+        yield from sorted(set(_iter()), key=lambda x: x[0])
 
     def iter_relations(self) -> Iterator[tuple[Any, ...]]:
         """Iterate over semantic relations."""
@@ -208,7 +204,8 @@ class Actor(FrameElement):
 
     @staticmethod
     def starts_from(phrase: Phrase) -> bool:
-        return isinstance(phrase, NounPhrase) and not phrase.dep & Dep.nmod
+        return isinstance(phrase, NounPhrase) \
+            and not phrase.dep & (Dep.nmod | Dep.adesc | Dep.cdesc)
 
 
 class Action(FrameElement):
@@ -246,10 +243,10 @@ class Action(FrameElement):
     def find_iobjects(phrase: Phrase) -> Iterator[Phrase]:
         yield from phrase.iobj
 
-
     @staticmethod
     def starts_from(phrase: Phrase) -> bool:
-        return isinstance(phrase, VerbPhrase) and not phrase.dep & Dep.xcomp
+        return isinstance(phrase, VerbPhrase) \
+            and not phrase.dep & Dep.xcomp
 
 
 class Description(FrameElement):
@@ -303,7 +300,7 @@ class Description(FrameElement):
     @staticmethod
     def starts_from(phrase: Phrase) -> bool:
         return isinstance(phrase, DescPhrase) \
-            or phrase.dep & Dep.nmod
+            or phrase.dep & (Dep.adesc | Dep.cdesc | Dep.nmod)
 
 
 class Complement(FrameElement):

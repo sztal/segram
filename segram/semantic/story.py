@@ -75,7 +75,7 @@ class Story(Sequence, Semantic):
     def actions(self) -> ChainGroup:
         return Conjuncts.get_chain(
             e for e in self.elements
-            if isinstance(e, Action) and not e.phrase.adesc
+            if isinstance(e, Action)
         )
 
     @property
