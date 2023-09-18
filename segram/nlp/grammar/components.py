@@ -150,8 +150,8 @@ class ComponentNLP(GrammarNLP, Component):
                 slots[name] = next((finder(c) for c in lead.children), None)
         comp = cls(sent, tok, role=role, **slots, **kwds)
         # Apply post-init finders ---------------------------------------------
-        for name in cls.post_init:
-            finder = getattr(cls, f"find_{name}")
+        for name in comp.__class__.post_init:
+            finder = getattr(comp.__class__, f"find_{name}")
             tok = add_tok(finder(comp), name, slots)
             setattr(comp, name, tok)
         # Get and set attributes ----------------------------------------------

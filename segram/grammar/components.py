@@ -88,7 +88,8 @@ class Component(SentElement):
         obj = super().__new__(cls)
         obj.__init__(*args, **kwds)
         if (cur := obj.sent.cmap.get(obj.idx)):
-            cur.__init__(obj.sent, **obj.data)
+            cur_kws = { k: v for k, v in obj.data.items() if k in cur.slot_names }
+            cur.__init__(obj.sent, **cur_kws)
             return cur
         obj.sent.cmap[obj.idx] = obj
         obj.sent.pmap[obj.idx] = obj.phrase
