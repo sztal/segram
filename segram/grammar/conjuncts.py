@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Iterator, Self
+from typing import Any, Optional, Iterator, Self
 from collections.abc import Iterable
 from ..nlp import TokenABC
 from ..utils.types import Group, ChainGroup
@@ -20,7 +20,7 @@ class Conjuncts(Group):
         Preconjunction token.
     """
     __cconjs__ = ("cconj", "preconj")
-    __slots__ = (*__cconjs__,)
+    __slots__ = ("_lead", *__cconjs__,)
 
     def __init__(
         self,
@@ -29,15 +29,27 @@ class Conjuncts(Group):
         cconj: Optional[TokenABC] = None,
         preconj: Optional[TokenABC] = None
     ) -> None:
-        super().__init__(members, lead)
+        super().__init__(members)
+        self._lead = lead
         self.cconj = cconj
         self.preconj = preconj
+
+    def __repr__(self) -> str:
+        return self.to_str(color=True)
 
     # Properties --------------------------------------------------------------
 
     @property
-    def components(self) -> tuple["Phrase", ...]:
-        return self.members
+    def lead(self) -> Any:
+        return self.members[self._lead]
+
+    @property
+    def cconjs(self) -> tuple[Any, ...]:
+        return tuple(getattr(self, name) for name in self.__cconjs__)
+
+    @property
+    def hashdata(self) -> tuple[Any, ...]:
+        return (*super().hashdata, self.lead, tuple(self.cconjs))
 
     # Methods -----------------------------------------------------------------
 
@@ -90,6 +102,16 @@ class Conjuncts(Group):
             "cconj": self.cconj.i if self.cconj else None,
             "preconj": self.preconj.i if self.preconj else None
         }
+
+    def to_str(self, *, color: bool = False, **kwds: Any) -> str:
+        coords = \
+            "|".join(
+                self.as_str(c, color=color, **kwds)
+                for c in self.cconjs if c
+            ).strip()
+        if coords:
+            coords = f"[{coords}]"
+        return f"{coords}{super().to_str()}"
 
     def is_comparable_with(self, other: Conjuncts) -> bool:
         return isinstance(other, Conjuncts)

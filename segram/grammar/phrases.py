@@ -160,7 +160,8 @@ class Phrase(SentElement):
     @property
     def group(self) -> Conjuncts:
         """Group of self and its conjoined phrases."""
-        return self.sent.conjs.get(self.lead)
+        return self.sent.conjs.get(self.lead) \
+            or Conjuncts([self])
 
     @property
     def verb(self) -> Optional[Phrase]:

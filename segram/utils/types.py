@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, ClassVar
+from typing import Any
 from functools import total_ordering
 from collections.abc import Mapping, MutableMapping
 from collections.abc import Sequence, Iterable, Iterator
@@ -61,27 +61,16 @@ class Group(Sequence, SegramABC):
     ----------
     members
         Sequence of objects.
-        Stored as a tuple, so it is not mutable
-        and can be hashed if the stored objects
-        are hashable themselves.
-    lead
-        Lead object. Defaults to the first members.
+        Stored as a tuple, so it is not mutable and can be safely hashed
+        if the stored objects are hashable themselves.
     """
-    __slots__ = ("members", "_lead")
-    __cconjs__ = ()
-    cconj_names: ClassVar[tuple[str, ...]] = ()
+    __slots__ = ("members",)
 
-
-    def __init__(
-        self,
-        members: Iterable[Any] = (),
-        lead: int = 0
-    ) -> None:
+    def __init__(self, members: Iterable[Any] = ()) -> None:
         self.members = tuple(members)
-        self._lead = lead
 
     def __repr__(self) -> str:
-        return self.to_str(color=True)
+        return self.to_str()
 
     def __hash__(self) -> int:
         return super().__hash__()
@@ -102,67 +91,38 @@ class Group(Sequence, SegramABC):
     def __len__(self) -> int:
         return len(self.members)
 
-    def __init_subclass__(cls) -> None:
-        cls.init_class_attrs({
-            "__cconjs__": "cconj_names"
-        }, check_slots=True)
-
     # Properties --------------------------------------------------------------
 
     @property
-    def lead(self) -> Any:
-        return self.members[self._lead]
-
-    @property
-    def cconjs(self) -> tuple[Any, ...]:
-        return tuple(getattr(self, name) for name in self.cconj_names)
-
-    @property
     def hashdata(self) -> tuple[Any, ...]:
-        return (self.members, self.lead, tuple(self.cconjs))
-
-    @property
-    def data(self) -> dict[str, Any]:
-        return {
-            "members": self.members,
-            "lead": self._lead,
-            **{ name: getattr(self, name) for name in self.cconj_names }
-        }
+        return (self.members,)
 
     # Methods -----------------------------------------------------------------
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Sequence)
 
-    def to_str(self, *, color: bool = False, **kwds: Any) -> str:
-        # pylint: disable=unused-argument
-        coords = \
-            "|".join(
-                self.as_str(c, color=color, **kwds)
-                for c in self.cconjs if c
-            ).strip()
-        if coords:
-            coords = f"[{coords}]"
-        members = ", ".join(self.as_str(m, color=color, **kwds) for m in self.members)
-        return f"{coords}({members})"
+    def to_str(self) -> str:
+        return str(self.members)
 
 
 @total_ordering
-class ChainGroup(Sequence, SegramABC):
+class ChainGroup(Group):
     """Chain of groups.
 
     Attributes
     ----------
-    chain
+    members
         Sequence of group objects.
     """
-    __slots__ = ("chain",)
+    __slots__ = ()
 
-    def __init__(self, chain: Iterable[Group] = ()) -> None:
-        self.chain = tuple(chain)
-
-    def __repr__(self) -> str:
-        return self.to_str(color=True)
+    def __init__(self, members: Iterable[Group] = ()) -> None:
+        members = tuple(
+            Group(m) if not isinstance(m, Group) else m
+            for m in members
+        )
+        super().__init__(members)
 
     def __hash__(self) -> int:
         return super().__hash__()
@@ -186,12 +146,16 @@ class ChainGroup(Sequence, SegramABC):
     # Properties --------------------------------------------------------------
 
     @property
+    def groups(self) -> tuple[Group, ...]:
+        return self.members
+
+    @property
     def flat(self) -> tuple[Any, ...]:
-        return tuple(m for g in self.chain for m in g)
+        return tuple(m for g in self.members for m in g)
 
     @property
     def hashdata(self) -> tuple[Any, ...]:
-        return self.chain
+        return self.members
 
     # Methods -----------------------------------------------------------------
 
@@ -200,8 +164,8 @@ class ChainGroup(Sequence, SegramABC):
 
     def to_str(self, *, color: bool = True, **kwds: Any) -> str:
         """Represent as string."""
-        return ", ".join(g.to_str(color=color, **kwds) for g in self.chain) \
-            or "()"
+        s = ", ".join(g.to_str(color=color, **kwds) for g in self.members)
+        return f"({s})"
 
 
 class Graph(MutableMapping, SegramABC):

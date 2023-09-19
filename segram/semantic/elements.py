@@ -115,6 +115,10 @@ class FrameElement(Semantic):
         return self.phrase.head
 
     @property
+    def depth(self) -> int:
+        return self.phrase.depth
+
+    @property
     def lead(self) -> FrameElement:
         if (lead := self.story.emap.get(self.phrase.lead.idx)):
             return lead
