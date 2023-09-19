@@ -294,7 +294,7 @@ class Description(FrameElement):
         if phrase.dep & Dep.adesc:
             for parent in phrase.parents:
                 if isinstance(parent, VerbPhrase):
-                    yield parent.head
+                    yield parent
 
 
     @staticmethod
