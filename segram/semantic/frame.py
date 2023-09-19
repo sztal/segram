@@ -2,8 +2,8 @@ from __future__ import annotations
 from typing import Any
 from types import MappingProxyType
 from functools import total_ordering
-from .abc import StoryABC, FrameABC
-from ..grammar import Sent, Conjuncts
+from .abc import StoryABC, FrameABC, SemanticElement
+from ..grammar import Sent, Phrase, Conjuncts
 
 
 @total_ordering
@@ -15,15 +15,15 @@ class Frame(FrameABC):
     sent
         Grammar sentence.
     """
-    __slots__ = ("_story", "_sent")
+    __slots__ = ("story", "sent")
 
     def __init__(
         self,
         story: StoryABC,
         sent: Sent
     ) -> None:
-        self._story = story
-        self._sent = sent
+        self.story = story
+        self.sent = sent
         self.story.pmap.maps.append(MappingProxyType(self.sent.pmap))
 
     def __hash__(self) -> int:
@@ -42,14 +42,6 @@ class Frame(FrameABC):
     # Properties --------------------------------------------------------------
 
     @property
-    def sent(self) -> Sent:
-        return self._sent
-
-    @property
-    def story(self) -> StoryABC:
-        return self._story
-
-    @property
     def hashdata(self) -> int:
         return (*super().hashdata, self.story, self.sent)
 
@@ -57,6 +49,10 @@ class Frame(FrameABC):
 
     def is_comparable_with(self, other: Any):
         return isinstance(other, Frame)
+
+    def make_element(self, phrase: Phrase) -> SemanticElement:
+        """Make semantic element from phrase."""
+
 
     # Internals ---------------------------------------------------------------
 
@@ -66,4 +62,4 @@ class Frame(FrameABC):
         These are typically events, but sometimes they
         may be entities.
         """
-        raise NotImplementedError
+        # group = self.sent.root.phrase.group

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, ClassVar, Type, Self, Iterable
+from typing import Any, ClassVar, Self, Iterable
 from abc import abstractmethod
 from ..abc import SegramWithDocABC
 from ..grammar import Phrase, Component, Conjuncts
@@ -9,13 +9,9 @@ from ..symbols import Role
 
 
 class SemanticNamespace(Namespace):
-    Story: Type["Story"]
-    Frame: Type["Frame"]
-    FElem: Type["FrameElement"]
-    Actor: Type["Actor"]
-    Event: Type["Event"]
-    Description: Type["Description"]
-    Complement: Type["Complement"]
+    Story: type["Story"]
+    Frame: type["Frame"]
+    Elem: type["SemanticElement"]
 
 
 class Semantic(SegramWithDocABC):

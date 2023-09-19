@@ -7,7 +7,7 @@ component and phrase detection.
 """
 from __future__ import annotations
 from typing import Any, Optional, Iterable, Mapping, MutableMapping, Self
-from typing import Type, ClassVar, Final
+from typing import ClassVar, Final
 from abc import abstractmethod
 from functools import total_ordering
 from catalogue import Registry
@@ -19,18 +19,18 @@ from ..utils.matching import match_spec
 
 
 class GrammarNamespace(Namespace):
-    Grammar: Type["Grammar"]
-    Component: Type["Component"]
-    Verb: Type["Verb"]
-    Noun: Type["Noun"]
-    Prep: Type["Prep"]
-    Desc: Type["Desc"]
-    Phrase: Type["Phrase"]
-    VP: Type["VerbPhrase"]
-    NP: Type["NounPhrase"]
-    DP: Type["DescPhrase"]
-    PP: Type["PrepPhrase"]
-    Sent: Type["Sent"]
+    Grammar: type["Grammar"]
+    Component: type["Component"]
+    Verb: type["Verb"]
+    Noun: type["Noun"]
+    Prep: type["Prep"]
+    Desc: type["Desc"]
+    Phrase: type["Phrase"]
+    VP: type["VerbPhrase"]
+    NP: type["NounPhrase"]
+    DP: type["DescPhrase"]
+    PP: type["PrepPhrase"]
+    Sent: type["Sent"]
 
 
 class Grammar(SegramWithDocABC):
