@@ -278,7 +278,7 @@ class Component(SentElement):
         self,
         *,
         role: Optional[Role] = None,
-        subcl: bool = False
+        bg: bool = False
     ) -> Iterable[tuple[TokenABC, Optional[Role]]]:
         """Iterate over token-role pairs.
 
@@ -286,13 +286,14 @@ class Component(SentElement):
         ----------
         role
             Overrides head token role.
-        subcl
-            Should tokens be marked as parts of a subclause.
+        bg
+            Should tokens be marked as a background token
+            (e.g. as a part of a subclause).
             This is used for graying out subclauses when printing.
         """
         role = role or self.role
-        if subcl:
-            role = Role.SUBCL
+        if bg:
+            role = Role.BG
         for tok in self.tokens:
             yield tok, role if tok == self.tok else tok.role
 

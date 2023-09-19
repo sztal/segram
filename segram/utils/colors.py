@@ -56,7 +56,7 @@ printer_settings = Settings(
         "prep":   191, # yellowish-greenish
         "neg":    256, # white
         "intj":   215, # orange
-        "subcl":  245, # gray
+        "bg":  245, # gray
         "relcl":  245, # gray
         # Grammar background colors
         "bg_neg": 196, # red
@@ -74,7 +74,7 @@ printer_settings = Settings(
         "prep":    90, # yellowish-greenish
         "neg":    256, # white
         "intj":   210, # orangish
-        "subcl":  245, # gray
+        "bg":  245, # gray
         "relcl":  245, # gray
         # Grammar background colors
         "bg_neg": 196, # red

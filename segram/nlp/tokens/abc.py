@@ -188,7 +188,7 @@ class TokenABC(NLPTokenABC):
             refs = ",".join(r.to_str(color=False) for r in refs)
             refs = f"[{refs}]"
             rrole = kwds.get("role")
-            if rrole is Role.SUBCL:
+            if rrole is Role.BG:
                 refs = color_role(refs, **{ **kwds, "role": rrole })
         else:
             refs = ""

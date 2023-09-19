@@ -110,10 +110,9 @@ class Role(Symbol):
         and adjectival and adverbial modifiers as well as
         any other sort of construction used to directly
         describe nouns, verbs and prepositions.
-    SUBCL
-        Subclause. Subclauses have their internal structure
-        and this role is used mainly for marking tokens within
-        subclauses for marking them when printing.
+    BG
+        Background element that should be not emphasized
+        visually when printing, e.g. printed in gray.
     NEG
         Negation.
     QMARK
@@ -133,7 +132,7 @@ class Role(Symbol):
     POBJ   = auto()
     PROOT  = auto()
     DESC   = auto()
-    SUBCL  = auto()
+    BG     = auto()
     # Fixed roles
     NEG    = auto()
     QMARK  = auto()

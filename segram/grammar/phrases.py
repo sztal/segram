@@ -272,7 +272,7 @@ class Phrase(SentElement):
     def iter_token_roles(
         self,
         *,
-        subcl: bool = False
+        bg: bool = False
     ) -> Iterator[TokenABC, Role | None]:
         """Iterate over token-role pairs.
 
@@ -294,11 +294,11 @@ class Phrase(SentElement):
                     if (cconj := conjs.cconj):
                         yield cconj, None
                 is_vp = isinstance(child, VerbPhrase)
-                yield from child.iter_token_roles(subcl=is_vp)
+                yield from child.iter_token_roles(bg=is_vp)
         toks = sorted(set(_iter()), key=lambda x: x[0])
-        if subcl:
+        if bg:
             for tok, _ in toks:
-                yield tok, Role.SUBCL
+                yield tok, Role.BG
         else:
             yield from toks
 

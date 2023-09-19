@@ -102,7 +102,9 @@ class Group(Sequence, SegramABC):
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Sequence)
 
-    def to_str(self) -> str:
+    def to_str(self, **kwds: Any) -> str:
+        """Represent as string."""
+        # pylint: disable=unused-argument
         return str(self.members)
 
 

@@ -119,16 +119,9 @@ class Conjuncts(Group):
     @classmethod
     def find_groups(cls, phrases: Iterable["Phrase"]) -> Iterator[Conjuncts]:
         """Find conjuncts groups in ``phrases``."""
-        lmap = {}
         for phrase in phrases:
-            lmap.setdefault(phrase.lead, []).append(phrase)
-        for lead, members in lmap.items():
-            try:
-                lidx = members.index(lead)
-            except ValueError:
-                lidx = 0
-            cconjs = lead.conjuncts.cconjs if len(members) > 1 else ()
-            yield Conjuncts(members, lidx, *cconjs)
+            if phrase.is_lead:
+                yield phrase.group
 
     @classmethod
     def get_chain(cls, phrases: Iterable["Phrase"]) -> ChainGroup:
