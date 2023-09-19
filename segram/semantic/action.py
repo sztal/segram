@@ -3,6 +3,8 @@ from typing import Self, Any, Iterable
 from .abc import SemanticElement, FrameABC
 from ..grammar import Phrase, VerbPhrase
 from ..utils.types import ChainGroup, Group
+from ..nlp.tokens import TokenABC
+from ..symbols import Role
 
 
 class Action(SemanticElement):
@@ -17,7 +19,7 @@ class Action(SemanticElement):
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)
-        self.xcomp = ChainGroup([xcomp])
+        self.xcomp = xcomp
 
     # Constructors ------------------------------------------------------------
 
@@ -40,4 +42,14 @@ class Action(SemanticElement):
             yield cls(**kwds)
         else:
             for chain in chains:
-                yield cls(**kwds, xcomp=chain)
+                yield cls(**kwds, xcomp=ChainGroup([chain]))
+
+    # Methods -----------------------------------------------------------------
+
+    def iter_token_roles(self) -> tuple[TokenABC, Role | None]:
+        """Iterate over token-role pairs."""
+        yield from self._iter_token_roles(
+            super().iter_token_roles(),
+            self.head.iter_token_roles(),
+            *(d.iter_token_roles() for d in self.phrase.desc)
+        )

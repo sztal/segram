@@ -146,3 +146,16 @@ class SemanticElement(Semantic):
             t.to_str(color=color, role=r, **kwds)
             for t, r in self.iter_token_roles()
         )
+
+    # Internals ---------------------------------------------------------------
+
+    def _iter_token_roles(self, *tokroles) -> tuple[TokenABC | None]:
+        seen = set()
+        show = []
+        for tr in tokroles:
+            for tok, role in tr:
+                if tok in seen:
+                    continue
+                seen.add(tok)
+                show.append((tok, role))
+        yield from sorted(show, key=lambda x: x[0])
