@@ -8,7 +8,15 @@ from ..symbols import Role
 
 
 class Actant(SemanticElement):
-    """Semantic actant class."""
+    """Semantic actant class.
+
+    Attributes
+    ----------
+    relcl
+        Relative clauses. These are proper semantic elements
+        and therefore are represented as
+        :class:`segram.semantic.Event`.
+    """
     __parts__ = ("relcl",)
     __slots__ = (*__parts__,)
 

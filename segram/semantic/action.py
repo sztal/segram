@@ -8,7 +8,16 @@ from ..symbols import Role
 
 
 class Action(SemanticElement):
-    """Semantic action class."""
+    """Semantic action class.
+
+    Attributes
+    ----------
+    xcomp
+        Open clausal complements.
+        These are not by themselves proper semantic elements
+        and therefore they are represented as
+        :class:`segram.grammar.Phrase` objects.
+    """
     __parts__ = ("xcomp",)
     __slots__ = (*__parts__,)
 

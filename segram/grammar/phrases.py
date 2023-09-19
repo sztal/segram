@@ -195,7 +195,7 @@ class Phrase(SentElement):
     def desc(self) -> Sequence[Phrase]:
         """Description phrases."""
         return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.desc
+            c for c in self.children if c.dep & (Dep.desc | Dep.misc)
         )
     @property
     def cdesc(self) -> Sequence[Phrase]:
