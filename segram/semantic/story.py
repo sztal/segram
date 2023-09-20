@@ -1,44 +1,24 @@
-from __future__ import annotations
-from typing import Any, ClassVar
-from collections import ChainMap
-from collections.abc import Iterable, Sequence
-from .abc import Semantic, FrameABC
-from ..nlp import DocABC
+from typing import Any, Self
+from .abc import Semantic
+from ..abc import SegramWithDocABC
+from ..nlp.tokens import DocABC
 
 
-class Story(Sequence, Semantic):
-    """Story semantic class."""
-    alias: ClassVar[str] = "Story"
-    __slots__ = ("_doc", "frames", "emap", "pmap")
+class Story(Semantic, SegramWithDocABC):
+    """Semantic story class.
 
-    def __init__(
-        self,
-        doc: DocABC,
-        frames: Iterable[FrameABC] = ()
-    ) -> None:
+    Attributes
+    ----------
+    doc
+        Document object.
+    defs
+        Definitions of semantic elements in the story.
+    """
+    __slots__ = ("_doc", "_defs")
+
+    def __init__(self, doc: DocABC) -> None:
         self._doc = doc
-        self.frames = tuple(frames)
-        self.emap = {}
-        self.pmap = ChainMap()
-
-    def __repr__(self) -> str:
-        nframes = len(self)
-        text = "frame" if nframes == 1 else "frames"
-        return f"<{self.ppath()} with {nframes} {text} at {hex(id(self))}>"
-
-    def __hash__(self) -> int:
-        return super().__hash__()
-
-    def __eq__(self, other: Story) -> bool:
-        if (res := super().__eq__(other)) is NotImplemented:
-            return res
-        return res and self.frames == other.frames
-
-    def __len__(self) -> int:
-        return len(self.frames)
-
-    def __getitem__(self, idx: int | slice) -> FrameABC | tuple[FrameABC, ...]:
-        return self.frames[idx]
+        self._defs = ()
 
     # Properties --------------------------------------------------------------
 
@@ -52,8 +32,8 @@ class Story(Sequence, Semantic):
 
     # Methods -----------------------------------------------------------------
 
-    def copy(self, **kwds: Any) -> Story:
+    def copy(self, **kwds: Any) -> Self:
         return self.__class__(**{ "doc": self.doc, **self.data, **kwds })
 
-    def is_comparable_with(self, other: Story) -> bool:
+    def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Story)
