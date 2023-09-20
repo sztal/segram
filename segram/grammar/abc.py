@@ -15,7 +15,6 @@ from ..nlp import DocABC, SpanABC, TokenABC
 from ..utils.registries import grammars
 from ..abc import SegramWithDocABC
 from ..utils.types import Namespace
-from ..utils.matching import match_spec
 
 
 class GrammarNamespace(Namespace):
@@ -168,20 +167,6 @@ class GrammarElement(Grammar):
     def hashdata(self) -> tuple[Any, ...]:
         """Data tuple used for hashing."""
         return (*super().hashdata, self.idx)
-
-    # Methods -----------------------------------------------------------------
-
-    def match(self, *specs: Mapping, **kwds: Any) -> bool:
-        """Match element properties against specification(s).
-
-        Parameters
-        ----------
-        *specs
-            Element properties specification(s).
-        **kwds
-            Passed to :func:`segram.utils.matching.check_match`.
-        """
-        return match_spec(self, *specs, **kwds)
 
 
 class DocElement(GrammarElement):

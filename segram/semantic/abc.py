@@ -5,7 +5,7 @@ from ..abc import SegramWithDocABC
 from ..grammar import Phrase, Component, Conjuncts
 from ..utils.types import Namespace, ChainGroup, Group
 from ..nlp.tokens import DocABC, TokenABC
-from ..symbols import Role
+from ..symbols import Role, Dep
 
 
 class SemanticNamespace(Namespace):
@@ -46,8 +46,8 @@ class SemanticElement(Semantic):
         Controlling semantic frame.
     """
     alias: ClassVar[str] = "Elem"
-    __parts__ = ()
-    __slots__ = ("phrase", "frame", *__parts__)
+    __parts__ = ("prep", "desc")
+    __slots__ = ("phrase", "frame")
     part_names: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
@@ -74,7 +74,7 @@ class SemanticElement(Semantic):
         super().__init_subclass__()
         cls.init_class_attrs({
             "__parts__": "part_names"
-        }, check_slots=True)
+        }, check_slots=False)
 
     # Properties --------------------------------------------------------------
 
@@ -117,29 +117,29 @@ class SemanticElement(Semantic):
         raise NotImplementedError
 
     @property
-    def children(self) -> Iterable[SemanticElement]:
+    def children(self) -> ChainGroup[Group[SemanticElement]]:
         """Child elements."""
-        yield from self.iter_children()
+        return tuple(self.iter_children())
 
     @property
-    def actants(self) -> Iterable[SemanticElement]:
+    def actant(self) -> tuple[SemanticElement]:
         """Actant child elements."""
-        yield from self.iter_children("Actant")
+        return tuple(self.iter_children("Actant"))
 
     @property
-    def actions(self) -> Iterable[SemanticElement]:
+    def action(self) -> tuple[SemanticElement]:
         """Action child elements."""
-        yield from self.iter_children("Action")
+        return tuple(self.iter_children("Action"))
 
     @property
-    def preps(self) -> Iterable[SemanticElement]:
+    def prep(self) -> tuple[SemanticElement]:
         """Preposition child elements."""
-        yield from self.iter_children("Prep")
+        return tuple(self.iter_children("Prep"))
 
     @property
-    def descs(self) -> Iterable[SemanticElement]:
+    def desc(self) -> tuple[SemanticElement]:
         """Description child elements."""
-        yield from self.iter_children("Desc")
+        return tuple(self.iter_children("Desc", dep=Dep.misc))
 
     # Constructors ------------------------------------------------------------
 
@@ -177,7 +177,13 @@ class SemanticElement(Semantic):
         return isinstance(other, SemanticElement)
 
     def iter_token_roles(self) -> tuple[TokenABC, Role | None]:
-        """Iterate over token-role pairs."""
+        """Iterate over token-role pairs.
+
+        Parameters
+        ----------
+        **kwds
+            Passed to :meth:`_iter_token_roles`.
+        """
         def _iter():
             for name in self.part_names:
                 parts = getattr(self, name)
@@ -193,7 +199,11 @@ class SemanticElement(Semantic):
             for t, r in self.iter_token_roles()
         )
 
-    def iter_children(self, typ: Optional[str | type] = None) -> Iterable[SemanticElement]:
+    def iter_children(
+        self,
+        typ: Optional[str | type] = None,
+        dep: Optional[Dep] = None
+    ) -> Iterable[SemanticElement]:
         """Iterate over child elements.
 
         Parameters
@@ -202,25 +212,40 @@ class SemanticElement(Semantic):
             Type of element to consider.
             Can be passed as ``type`` object or a string alias.
             Iterate over all children when ``None``.
+        dep
+            Alternaive selection condition based
+            on phrasal dependency tag value.
         """
+        # pylint: disable=too-many-boolean-expressions
         if typ and isinstance(typ, str):
             typ = self.frame.types[typ]
         for child in self.phrase.children:
-            if not typ or typ.based_on(child):
+            if (not typ and not dep) \
+            or (typ and typ.based_on(child)) \
+            or (dep and child.dep & dep):
                 yield from self.frame.iter_elements(child)
 
     # Internals ---------------------------------------------------------------
 
-    def _iter_token_roles(self, *tokroles) -> tuple[TokenABC | None]:
+    def _iter_token_roles(
+        self,
+        *tokroles,
+        role: Optional[Role] = None
+    ) -> tuple[TokenABC | None]:
         seen = set()
         show = []
         for tr in tokroles:
-            for tok, role in tr:
-                if tok in seen:
+            for t, r in tr:
+                if t in seen:
                     continue
-                seen.add(tok)
-                show.append((tok, role))
-        yield from sorted(show, key=lambda x: x[0])
+                seen.add(t)
+                show.append((t, r))
+        tr = sorted(show, key=lambda x: x[0])
+        if role is None:
+            yield from tr
+        else:
+            for t, _ in tr:
+                yield t, role
 
     @classmethod
     def _get_base_phrase_data(cls, phrase: Phrase) -> dict[str, Any]:

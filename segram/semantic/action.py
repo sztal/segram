@@ -61,5 +61,4 @@ class Action(SemanticElement):
         yield from self._iter_token_roles(
             super().iter_token_roles(),
             self.head.iter_token_roles(),
-            *(d.iter_token_roles() for d in self.phrase.desc)
         )
