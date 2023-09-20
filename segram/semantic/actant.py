@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Self, Any, Iterable
+from typing import Self, Any, Iterable, ClassVar
 from .abc import SemanticElement, FrameABC
 from ..grammar import Phrase, NounPhrase, Conjuncts
 from ..utils.types import ChainGroup, Group
@@ -17,6 +17,7 @@ class Actant(SemanticElement):
         and therefore are represented as
         :class:`segram.semantic.Event`.
     """
+    alias: ClassVar[str] = "Actant"
     __parts__ = ("relcl",)
     __slots__ = (*__parts__,)
 
@@ -32,13 +33,16 @@ class Actant(SemanticElement):
     # Constructors ------------------------------------------------------------
 
     @classmethod
-    def from_phrase(cls, phrase: Phrase) -> Iterable[Self]:
-        if not isinstance(phrase, NounPhrase):
-            return
-        kwds = dict(frame=None, relcl=Conjuncts.get_chain(phrase.relcl))
+    def from_phrase(cls, phrase: Phrase, frame: FrameABC) -> Iterable[Self]:
+        kwds = dict(frame=frame, relcl=Conjuncts.get_chain(phrase.relcl))
         yield cls(phrase, **kwds)
 
     # Methods -----------------------------------------------------------------
+
+    @classmethod
+    def based_on(cls, phrase: Phrase) -> bool:
+        return isinstance(phrase, NounPhrase) \
+            and not any(isinstance(p, NounPhrase) for p in phrase.parents)
 
     def iter_token_roles(self) -> tuple[TokenABC, Role | None]:
         """Iterate over token-role pairs."""

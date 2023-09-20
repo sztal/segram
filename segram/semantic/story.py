@@ -1,26 +1,25 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, ClassVar
 from collections import ChainMap
-from collections.abc import Iterable, Sequence, Mapping
-from .abc import StoryABC
-from .frame import Frame
-from ..grammar import Phrase
+from collections.abc import Iterable, Sequence
+from .abc import Semantic, FrameABC
 from ..nlp import DocABC
 
 
-class Story(Sequence, StoryABC):
+class Story(Sequence, Semantic):
     """Story semantic class."""
-    __slots__ = ("_doc", "frames", "emap", "_pmap")
+    alias: ClassVar[str] = "Story"
+    __slots__ = ("_doc", "frames", "emap", "pmap")
 
     def __init__(
         self,
         doc: DocABC,
-        frames: Iterable[Frame] = ()
+        frames: Iterable[FrameABC] = ()
     ) -> None:
         self._doc = doc
         self.frames = tuple(frames)
         self.emap = {}
-        self._pmap = ChainMap()
+        self.pmap = ChainMap()
 
     def __repr__(self) -> str:
         nframes = len(self)
@@ -38,7 +37,7 @@ class Story(Sequence, StoryABC):
     def __len__(self) -> int:
         return len(self.frames)
 
-    def __getitem__(self, idx: int | slice) -> Frame | tuple[Frame, ...]:
+    def __getitem__(self, idx: int | slice) -> FrameABC | tuple[FrameABC, ...]:
         return self.frames[idx]
 
     # Properties --------------------------------------------------------------
@@ -50,10 +49,6 @@ class Story(Sequence, StoryABC):
     @property
     def hashdata(self) -> tuple[Any, ...]:
         return (*super().hashdata, id(self))
-
-    @property
-    def pmap(self) -> Mapping[int, Phrase]:
-        return self._pmap
 
     # Methods -----------------------------------------------------------------
 

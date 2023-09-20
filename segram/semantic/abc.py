@@ -12,6 +12,11 @@ class SemanticNamespace(Namespace):
     Story: type["Story"]
     Frame: type["Frame"]
     Elem: type["SemanticElement"]
+    Actant: type["Actant"]
+    Action: type["Action"]
+    Prep: type["Preposition"]
+    Desc: type["Description"]
+    Event: type["Event"]
 
 
 class Semantic(SegramWithDocABC):
@@ -21,12 +26,8 @@ class Semantic(SegramWithDocABC):
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
-        cls.types[cls.__name__] = cls
-
-
-class StoryABC(Semantic):
-    """Abstract base class for semantic story."""
-    __slots__ = ()
+        if (alias := getattr(cls, "alias", None)):
+            cls.types[alias] = cls
 
 
 class FrameABC(Semantic):
@@ -46,6 +47,7 @@ class SemanticElement(Semantic):
     parents
         Parent semantic elements.
     """
+    alias: ClassVar[str] = "Elem"
     __parts__ = ()
     __slots__ = ("phrase", "frame", "parents", *__parts__)
     part_names: ClassVar[tuple[str, ...]] = ()
@@ -61,10 +63,20 @@ class SemanticElement(Semantic):
         self.frame = frame
         self.parents = parents  # TODO: implement this
 
+    def __new__(cls, *args: Any, **kwds: Any) -> None:
+        obj = super().__new__(cls)
+        obj.__init__(*args, **kwds)
+        if (cur := obj.story.emap.get(obj.idx)):
+            cur.__init__(**obj.data)
+            return cur
+        obj.story.emap[obj.idx] = obj
+        return obj
+
     def __repr__(self) -> str:
         return self.to_str(color=True)
 
     def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
         cls.init_class_attrs({
             "__parts__": "part_names"
         }, check_slots=True)
@@ -72,12 +84,16 @@ class SemanticElement(Semantic):
     # Properties --------------------------------------------------------------
 
     @property
-    def story(self) -> StoryABC:
+    def story(self) -> "Story":
         return self.frame.story
 
     @property
     def doc(self) -> DocABC:
         return self.story.doc
+
+    @property
+    def idx(self) -> int:
+        return self.phrase.idx
 
     @property
     def head(self) -> Component:
@@ -109,7 +125,12 @@ class SemanticElement(Semantic):
 
     @classmethod
     @abstractmethod
-    def from_phrase(cls, phrase: Phrase) -> Iterable[Self] | None:
+    def based_on(cls, phrase: Phrase) -> bool:
+        """Check if element can be based on phrase."""
+
+    @classmethod
+    @abstractmethod
+    def from_phrase(cls, phrase: Phrase, frame: FrameABC) -> Iterable[Self] | None:
         """Construct from phrase.
 
         The method yields one or more elements from a single

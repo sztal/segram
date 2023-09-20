@@ -1,9 +1,11 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, Iterable, ClassVar
 from types import MappingProxyType
 from functools import total_ordering
-from .abc import StoryABC, FrameABC, SemanticElement
+from .abc import FrameABC, SemanticElement
+from .story import Story
 from ..grammar import Sent, Phrase, Conjuncts
+from ..nlp.tokens import DocABC
 
 
 @total_ordering
@@ -15,11 +17,12 @@ class Frame(FrameABC):
     sent
         Grammar sentence.
     """
+    alias: ClassVar[str] = "Frame"
     __slots__ = ("story", "sent")
 
     def __init__(
         self,
-        story: StoryABC,
+        story: Story,
         sent: Sent
     ) -> None:
         self.story = story
@@ -42,6 +45,10 @@ class Frame(FrameABC):
     # Properties --------------------------------------------------------------
 
     @property
+    def doc(self) -> DocABC:
+        return self.story.doc
+
+    @property
     def hashdata(self) -> int:
         return (*super().hashdata, self.story, self.sent)
 
@@ -50,11 +57,22 @@ class Frame(FrameABC):
     def is_comparable_with(self, other: Any):
         return isinstance(other, Frame)
 
-    def make_element(self, phrase: Phrase) -> SemanticElement:
-        """Make semantic element from phrase."""
-
+    def iter_elements(self, phrase: Phrase) -> Iterable[SemanticElement]:
+        """Iterate over semantic element(s) from phrase."""
+        typ = self._get_element_type(phrase)
+        if typ is None:
+            return
+        yield from typ.from_phrase(phrase, self)
 
     # Internals ---------------------------------------------------------------
+
+    def _get_element_type(self, phrase: Phrase) -> type | None:
+        for typ in self.types.values():
+            if not issubclass(typ, SemanticElement) or typ.__abstractmethods__:
+                continue
+            if typ.based_on(phrase):
+                return typ
+        return None
 
     def _find_roots(self) -> Conjuncts:
         """Find root elements.

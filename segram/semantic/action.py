@@ -1,10 +1,10 @@
 from __future__ import annotations
-from typing import Self, Any, Iterable
+from typing import Self, Any, Iterable, ClassVar
 from .abc import SemanticElement, FrameABC
 from ..grammar import Phrase, VerbPhrase
 from ..utils.types import ChainGroup, Group
 from ..nlp.tokens import TokenABC
-from ..symbols import Role
+from ..symbols import Role, Dep
 
 
 class Action(SemanticElement):
@@ -18,6 +18,7 @@ class Action(SemanticElement):
         and therefore they are represented as
         :class:`segram.grammar.Phrase` objects.
     """
+    alias: ClassVar[str] = "Action"
     __parts__ = ("xcomp",)
     __slots__ = (*__parts__,)
 
@@ -33,9 +34,7 @@ class Action(SemanticElement):
     # Constructors ------------------------------------------------------------
 
     @classmethod
-    def from_phrase(cls, phrase: Phrase) -> Iterable[Self]:
-        if not isinstance(phrase, VerbPhrase):
-            return
+    def from_phrase(cls, phrase: Phrase, frame: FrameABC) -> Iterable[Self]:
         def _iter_xcomps(phrase, chain=()):
             if not phrase.xcomp:
                 yield tuple(chain)
@@ -45,7 +44,7 @@ class Action(SemanticElement):
                     new_chain.append(xcomp)
                     yield from _iter_xcomps(xcomp, chain=new_chain)
 
-        kwds = dict(phrase=phrase, frame=None)
+        kwds = dict(phrase=phrase, frame=frame)
         chains = tuple(_iter_xcomps(phrase))
         if not chains:
             yield cls(**kwds)
@@ -54,6 +53,11 @@ class Action(SemanticElement):
                 yield cls(**kwds, xcomp=ChainGroup([chain]))
 
     # Methods -----------------------------------------------------------------
+
+    @classmethod
+    def based_on(cls, phrase: Phrase) -> bool:
+        return isinstance(phrase, VerbPhrase) \
+            and phrase.head.dep & ~Dep.xcomp
 
     def iter_token_roles(self) -> tuple[TokenABC, Role | None]:
         """Iterate over token-role pairs."""
