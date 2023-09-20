@@ -1,8 +1,6 @@
-from typing import Any, Iterable
 from .abc import SemanticElement
 from ..grammar import Phrase, NounPhrase
-from ..symbols import Dep, Role
-from ..nlp.tokens import TokenABC
+from ..symbols import Dep
 
 
 class Actant(SemanticElement):
@@ -15,7 +13,7 @@ class Actant(SemanticElement):
     def matches(cls, phrase: Phrase) -> bool:
         match phrase:
             case NounPhrase(dep=dep):
-                return dep & ~(Dep.nmod | Dep.appos)
+                return not dep & (Dep.nmod | Dep.desc | Dep.appos)
             case _:
                 return False
 

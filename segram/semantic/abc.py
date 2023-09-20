@@ -17,29 +17,58 @@ class SemanticElement(Semantic):
 
     Attributes
     ----------
+    story
+        Story object.
     base
         Base phrase.
     end
         End phrase.
     """
-    __slots__ = ("base", "end")
+    __slots__ = ("_story", "base", "end")
     reverse_base: ClassVar[bool] = False
 
     def __init__(
         self,
+        story: "Story",
         base: Phrase,
         end: Optional[Phrase] = None
     ) -> None:
+        self._story = story
         self.base = base
         self.end = end
+
+    def __new__(cls, *args: Any, **kwds: Any) -> None:
+        obj = super().__new__(cls)
+        obj.__init__(*args, **kwds)
+        if (cur := obj.story.emap.get(obj.base)):
+            cur.__init__(obj.story, **obj.data)
+            return cur
+        obj.story.emap[obj.base] = obj
+        return obj
 
     def __repr__(self) -> str:
         return self.to_str(color=True)
 
+    # Properties --------------------------------------------------------------
+
+    @property
+    def story(self) -> "Story":
+        return self._story
+
+    @property
+    def depth(self) -> int:
+        """Phrasal depth of the base phrase."""
+        return self.base.depth
+
+    @property
+    def head(self) -> int:
+        """Head component of the base phrase."""
+        return self.base.head
+
     # Constructors ------------------------------------------------------------
 
     @classmethod
-    def from_phrase(cls, phrase: Phrase) -> Iterable[Self]:
+    def from_phrase(cls, story: "Story", phrase: Phrase) -> Iterable[Self]:
         """Construct from phrase."""
         args = []
         if cls.matches(phrase):
@@ -62,7 +91,7 @@ class SemanticElement(Semantic):
         for base, end in args:
             if cls.reverse_base:
                 base, end = end, base
-            yield cls(base, end)
+            yield cls(story, base, end)
 
     # Methods -----------------------------------------------------------------
 
@@ -100,6 +129,8 @@ class SemanticElement(Semantic):
         ``**kwds`` are passed to :meth:`segram.grammar.Phrase.iter_token_roles`.
         """
         yield from self.base.iter_token_roles(**kwds)
+        if self.end:
+            yield from self.end.iter_token_roles(**kwds)
 
     def prepare_token_roles(
         self,
