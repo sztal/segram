@@ -1,9 +1,9 @@
 from __future__ import annotations
-from typing import Any, ClassVar, Self, Iterable
+from typing import Any, Optional, ClassVar, Self, Iterable
 from abc import abstractmethod
 from ..abc import SegramWithDocABC
 from ..grammar import Phrase, Component, Conjuncts
-from ..utils.types import Namespace
+from ..utils.types import Namespace, ChainGroup, Group
 from ..nlp.tokens import DocABC, TokenABC
 from ..symbols import Role
 
@@ -44,24 +44,19 @@ class SemanticElement(Semantic):
         Grammar phrase corresponding to the semantic element.
     frame
         Controlling semantic frame.
-    parents
-        Parent semantic elements.
     """
     alias: ClassVar[str] = "Elem"
     __parts__ = ()
-    __slots__ = ("phrase", "frame", "parents", *__parts__)
+    __slots__ = ("phrase", "frame", *__parts__)
     part_names: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
         self,
         phrase: Phrase,
         frame: FrameABC,
-        *,
-        parents: Conjuncts[SemanticElement] = ()
     ) -> None:
         self.phrase = phrase
         self.frame = frame
-        self.parents = parents  # TODO: implement this
 
     def __new__(cls, *args: Any, **kwds: Any) -> None:
         obj = super().__new__(cls)
@@ -109,7 +104,7 @@ class SemanticElement(Semantic):
     @property
     def is_root(self) -> bool:
         """Check if root element with no parents."""
-        return not self.parents
+        return self.depth == 0
 
     @property
     def is_lead(self) -> bool:
@@ -121,25 +116,32 @@ class SemanticElement(Semantic):
         """Get conjoined group."""
         raise NotImplementedError
 
+    @property
+    def children(self) -> Iterable[SemanticElement]:
+        """Child elements."""
+        yield from self.iter_children()
+
+    @property
+    def actants(self) -> Iterable[SemanticElement]:
+        """Actant child elements."""
+        yield from self.iter_children("Actant")
+
+    @property
+    def actions(self) -> Iterable[SemanticElement]:
+        """Action child elements."""
+        yield from self.iter_children("Action")
+
+    @property
+    def preps(self) -> Iterable[SemanticElement]:
+        """Preposition child elements."""
+        yield from self.iter_children("Prep")
+
+    @property
+    def descs(self) -> Iterable[SemanticElement]:
+        """Description child elements."""
+        yield from self.iter_children("Desc")
+
     # Constructors ------------------------------------------------------------
-
-    @classmethod
-    @abstractmethod
-    def based_on(cls, phrase: Phrase) -> bool:
-        """Check if element can be based on phrase."""
-
-    @classmethod
-    @abstractmethod
-    def iter_phrase_data(cls, phrase: Phrase) -> Iterable[dict[str, Any]]:
-        """Get phrase data needed for initializing element.
-
-        Yields
-        ------
-        data
-            One data dictionary per element originiating from ``phrase``.
-        """
-
-    # Methods -----------------------------------------------------------------
 
     @classmethod
     def from_phrase(cls, phrase: Phrase, frame: FrameABC) -> Iterable[Self] | None:
@@ -150,7 +152,26 @@ class SemanticElement(Semantic):
         is not a basis of any semantic elements of the given type.
         """
         for data in cls.iter_phrase_data(phrase):
-            yield cls(phrase, frame, **data)
+            base = cls._get_base_phrase_data(phrase)
+            yield cls(phrase, frame, **base, **data)
+
+    # Methods -----------------------------------------------------------------
+
+    @classmethod
+    @abstractmethod
+    def based_on(cls, phrase: Phrase) -> bool:
+        """Check if element can be based on phrase."""
+
+    @classmethod
+    def iter_phrase_data(cls, phrase: Phrase) -> Iterable[dict[str, Any]]:
+        """Get phrase data needed for initializing element.
+
+        Yields
+        ------
+        data
+            One data dictionary per element originiating from ``phrase``.
+        """
+        yield { **cls._get_base_phrase_data(phrase) }
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, SemanticElement)
@@ -158,16 +179,12 @@ class SemanticElement(Semantic):
     def iter_token_roles(self) -> tuple[TokenABC, Role | None]:
         """Iterate over token-role pairs."""
         def _iter():
-            seen = set()
             for name in self.part_names:
                 parts = getattr(self, name)
                 for part in reversed(parts):
-                    for tok, role in part.iter_token_roles():
-                        if tok in seen:
-                            continue
-                        seen.add(tok)
-                        yield tok, role
-        yield from sorted(_iter(), key=lambda x: x[0])
+                    yield from part.iter_token_roles()
+            yield from self.phrase.head.iter_token_roles()
+        yield from self._iter_token_roles(_iter())
 
     def to_str(self, *, color: bool = False, **kwds: Any) -> str:
         """Represent as string."""
@@ -175,6 +192,22 @@ class SemanticElement(Semantic):
             t.to_str(color=color, role=r, **kwds)
             for t, r in self.iter_token_roles()
         )
+
+    def iter_children(self, typ: Optional[str | type] = None) -> Iterable[SemanticElement]:
+        """Iterate over child elements.
+
+        Parameters
+        ----------
+        typ
+            Type of element to consider.
+            Can be passed as ``type`` object or a string alias.
+            Iterate over all children when ``None``.
+        """
+        if typ and isinstance(typ, str):
+            typ = self.frame.types[typ]
+        for child in self.phrase.children:
+            if not typ or typ.based_on(child):
+                yield from self.frame.iter_elements(child)
 
     # Internals ---------------------------------------------------------------
 
@@ -188,3 +221,8 @@ class SemanticElement(Semantic):
                 seen.add(tok)
                 show.append((tok, role))
         yield from sorted(show, key=lambda x: x[0])
+
+    @classmethod
+    def _get_base_phrase_data(cls, phrase: Phrase) -> dict[str, Any]:
+        # pylint: disable=unused-argument
+        return {}

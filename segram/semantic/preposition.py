@@ -14,23 +14,18 @@ class Preposition(SemanticElement):
     ----------
     """
     alias: ClassVar[str] = "Prep"
-    __parts__ = ("pobj",)
+    __parts__ = ()
     __slots__ = (*__parts__,)
 
-    def __init__(
-        self,
-        *args: Any,
-        pobj: ChainGroup[Group[SemanticElement]] = (),
-        **kwds: Any
-    ) -> None:
-        super().__init__(*args, **kwds)
-        self.pobj = pobj
+    # Properties --------------------------------------------------------------
+
+    @property
+    def pobj(self) -> Iterable[SemanticElement]:
+        """Preposition object child elements."""
+        for phrase in self.phrase.pobj:
+            yield from self.frame.make_element(phrase)
 
     # Methods -----------------------------------------------------------------
-
-    @classmethod
-    def iter_phrase_data(cls, phrase: Phrase) -> Iterable[dict[str, Any]]:
-        yield { "pobj": Conjuncts.get_chain(phrase.pobj) }
 
     @classmethod
     def based_on(cls, phrase: Phrase) -> bool:

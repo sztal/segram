@@ -59,20 +59,13 @@ class Frame(FrameABC):
 
     def iter_elements(self, phrase: Phrase) -> Iterable[SemanticElement]:
         """Iterate over semantic element(s) from phrase."""
-        typ = self._get_element_type(phrase)
-        if typ is None:
-            return
-        yield from typ.from_phrase(phrase, self)
-
-    # Internals ---------------------------------------------------------------
-
-    def _get_element_type(self, phrase: Phrase) -> type | None:
         for typ in self.types.values():
             if not issubclass(typ, SemanticElement) or typ.__abstractmethods__:
                 continue
             if typ.based_on(phrase):
-                return typ
-        return None
+                yield from typ.from_phrase(phrase, self)
+
+    # Internals ---------------------------------------------------------------
 
     def _find_roots(self) -> Conjuncts:
         """Find root elements.

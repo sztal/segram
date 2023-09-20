@@ -18,23 +18,18 @@ class Actant(SemanticElement):
         :class:`segram.semantic.Event`.
     """
     alias: ClassVar[str] = "Actant"
-    __parts__ = ("relcl",)
+    __parts__ = ()
     __slots__ = (*__parts__,)
 
-    def __init__(
-        self,
-        *args: Any,
-        relcl: ChainGroup[Group[SemanticElement]] = (),
-        **kwds: Any
-    ) -> None:
-        super().__init__(*args, **kwds)
-        self.relcl = relcl
+    # Properties --------------------------------------------------------------
+
+    @property
+    def relcl(self) -> Iterable[SemanticElement]:
+        """Relative clause child elements."""
+        for phrase in self.phrase.relcl:
+            yield from self.frame.make_element(phrase)
 
     # Methods -----------------------------------------------------------------
-
-    @classmethod
-    def iter_phrase_data(cls, phrase: Phrase) -> Iterable[dict[str, Any]]:
-        yield { "relcl": Conjuncts.get_chain(phrase.relcl) }
 
     @classmethod
     def based_on(cls, phrase: Phrase) -> bool:
