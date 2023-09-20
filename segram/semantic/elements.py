@@ -1,3 +1,4 @@
+from typing import ClassVar
 from .abc import SemanticElement
 from ..grammar import Phrase, NounPhrase
 from ..symbols import Dep
@@ -5,6 +6,7 @@ from ..symbols import Dep
 
 class Actant(SemanticElement):
     """Actant semantic element."""
+    alias: ClassVar[str] = "Actant"
     __slots__ = ()
 
     # Methods -----------------------------------------------------------------

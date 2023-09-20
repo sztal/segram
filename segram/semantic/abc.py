@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Iterable, Self, Any, Optional, ClassVar
 from abc import abstractmethod
 from itertools import islice
@@ -5,10 +6,17 @@ from ..abc import SegramABC
 from ..grammar import Phrase
 from ..nlp.tokens import TokenABC
 from ..symbols import Role
+from ..utils.types import Namespace
+
+
+class SemanticNamespace(Namespace):
+    Actant: type[SemanticElement]
+    Event: type[SemanticElement]
 
 
 class Semantic(SegramABC):
     """Abstract base class for semantic classes."""
+    types: ClassVar[SemanticNamespace] = SemanticNamespace()
     __slots__ = ()
 
 
@@ -24,6 +32,7 @@ class SemanticElement(Semantic):
     end
         End phrase.
     """
+    alias: ClassVar[str] = "SElem"
     __slots__ = ("_story", "base", "end")
     reverse_base: ClassVar[bool] = False
 
@@ -48,6 +57,10 @@ class SemanticElement(Semantic):
 
     def __repr__(self) -> str:
         return self.to_str(color=True)
+
+    def __init_subclass__(cls) -> None:
+        if (alias := getattr(cls, "alias", None)):
+            cls.types[alias] = cls
 
     # Properties --------------------------------------------------------------
 

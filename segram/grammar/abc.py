@@ -6,7 +6,7 @@ syntax tree links and can be used to perform various tasks such as
 component and phrase detection.
 """
 from __future__ import annotations
-from typing import Any, Optional, Iterable, Mapping, MutableMapping, Self
+from typing import Any, Optional, Iterable, MutableMapping, Self
 from typing import ClassVar, Final
 from abc import abstractmethod
 from functools import total_ordering

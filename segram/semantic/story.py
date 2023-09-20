@@ -1,6 +1,5 @@
-from typing import Any, Self, Optional, Mapping, Iterable
-from .abc import Semantic, SemanticElement
-from .elements import Actant
+from typing import Any, Self, Iterable
+from .abc import Semantic
 from ..grammar import Sent, Phrase
 
 
@@ -16,26 +15,14 @@ class Story(Semantic):
     emap
         Map from phrases to semantic elements.
     """
-    __slots__ = ("phrases", "defs", "emap")
+    __slots__ = ("phrases", "emap")
 
     def __init__(
         self,
-        phrases: Iterable[Phrase] = (),
-        defs: Optional[Mapping[str, SemanticElement]] = None
+        phrases: Iterable[Phrase] = ()
     ) -> None:
         self.phrases = list(phrases)
-        self.defs = {
-            "actants": Actant,
-            **(defs or {})
-        }
         self.emap = {}
-
-    def __getattr__(self, attr: str) -> Any:
-        if attr in self.defs:
-            elem = self.defs[attr]
-            return (e for p in self.phrases for e in elem.from_phrase(self, p))
-        cn = self.__class__.__name__
-        raise AttributeError(f"'{cn}' object has no attribute '{attr}'")
 
     # Properties --------------------------------------------------------------
 
