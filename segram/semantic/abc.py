@@ -1,8 +1,10 @@
-from typing import Iterable, Self
+from typing import Iterable, Self, Any, Optional, ClassVar
 from abc import abstractmethod
 from itertools import islice
 from ..abc import SegramABC
 from ..grammar import Phrase
+from ..nlp.tokens import TokenABC
+from ..symbols import Role
 
 
 class Semantic(SegramABC):
@@ -11,34 +13,63 @@ class Semantic(SegramABC):
 
 
 class SemanticElement(Semantic):
-    """Semantic element class."""
+    """Semantic element class.
+
+    Attributes
+    ----------
+    base
+        Base phrase.
+    end
+        End phrase.
+    """
+    __slots__ = ("base", "end")
+    reverse_base: ClassVar[bool] = False
+
+    def __init__(
+        self,
+        base: Phrase,
+        end: Optional[Phrase] = None
+    ) -> None:
+        self.base = base
+        self.end = end
+
+    def __repr__(self) -> str:
+        return self.to_str(color=True)
 
     # Constructors ------------------------------------------------------------
 
     @classmethod
     def from_phrase(cls, phrase: Phrase) -> Iterable[Self]:
         """Construct from phrase."""
-        if cls.is_anchor(phrase):
-            for another in cls.stream(phrase):
-                if cls.is_terminus(another):
-                    pass
+        args = []
+        if cls.matches(phrase):
+            if (extend := getattr(cls, "extend", None)):
+                has_end = False
+                for sub in extend(phrase):
+                    if (ends := getattr(cls, "ends", None)):
+                        if ends(sub):
+                            args.append((phrase, sub))
+                            has_end = True
+                    else:
+                        cn = cls.__name__
+                        raise NotImplementedError(
+                            f"'{cn}' implements 'extend' but not 'ends'"
+                        )
+                if not has_end:
+                    args.append((phrase, None))
+            else:
+                args.append((phrase, None))
+        for base, end in args:
+            if cls.reverse_base:
+                base, end = end, base
+            yield cls(base, end)
 
     # Methods -----------------------------------------------------------------
 
     @classmethod
     @abstractmethod
-    def is_anchor(cls, phrase: Phrase) -> bool:
-        """Is phrase the anchor of an element."""
-
-    @classmethod
-    @abstractmethod
-    def is_terminus(cls, phrase: Phrase) -> bool:
-        """Is phrase the terminus of an element."""
-
-    @classmethod
-    @abstractmethod
-    def stream(cls, phrase: Phrase) -> bool:
-        """Stream intermediate phrases from an anchor."""
+    def matches(cls, phrase: Phrase) -> bool:
+        """Check if phrase matches the base requirements of element."""
 
     @classmethod
     def iter_subtree(cls, phrase: Phrase) -> Iterable[Phrase]:
@@ -49,3 +80,66 @@ class SemanticElement(Semantic):
     def iter_suptree(cls, phrase: Phrase) -> Iterable[Phrase]:
         """Iterate over the proper supertree of phrase."""
         yield from islice(phrase.suptree, 1, None)
+
+    def to_str(self, *, color: bool = False, **kwds: Any) -> str:
+        """Represent as string.
+
+        Arguments are passed to :meth:`segram.nlp.TokenABC.to_str`.
+        """
+        return self.stringify_tokens(
+            self.prepare_token_roles(self.iter_token_roles()),
+            color=color, **kwds
+        )
+
+    def is_comparable_with(self, other: Any) -> bool:
+        return isinstance(other, SemanticElement)
+
+    def iter_token_roles(self, **kwds: Any) -> Iterable[tuple[TokenABC, Role | None]]:
+        """Iterate over token-role pairs.
+
+        ``**kwds`` are passed to :meth:`segram.grammar.Phrase.iter_token_roles`.
+        """
+        yield from self.base.iter_token_roles(**kwds)
+
+    def prepare_token_roles(
+        self,
+        *tokroles: Iterable[tuple[TokenABC, Role | None]],
+        role: Optional[Role] = None
+    ) -> tuple[tuple[TokenABC, Role | None]]:
+        """Prepare and sort token-role pairs before printing.
+
+        Parameters
+        ----------
+        *tokroles
+            Iterables with token-role pairs.
+        role
+            Optional role to superimpose on all tokens.
+        """
+        seen = set()
+        show = []
+        for tr in tokroles:
+            for t, r in tr:
+                if t in seen:
+                    continue
+                seen.add(t)
+                show.append((t, r))
+        tr = sorted(show, key=lambda x: x[0])
+        if role is None:
+            yield from tr
+        else:
+            for t, _ in tr:
+                yield t, role
+
+    def stringify_tokens(
+        self,
+        tokroles: Iterable[tuple[TokenABC, Role | None]],
+        **kwds: Any
+    ) -> str:
+        """Stringify tokens from token-role pairs.
+
+        tokroles
+            Iterable with token-role pairs.
+        **kwds
+            Passed to :meth:`nlp.tokens.TokenABC.to_str`.
+        """
+        return " ".join(t.to_str(role=r, **kwds) for t, r in tokroles)
