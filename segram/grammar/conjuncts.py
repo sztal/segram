@@ -106,7 +106,7 @@ class Conjuncts(Group):
     def to_str(self, *, color: bool = False, **kwds: Any) -> str:
         coords = \
             "|".join(
-                self.as_str(c, color=color, **kwds)
+                self.stringify(c, color=color, **kwds)
                 for c in self.cconjs if c
             ).strip()
         if coords:

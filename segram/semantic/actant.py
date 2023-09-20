@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Self, Any, Iterable, ClassVar
+from typing import Any, Iterable, ClassVar
 from .abc import SemanticElement, FrameABC
 from ..grammar import Phrase, NounPhrase, Conjuncts
 from ..utils.types import ChainGroup, Group
@@ -30,14 +30,11 @@ class Actant(SemanticElement):
         super().__init__(*args, **kwds)
         self.relcl = relcl
 
-    # Constructors ------------------------------------------------------------
+    # Methods -----------------------------------------------------------------
 
     @classmethod
-    def from_phrase(cls, phrase: Phrase, frame: FrameABC) -> Iterable[Self]:
-        kwds = dict(frame=frame, relcl=Conjuncts.get_chain(phrase.relcl))
-        yield cls(phrase, **kwds)
-
-    # Methods -----------------------------------------------------------------
+    def iter_phrase_data(cls, phrase: Phrase) -> Iterable[dict[str, Any]]:
+        yield { "relcl": Conjuncts.get_chain(phrase.relcl) }
 
     @classmethod
     def based_on(cls, phrase: Phrase) -> bool:

@@ -1,37 +1,35 @@
 from __future__ import annotations
 from typing import ClassVar, Any, Iterable
 from .abc import SemanticElement, FrameABC
-from ..grammar import Phrase, PrepPhrase, Conjuncts
+from ..grammar import Phrase, DescPhrase, Conjuncts
 from ..utils.types import ChainGroup, Group
-from ..nlp.tokens import TokenABC
-from ..symbols import Role
 
 
-class Preposition(SemanticElement):
+class Description(SemanticElement):
     """Semantic preposition class.
 
     Attributes
     ----------
     """
-    alias: ClassVar[str] = "Prep"
-    __parts__ = ("pobj",)
+    alias: ClassVar[str] = "Desc"
+    __parts__ = ("cdesc",)
     __slots__ = (*__parts__,)
 
     def __init__(
         self,
         *args: Any,
-        pobj: ChainGroup[Group[SemanticElement]] = (),
+        cdesc: ChainGroup[Group[SemanticElement]] = (),
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)
-        self.pobj = pobj
+        self.cdesc = cdesc
 
     # Methods -----------------------------------------------------------------
 
     @classmethod
     def iter_phrase_data(cls, phrase: Phrase) -> Iterable[dict[str, Any]]:
-        yield { "pobj": Conjuncts.get_chain(phrase.pobj) }
+        yield { "cdesc": Conjuncts.get_chain(phrase.cdesc) }
 
     @classmethod
     def based_on(cls, phrase: Phrase) -> bool:
-        return isinstance(phrase, PrepPhrase)
+        return isinstance(phrase, DescPhrase)

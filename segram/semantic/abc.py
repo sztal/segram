@@ -130,6 +130,18 @@ class SemanticElement(Semantic):
 
     @classmethod
     @abstractmethod
+    def iter_phrase_data(cls, phrase: Phrase) -> Iterable[dict[str, Any]]:
+        """Get phrase data needed for initializing element.
+
+        Yields
+        ------
+        data
+            One data dictionary per element originiating from ``phrase``.
+        """
+
+    # Methods -----------------------------------------------------------------
+
+    @classmethod
     def from_phrase(cls, phrase: Phrase, frame: FrameABC) -> Iterable[Self] | None:
         """Construct from phrase.
 
@@ -137,8 +149,8 @@ class SemanticElement(Semantic):
         appropriate phrase. Nothing is returned if the phrase
         is not a basis of any semantic elements of the given type.
         """
-
-    # Methods -----------------------------------------------------------------
+        for data in cls.iter_phrase_data(phrase):
+            yield cls(phrase, frame, **data)
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, SemanticElement)

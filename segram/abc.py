@@ -100,7 +100,7 @@ class SegramABC(ABC):
         return not any(iter_diffs(obj, other, strict=strict))
 
     @classmethod
-    def as_str(cls, obj: Any, **kwds: Any) -> str:
+    def stringify(cls, obj: Any, **kwds: Any) -> str:
         """Convert ``obj`` to string.
 
         If ``obj`` exposes ``to_str()`` then it is used
