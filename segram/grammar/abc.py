@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Optional, Iterable, MutableMapping, Self
 from typing import ClassVar, Final
 from abc import abstractmethod
+import re
 from functools import total_ordering
 from catalogue import Registry
 from ..nlp import DocABC, SpanABC, TokenABC
@@ -81,19 +82,7 @@ class Grammar(SegramWithDocABC):
                 raise TypeError(f"'{alias}' already defined by '{tpath}'")
             cls.types[alias] = cls
 
-    # Properties --------------------------------------------------------------
-
-    @property
-    def text(self) -> str:
-        """Raw text of element."""
-        return self.to_str()
-
     # Methods -----------------------------------------------------------------
-
-    @abstractmethod
-    def to_str(self, **kwds: Any) -> str:
-        """Represent as a string."""
-        raise NotImplementedError
 
     @abstractmethod
     def to_data(self) -> dict[str, Any]:
@@ -149,6 +138,8 @@ class GrammarElement(Grammar):
         """Check whether ``self`` contains ``other``."""
         raise NotImplementedError
 
+    # Properties --------------------------------------------------------------
+
     @property
     @abstractmethod
     def idx(self) -> int | tuple[int, ...]:
@@ -161,13 +152,56 @@ class GrammarElement(Grammar):
         """NLP sentence containing the element."""
         raise NotImplementedError
 
-    # Properties --------------------------------------------------------------
-
     @property
     def hashdata(self) -> tuple[Any, ...]:
         """Data tuple used for hashing."""
         return (*super().hashdata, self.idx)
 
+    @property
+    def text(self) -> str:
+        """Raw text of element."""
+        return self.to_str()
+
+    # Methods -----------------------------------------------------------------
+
+    @abstractmethod
+    def to_str(self, **kwds: Any) -> str:
+        """Represent as a string."""
+        raise NotImplementedError
+
+    def match(
+        self,
+        s: Optional[str] = None,
+        *,
+        regex: bool = True,
+        ignore_case: bool = False,
+        flags: re.RegexFlag = re.NOFLAG
+    ) -> re.Pattern | None:
+        """Match element text against a regex pattern
+        using :func:`re.search` function.
+
+        Parameters
+        ----------
+        s
+           String used for matching.
+           No matching is done when ``None``.
+        regex
+            Should the string be interpreted as regular expresion.
+        ignore_case
+            Should case be ignored.
+        flags
+            Other regex flags has to be passed
+            explicitly as flag objects from :mod:`re`.
+        """
+        if s is None:
+            return True
+        if s and regex:
+            if ignore_case:
+                flags = flags | re.IGNORECASE if flags is not None else re.IGNORECASE
+            return bool(re.search(s, self.text, flags))
+        if ignore_case:
+            return self.text.lower() == s.lower()
+        return self.text == s
 
 class DocElement(GrammarElement):
     """Document element class."""

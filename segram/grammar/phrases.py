@@ -55,22 +55,17 @@ class Phrase(SentElement):
         return obj
 
     def __iter__(self) -> Iterator[Phrase]:
-        yield from self.iter_subtree()
+        yield from self.tokens
 
     def __len__(self) -> int:
-        return sum(1 for _ in self.iter_subtree())
+        return len(self.tokens)
 
     def __getitem__(self, idx: int | slice) -> Phrase | list[Phrase]:
-        end = idx.stop if isinstance(idx, slice) else idx+1
-        sub = []
-        for i, p in enumerate(self.iter_subtree()):
-            if not end or i < end:
-                sub.append(p)
-        return sub[idx]
+        return self.tokens[idx]
 
     def __contains__(self, other: Phrase | Component | TokenABC) -> bool:
         if self.is_comparable_with(other):
-            return any(other == p for p in self.subtree)
+            return any(other == p for p in self.iter_subtree(skip=1))
         if isinstance(other, Component):
             return any(p.head == other for p in self.iter_subtree())
         if isinstance(other, TokenABC):
@@ -253,12 +248,46 @@ class Phrase(SentElement):
 
     # Methods -----------------------------------------------------------------
 
+    def match(
+        self,
+        s: Optional[str] = None,
+        *,
+        dep: Optional[Dep | str] = None,
+        alias: Optional[str] = None,
+        **kwds: Any
+    ) -> bool:
+        """Match element text against a regex pattern
+        using :func:`re.search` function.
+
+        Parameters
+        ----------
+        s
+           String used for matching.
+           No matching is done when ``None``.
+        dep
+            Dependency tag to match (partial overlap is considered a match).
+            Can be provided as a string,
+            including alternatives such ``"xcomp|relcl"``.
+        alias
+            Phrase type alias to match.
+        **kwds
+            Passed to :meth:`segram.grammar.abc.GrammarElement.match`.
+        """
+        matched = super().match(s, **kwds)
+        if dep is not None:
+            if isinstance(dep, str):
+                dep = Dep.from_name(dep)
+            matched &= bool(dep & self.dep)
+        if alias is not None:
+            matched &= self.alias == alias
+        return matched
+
     def iter_subtree(self, *, skip: int = 0) -> Iterator[Phrase]:
         """Iterate over phrasal subtree and omit ``skip`` first items."""
         def _iter():
             yield self
             for child in self.children:
-                yield from child.subtree
+                yield from child.iter_subtree(skip=0)
         yield from islice(_iter(), skip, None)
 
     def iter_suptree(self, *, skip: int = 0) -> Iterator[Phrase]:
@@ -266,7 +295,7 @@ class Phrase(SentElement):
         def _iter():
             yield self
             for parent in self.parents:
-                yield from parent.suptree
+                yield from parent.iter_suptree(skip=0)
         yield from islice(_iter(), skip, None)
 
     def is_comparable_with(self, other: Any) -> bool:

@@ -26,11 +26,15 @@ class Symbol(Flag):
 
     @classmethod
     def from_name(cls, name: str) -> Symbol:
+        neg = False
+        if name.startswith("~"):
+            name = name[1:]
+            neg = True
         parts = name.split("|")
         sym =  cls(0)
         for part in parts:
             sym |= getattr(cls, part)
-        return sym
+        return ~sym if neg else sym
 
 
 class POS(Symbol):
