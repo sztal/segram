@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import Self, Any, Sequence, Callable
 from abc import abstractmethod
+import re
 from .abc import Semantic
-from ..grammar import Phrase, NounPhrase
+from ..grammar import Conjuncts, Phrase, NounPhrase, VerbPhrase
 from ..symbols import Dep
 from ..utils.types import Matcher
 
@@ -24,10 +25,7 @@ class Frame(Semantic, Sequence):
     """
     __slots__ = ("_story", "matcher", "_phrases")
 
-    def __init__(
-        self,
-        story: "Story"
-    ) -> None:
+    def __init__(self, story: "Story") -> None:
         self._story = story
         self.matcher = Matcher(self.is_match)
         self._phrases = ()
@@ -70,7 +68,10 @@ class Frame(Semantic, Sequence):
     def phrases(self) -> tuple[Phrase, ...]:
         if not self._phrases:
             self._phrases = \
-                tuple(p for p in self.story.phrases if self.match(p))
+                Conjuncts.get_chain(
+                    p for p in self.story.phrases
+                    if self.match(p)
+                )
         return self._phrases
 
     # Methods -----------------------------------------------------------------
@@ -93,6 +94,19 @@ class Frame(Semantic, Sequence):
     def copy(self, **kwds: Any) -> Self:
         return self.__class__(self.story, **kwds)
 
+    @classmethod
+    def subclass(cls, is_match: Callable[[Phrase], bool]) -> type[Frame]:
+        """Make subclass from a callable.
+
+        Callable is injected into a class as a staticmethod,
+        so it should not use the ``self`` parameter.
+        """
+        name = re.sub(r"\W", r"", is_match.__name__)
+        return type(f"{name}{id(is_match)}", (cls,), {
+            "__slots__": (),
+            "is_match": staticmethod(is_match)
+        })
+
 
 class Actants(Frame):
     """Semantic frame of actants."""
@@ -102,5 +116,17 @@ class Actants(Frame):
         match phrase:
             case NounPhrase(dep=dep):
                 return not dep & (Dep.nmod | Dep.desc | Dep.appos)
+            case _:
+                return False
+
+
+class Events(Frame):
+    """Semantic frame of events."""
+    __slots__ = ()
+
+    def is_match(self, phrase: Phrase) -> bool:
+        match phrase:
+            case VerbPhrase(dep=dep):
+                return not dep & Dep.xcomp
             case _:
                 return False

@@ -8,6 +8,10 @@ from .components import Component, Verb, Noun, Desc, Prep
 from .conjuncts import Conjuncts
 from ..nlp import TokenABC
 from ..symbols import Role, Dep
+from ..abc import labelled
+
+
+controlled = labelled("part")
 
 
 class Phrase(SentElement):
@@ -29,6 +33,7 @@ class Phrase(SentElement):
     # pylint: disable=too-many-public-methods
     __slots__ = ("head", "dep", "sconj", "_lead")
     alias: ClassVar[str] = "Phrase"
+    part_names: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
         self,
@@ -165,6 +170,7 @@ class Phrase(SentElement):
         return self if isinstance(self, VerbPhrase) else None
 
     @property
+    @controlled
     def subj(self) -> Sequence[Phrase]:
         """Subject phrases."""
         subjects = []
@@ -176,48 +182,56 @@ class Phrase(SentElement):
         return Conjuncts.get_chain(subjects)
 
     @property
+    @controlled
     def dobj(self) -> Sequence[Phrase]:
         """Direct object phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.dobj
         )
     @property
+    @controlled
     def iobj(self) -> Sequence[Phrase]:
         """Indirect object phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.iobj
         )
     @property
+    @controlled
     def desc(self) -> Sequence[Phrase]:
         """Description phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & (Dep.desc | Dep.misc)
         )
     @property
+    @controlled
     def cdesc(self) -> Sequence[Phrase]:
         """Clausal descriptions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.cdesc
         )
     @property
+    @controlled
     def adesc(self) -> Sequence[Phrase]:
         """Adjectival complement descriptions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.adesc
         )
     @property
+    @controlled
     def prep(self) -> Sequence[Phrase]:
         """Prepositions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.prep
         )
     @property
+    @controlled
     def pobj(self) -> Sequence[Phrase]:
         """Prepositional objects."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.pobj
         )
     @property
+    @controlled
     def subcl(self) -> Sequence[Phrase]:
         """Subclauses."""
         return Conjuncts.get_chain(
@@ -226,24 +240,28 @@ class Phrase(SentElement):
             or (isinstance(c, VerbPhrase) and (c.dep & Dep.acl))
         )
     @property
+    @controlled
     def relcl(self) -> Sequence[Phrase]:
         """Relative clausses."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.relcl
         )
     @property
+    @controlled
     def xcomp(self) -> Sequence[Phrase]:
         """Open clausal complements."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.xcomp
         )
     @property
+    @controlled
     def appos(self) -> Sequence[Phrase]:
         """Appositional modifiers."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.appos
         )
     @property
+    @controlled
     def nmod(self) -> Sequence[Phrase]:
         """Nominal modifiers."""
         return Conjuncts.get_chain(
@@ -254,7 +272,7 @@ class Phrase(SentElement):
 
     def match(
         self,
-        s: Optional[str] = None,
+        text: Optional[str] = None,
         *,
         dep: Optional[Dep | str] = None,
         alias: Optional[str] = None,
@@ -265,7 +283,7 @@ class Phrase(SentElement):
 
         Parameters
         ----------
-        s
+        text
            String used for matching.
            No matching is done when ``None``.
         dep
@@ -277,7 +295,7 @@ class Phrase(SentElement):
         **kwds
             Passed to :meth:`segram.grammar.abc.GrammarElement.match`.
         """
-        matched = super().match(s, **kwds)
+        matched = super().match(text, **kwds)
         if dep is not None:
             if isinstance(dep, str):
                 dep = Dep.from_name(dep)

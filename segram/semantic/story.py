@@ -1,8 +1,8 @@
 from __future__ import annotations
-from typing import Self, Any, Iterable, MutableMapping
+from typing import Self, Any, Iterable, MutableMapping, Callable
 from .abc import Semantic
-from .frames import Frame, Actants
-from ..grammar import Sent, Phrase
+from .frames import Frame, Actants, Events
+from ..grammar import Sent, Phrase, Conjuncts
 
 
 class Story(Semantic, MutableMapping):
@@ -19,15 +19,18 @@ class Story(Semantic, MutableMapping):
         self,
         phrases: Iterable[Phrase] = ()
     ) -> None:
-        self._phrases = tuple(phrases)
+        self._phrases = Conjuncts.get_chain(phrases)
         self._frames = {
-            "actants": Actants(self)
+            "actants": Actants(self),
+            "events": Events(self)
         }
 
     def __getitem__(self, key: str) -> Frame:
         return self._frames[key]
 
     def __setitem__(self, key: str, value: Frame) -> None:
+        if isinstance(value, Callable):
+            value = Frame.subclass(value)(self)
         self._frames[key] = value
 
     def __delitem__(self, key: str) -> None:
@@ -46,7 +49,7 @@ class Story(Semantic, MutableMapping):
         return self._phrases
     @phrases.setter
     def _(self, phrases: Iterable[Phrase]) -> None:
-        self._phrases = tuple(phrases)
+        self._phrases = Conjuncts.get_chain(phrases)
         for frame in self.frames:
             frame.clear()
 

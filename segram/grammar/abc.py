@@ -180,8 +180,10 @@ class GrammarElement(Grammar):
 
     def match(
         self,
-        s: Optional[str] = None,
+        text: Optional[str] = None,
         *,
+        head: bool = False,
+        lemma: bool = False,
         regex: bool = True,
         ignore_case: bool = False,
         flags: re.RegexFlag = re.NOFLAG
@@ -191,9 +193,13 @@ class GrammarElement(Grammar):
 
         Parameters
         ----------
-        s
+        text
            String used for matching.
            No matching is done when ``None``.
+        head
+            Use the head element (e.g. head component of a phrase).
+        lemma
+            Use lemmatized text.
         regex
             Should the string be interpreted as regular expresion.
         ignore_case
@@ -202,15 +208,19 @@ class GrammarElement(Grammar):
             Other regex flags has to be passed
             explicitly as flag objects from :mod:`re`.
         """
-        if s is None:
+        if text is None:
             return True
-        if s and regex:
+        obj = self
+        if head:
+            obj = obj.head  # pylint: disable=no-member
+        obj_text = obj.lemma if lemma else obj.text
+        if text and regex:
             if ignore_case:
                 flags = flags | re.IGNORECASE if flags is not None else re.IGNORECASE
-            return bool(re.search(s, self.text, flags))
+            return bool(re.search(text, obj_text, flags))
         if ignore_case:
-            return self.text.lower() == s.lower()
-        return self.text == s
+            return obj_text.lower() == text.lower()
+        return obj_text == text
 
 class DocElement(GrammarElement):
     """Document element class."""

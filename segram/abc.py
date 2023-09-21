@@ -1,9 +1,17 @@
 from __future__ import annotations
-from typing import Any, Optional, ClassVar, Type, Self
+from typing import Any, Optional, ClassVar, Type, Self, Callable
 from abc import ABC, abstractmethod
 from .utils.docstrings import inherit_docstring
 from .utils.diff import iter_diffs, IDiffType
 from .utils.meta import init_class_attrs, get_cname, get_ppath
+
+
+def labelled(label: str) -> Callable:
+    """Assign ``label`` as attribute ``attr`` to a function."""
+    def decorator(func: Callable) -> Callable:
+        setattr(func, "__group_label__", label)
+        return func
+    return decorator
 
 
 class SegramABC(ABC):
@@ -27,6 +35,13 @@ class SegramABC(ABC):
         }, check_slots=False)
         if len(cls.slot_names) != len(set(cls.slot_names)):
             raise TypeError(f"'__slots__' are not unique: {cls.slot_names}")
+        # Handle labelled methods
+        for name, attr in vars(cls).items():
+            target = attr.fget if isinstance(attr, property) else attr
+            if (label := getattr(target, "__group_label__", None)):
+                names_attr = f"{label}_names"
+                names = getattr(cls, names_attr, ())
+                setattr(cls, names_attr, (*names, name))
         inherit_docstring(cls)
 
     # Abstract methods --------------------------------------------------------
