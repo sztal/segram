@@ -43,6 +43,8 @@ class SemanticElement(Semantic):
         end: Optional[Phrase] = None
     ) -> None:
         self._story = story
+        if self.reverse_base and end is not None:
+            base, end = end, base
         self.base = base
         self.end = end
 
@@ -59,6 +61,7 @@ class SemanticElement(Semantic):
         return self.to_str(color=True)
 
     def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
         if (alias := getattr(cls, "alias", None)):
             cls.types[alias] = cls
 
@@ -83,14 +86,13 @@ class SemanticElement(Semantic):
     @classmethod
     def from_phrase(cls, story: "Story", phrase: Phrase) -> Iterable[Self]:
         """Construct from phrase."""
-        args = []
         if cls.matches(phrase):
             if (extend := getattr(cls, "extend", None)):
                 has_end = False
                 for sub in extend(phrase):
                     if (ends := getattr(cls, "ends", None)):
                         if ends(sub):
-                            args.append((phrase, sub))
+                            yield cls(story, phrase, sub)
                             has_end = True
                     else:
                         cn = cls.__name__
@@ -98,13 +100,9 @@ class SemanticElement(Semantic):
                             f"'{cn}' implements 'extend' but not 'ends'"
                         )
                 if not has_end:
-                    args.append((phrase, None))
+                    yield cls(story, phrase, None)
             else:
-                args.append((phrase, None))
-        for base, end in args:
-            if cls.reverse_base:
-                base, end = end, base
-            yield cls(story, base, end)
+                yield cls(story, phrase, None)
 
     # Methods -----------------------------------------------------------------
 

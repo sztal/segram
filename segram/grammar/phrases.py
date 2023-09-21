@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Optional, ClassVar, Iterator, Self
 from collections.abc import Sequence
+from itertools import islice
 from abc import abstractmethod
 from .abc import SentElement
 from .components import Component, Verb, Noun, Desc, Prep
@@ -54,15 +55,15 @@ class Phrase(SentElement):
         return obj
 
     def __iter__(self) -> Iterator[Phrase]:
-        yield from self.subtree
+        yield from self.iter_subtree()
 
     def __len__(self) -> int:
-        return sum(1 for _ in self.subtree)
+        return sum(1 for _ in self.iter_subtree())
 
     def __getitem__(self, idx: int | slice) -> Phrase | list[Phrase]:
         end = idx.stop if isinstance(idx, slice) else idx+1
         sub = []
-        for i, p in enumerate(self.subtree):
+        for i, p in enumerate(self.iter_subtree()):
             if not end or i < end:
                 sub.append(p)
         return sub[idx]
@@ -71,9 +72,9 @@ class Phrase(SentElement):
         if self.is_comparable_with(other):
             return any(other == p for p in self.subtree)
         if isinstance(other, Component):
-            return any(p.head == other for p in self.subtree)
+            return any(p.head == other for p in self.iter_subtree())
         if isinstance(other, TokenABC):
-            return any(other in p.head for p in self.subtree)
+            return any(other in p.head for p in self.iter_subtree())
         return super().__contains__(other)
 
     # Abstract methods --------------------------------------------------------
@@ -128,18 +129,14 @@ class Phrase(SentElement):
         return self.sent.graph.rev[self]
 
     @property
-    def subtree(self) -> Iterator[Phrase]:
-        """Phrasal subtree."""
-        yield self
-        for child in self.children:
-            yield from child.subtree
+    def subtree(self) -> tuple[Phrase]:
+        """Phrasal proper subtree."""
+        return tuple(self.iter_subtree(skip=1))
 
     @property
-    def suptree(self) -> Iterator[Phrase]:
-        """Phrasal supertree."""
-        yield self
-        for parent in self.parents:
-            yield from parent.suptree
+    def suptree(self) -> tuple[Phrase]:
+        """Phrasal proper supertree."""
+        return tuple(self.iter_suptree(skip=1))
 
     @property
     def depth(self) -> int:
@@ -255,6 +252,22 @@ class Phrase(SentElement):
         )
 
     # Methods -----------------------------------------------------------------
+
+    def iter_subtree(self, *, skip: int = 0) -> Iterator[Phrase]:
+        """Iterate over phrasal subtree and omit ``skip`` first items."""
+        def _iter():
+            yield self
+            for child in self.children:
+                yield from child.subtree
+        yield from islice(_iter(), skip, None)
+
+    def iter_suptree(self, *, skip: int = 0) -> Iterator[Phrase]:
+        """Iterate over phrasal supertree and omit ``skip`` first items."""
+        def _iter():
+            yield self
+            for parent in self.parents:
+                yield from parent.suptree
+        yield from islice(_iter(), skip, None)
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Phrase)
