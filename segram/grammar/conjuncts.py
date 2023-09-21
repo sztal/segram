@@ -1,6 +1,7 @@
 from __future__ import annotations
-from typing import Any, Optional, Iterator, Self
+from typing import Any, Optional, Iterator, Self, Mapping
 from collections.abc import Iterable
+from itertools import groupby
 from ..nlp import TokenABC
 from ..utils.types import Group, ChainGroup
 
@@ -119,11 +120,88 @@ class Conjuncts(Group):
     @classmethod
     def find_groups(cls, phrases: Iterable["Phrase"]) -> Iterator[Conjuncts]:
         """Find conjuncts groups in ``phrases``."""
+        groups = {}
         for phrase in phrases:
-            if phrase.is_lead:
-                yield phrase.group
+            groups.setdefault(phrase.group.lead, []).append(phrase)
+        for lead, group in groups.items():
+            if len(group) <= 1:
+                yield group
+            else:
+                lead = group.lead
+                yield lead.sent.conjs[lead].copy(members=group)
 
     @classmethod
     def get_chain(cls, phrases: Iterable["Phrase"]) -> ChainGroup:
         """Get chain of conjuncts groups in ``phrases``."""
-        return ChainGroup(cls.find_groups(phrases))
+        return PhraseGroup(cls.find_groups(phrases))
+
+
+class PhraseGroup(ChainGroup):
+    """Phrase group class.
+
+    This is a chain of groups of conjoined phrases
+    enhanced with several methods for grouping and
+    summarizing phrases.
+    """
+    __slots__ = ()
+
+    @staticmethod
+    def getkey(obj: Any, keypath: str) -> Any:
+        """Get value by attr/key dot-separated path."""
+        for key in keypath.split("."):
+            if isinstance(obj, Mapping):
+                obj = obj[key]
+            else:
+                obj = getattr(obj, key)
+        return obj
+
+    def group_by_doc(self) -> dict[str, PhraseGroup]:
+        """Group by documents."""
+        data = {}
+        for group in self.members:
+            data.setdefault(id(group.lead.doc), []).append(group)
+        final = {}
+        for v in data.values():
+            final[v[0].lead.doc.id] = self.__class__(sorted(v))
+        return final
+
+    def get_conjuncts(self) -> Self:
+        """Get non-trivial conjunct groups."""
+        return self.__class__([
+            m for m in self.members if len(m) > 1
+        ])
+
+    def group_by_head(
+        self,
+        *parts,
+        keypath: str = "head.tok.ref.lemma"
+    ) -> dict[str, PhraseGroup]:
+        """Group by phrase head values.
+
+        Parameters
+        ----------
+        *parts
+            Names of the parts (e.g. ``"subj"`` or ``"xcomp"``)
+            to use. Use all parts if ``None``.
+        keypath
+            Dotted key-attribute selector path
+            for extracting grouping keys' values from phrases.
+        """
+        data = {}
+        for phrase in self:
+            key = self.getkey(phrase, keypath)
+            data \
+                .setdefault(key, {}) \
+                .setdefault("phrases", []).append(phrase)
+            rec = data[key]
+            for name in phrase.part_names:
+                if parts and name not in parts:
+                    continue
+                for part in getattr(phrase, name, ()):
+                    rec.setdefault(name, []).append(part)
+        for key in data:
+            data[key] = {
+                k: Conjuncts.get_chain(v)
+                for k, v in data[key].items() if v
+            }
+        return data

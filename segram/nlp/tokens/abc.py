@@ -151,7 +151,7 @@ class TokenABC(NLPTokenABC):
     @property
     @abstractmethod
     def refs(self) -> Optional[tuple[TokenABC, ...]]:
-        """Coreference token."""
+        """Coreference tokens."""
 
     @property
     @abstractmethod
@@ -163,6 +163,13 @@ class TokenABC(NLPTokenABC):
     @property
     def lang(self) -> str:
         return self.doc.lang
+
+    @property
+    def ref(self) -> TokenABC:
+        """Return main coreferred token or self."""
+        if (refs := self.refs):
+            return refs[0]
+        return self
 
     # Methods -----------------------------------------------------------------
 
