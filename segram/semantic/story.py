@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Self, Any, Iterable, MutableMapping
 from .abc import Semantic
 from .frames import Frame, Actants
@@ -53,10 +54,6 @@ class Story(Semantic, MutableMapping):
     def frames(self) -> tuple[Frame, ...]:
         return tuple(self._frames.values())
 
-    @property
-    def hashdata(self) -> tuple[Any, ...]:
-        return (*super().hashdata, id(self))
-
     # Constructors ------------------------------------------------------------
 
     @classmethod
@@ -69,3 +66,9 @@ class Story(Semantic, MutableMapping):
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Story)
+
+    def copy(self, **kwds: Any) -> Self:
+        # pylint: disable=protected-access
+        new = self.__class__(phrases=self.phrases, **kwds)
+        new._frames = self._frames.copy()
+        return new

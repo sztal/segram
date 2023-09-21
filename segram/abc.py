@@ -41,7 +41,7 @@ class SegramABC(ABC):
     @property
     def hashdata(self) -> tuple[Any, ...]:
         """Tuple with hashable objects used for calculating instance hash."""
-        raise NotImplementedError
+        raise NotImplementedError(f"'{self.cname()}' is not hashable")
 
     @property
     def data(self) -> dict[str, Any]:
