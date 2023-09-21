@@ -8,7 +8,7 @@ from typing import Any, Optional, Iterable, Iterator, ClassVar, Type, Self
 from .abc import SentElement
 from .conjuncts import Conjuncts
 from ..nlp.tokens import TokenABC
-from ..symbols import POS, Dep, Role, Tense, Modal, Mood, Symbol
+from ..symbols import POS, Role, Tense, Modal, Mood, Symbol
 
 
 class Component(SentElement):

@@ -148,6 +148,11 @@ class GrammarElement(Grammar):
 
     @property
     @abstractmethod
+    def tokens(self) -> tuple[TokenABC, ...]:
+        """Tokens of the element."""
+
+    @property
+    @abstractmethod
     def sent(self) -> SpanABC:
         """NLP sentence containing the element."""
         raise NotImplementedError
@@ -161,6 +166,10 @@ class GrammarElement(Grammar):
     def text(self) -> str:
         """Raw text of element."""
         return self.to_str()
+
+    @property
+    def lemma(self) -> str:
+        return "".join(t.lemma+t.whitespace for t in self.tokens)
 
     # Methods -----------------------------------------------------------------
 
