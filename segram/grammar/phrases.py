@@ -107,6 +107,10 @@ class Phrase(SentElement):
         return tuple(t for t, _ in self.iter_token_roles())
 
     @property
+    def neg(self) -> TokenABC | None:
+        return self.head.neg
+
+    @property
     def data(self) -> dict[str, Any]:
         return {
             **super().data,

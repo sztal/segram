@@ -1,8 +1,10 @@
 from __future__ import annotations
-from typing import Any, Optional, Callable, Sequence
+from typing import Self, Any, Sequence, Callable
+from abc import abstractmethod
 from .abc import Semantic
 from ..grammar import Phrase, NounPhrase
 from ..symbols import Dep
+from ..utils.types import Matcher
 
 
 class Frame(Semantic, Sequence):
@@ -13,8 +15,6 @@ class Frame(Semantic, Sequence):
 
     Attributes
     ----------
-    name
-        Name of the frame.
     story
         A Story the frame belongs to.
     matcher
@@ -26,11 +26,10 @@ class Frame(Semantic, Sequence):
 
     def __init__(
         self,
-        story: "Story",
-        matcher: Optional[Callable[[Any], bool]] = None
+        story: "Story"
     ) -> None:
         self._story = story
-        self.matcher = matcher
+        self.matcher = Matcher(self.is_match)
         self._phrases = ()
 
     def __len__(self) -> int:
@@ -40,16 +39,22 @@ class Frame(Semantic, Sequence):
         return self.phrases[idx]
 
     def __and__(self, other: Frame) -> Frame:
-        if isinstance(other, Frame):
-            return Frame(self.story, lambda p: self.match(p) and other.match(p))
+        if isinstance(other, Frame | Callable):
+            new = self.copy()
+            func = other.matcher if isinstance(other, Frame) else other
+            new.matcher &= func
+            return new
         return NotImplemented
 
     def __rand__(self, other: Frame) -> Frame:
         return self & other
 
     def __or__(self, other: Frame) -> Frame:
-        if isinstance(other, Frame):
-            return Frame(self.story, lambda p: self.match(p) or other.match(p))
+        if isinstance(other, Frame | Callable):
+            new = self.copy()
+            func = other.matcher if isinstance(other, Frame) else other
+            new.matcher |= func
+            return new
         return NotImplemented
 
     def __ror__(self, other: Frame) -> Frame:
@@ -70,25 +75,31 @@ class Frame(Semantic, Sequence):
 
     # Methods -----------------------------------------------------------------
 
+    @abstractmethod
+    def is_match(self, phrase: Phrase) -> bool:
+        """Does ``phrase`` match the criteria of the frame."""
+
+    def is_comparable_with(self, other: Any) -> bool:
+        return isinstance(other, Frame)
+
     def match(self, phrase: Phrase) -> bool:
         """Match phrase against the selection criteria."""
-        if self.matcher is not None:
-            return self.matcher(phrase)
-        cn = self.__class__.__name__
-        raise NotImplementedError(f"'{cn}' does not implement a default matching function")
+        return self.matcher(phrase)
 
     def clear(self) -> None:
         """Clear phrase sequence."""
         self._phrases = ()
 
+    def copy(self, **kwds: Any) -> Self:
+        return self.__class__(self.story, **kwds)
 
-class Actants(Matcher):
+
+class Actants(Frame):
     """Semantic frame of actants."""
+    __slots__ = ()
 
-    @staticmethod
-    def match(obj: Phrase) -> bool:
-        """Check if phrase is an actant."""
-        match obj:
+    def is_match(self, phrase: Phrase) -> bool:
+        match phrase:
             case NounPhrase(dep=dep):
                 return not dep & (Dep.nmod | Dep.desc | Dep.appos)
             case _:

@@ -1,36 +1,57 @@
-from typing import Any, Optional, Self, Iterable, Mapping, Sequence, TypedDict, Callable
-from .abc import Semantic, SemanticElement
+from typing import Self, Any, Iterable, MutableMapping
+from .abc import Semantic
+from .frames import Frame, Actants
 from ..grammar import Sent, Phrase
 
 
-class Story(Semantic):
+class Story(Semantic, MutableMapping):
     """Semantic story class.
 
     Attributes
     ----------
     phrases
-        List of phrases the story operates on.
-    emap
-        Map from phrases to semantic elements.
-    ctx
-        Context dictionary for grouping phrases.
+        Tuple of phrases the story operates on.
     """
-    __slots__ = ("phrases", "emap", "ctx")
-
-    class SelectorDict(TypedDict):
-        elements: Optional[Sequence[str]]
-        matcher: Optional[Callable[[SemanticElement], bool]]
-        context: Optional[str]
+    __slots__ = ("_phrases", "_frames")
 
     def __init__(
         self,
         phrases: Iterable[Phrase] = ()
     ) -> None:
-        self.phrases = list(phrases)
-        self.emap = {}
-        self.ctx = {}
+        self._phrases = tuple(phrases)
+        self._frames = {
+            "actants": Actants(self)
+        }
+
+    def __getitem__(self, key: str) -> Frame:
+        return self._frames[key]
+
+    def __setitem__(self, key: str, value: Frame) -> None:
+        self._frames[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._frames[key]
+
+    def __iter__(self) -> Iterable[str]:
+        yield from self._frames
+
+    def __len__(self) -> int:
+        return len(self._frames)
 
     # Properties --------------------------------------------------------------
+
+    @property
+    def phrases(self) -> tuple[Phrase, ...]:
+        return self._phrases
+    @phrases.setter
+    def _(self, phrases: Iterable[Phrase]) -> None:
+        self._phrases = tuple(phrases)
+        for frame in self.frames:
+            frame.clear()
+
+    @property
+    def frames(self) -> tuple[Frame, ...]:
+        return tuple(self._frames.values())
 
     @property
     def hashdata(self) -> tuple[Any, ...]:
@@ -46,21 +67,5 @@ class Story(Semantic):
 
     # Methods -----------------------------------------------------------------
 
-    def copy(self, **kwds: Any) -> Self:
-        return self.__class__(**{ **self.data, **kwds })
-
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Story)
-
-    def select(self, *elements, spec: Mapping[str, SelectorDict]) -> Self:
-        """Make new story with selected phrases
-        grouped into different contexts.
-
-        Parameters
-        ----------
-        *elements
-            Names of element types to consider.
-        spec
-            Selection specification with keys providing
-            names of contexts to create.
-        """

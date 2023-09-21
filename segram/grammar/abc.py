@@ -169,7 +169,7 @@ class GrammarElement(Grammar):
 
     @property
     def lemma(self) -> str:
-        return "".join(t.lemma+t.whitespace for t in self.tokens)
+        return "".join(t.lemma+t.whitespace for t in self.tokens).strip()
 
     # Methods -----------------------------------------------------------------
 
