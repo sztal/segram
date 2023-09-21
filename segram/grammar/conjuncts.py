@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Any, Optional, Iterator, Self, Mapping
 from collections.abc import Iterable
-from itertools import groupby
 from ..nlp import TokenABC
 from ..utils.types import Group, ChainGroup
 
@@ -124,10 +123,11 @@ class Conjuncts(Group):
         for phrase in phrases:
             groups.setdefault(phrase.group.lead, []).append(phrase)
         for lead, group in groups.items():
-            if len(group) <= 1:
+            if not group:
+                continue
+            if len(group) == 1:
                 yield group
             else:
-                lead = group.lead
                 yield lead.sent.conjs[lead].copy(members=group)
 
     @classmethod
@@ -140,8 +140,8 @@ class PhraseGroup(ChainGroup):
     """Phrase group class.
 
     This is a chain of groups of conjoined phrases
-    enhanced with several methods for grouping and
-    summarizing phrases.
+    enhanced with several methods for grouping, summarizing
+    and aggregating information from phrases.
     """
     __slots__ = ()
 
@@ -174,34 +174,57 @@ class PhraseGroup(ChainGroup):
     def group_by_head(
         self,
         *parts,
-        keypath: str = "head.tok.ref.lemma"
+        lemmatize: bool = True,
+        coref: bool = True,
+        pos: bool = True,
+        ent: bool = True,
+        lexeme: bool = True
     ) -> dict[str, PhraseGroup]:
-        """Group by phrase head values.
+        """Group by phrases by head tokens.
 
         Parameters
         ----------
         *parts
             Names of the parts (e.g. ``"subj"`` or ``"xcomp"``)
             to use. Use all parts if ``None``.
-        keypath
-            Dotted key-attribute selector path
-            for extracting grouping keys' values from phrases.
+        lemmatize
+            Lemmatize token texts used as keys.
+        coref
+            Resolve coreferences (to the leading ref)
+            for use as keys.
+        pos
+            Add POS tags to keys.
+        ent
+            Add entity types to keys.
+        lexeme
+            Add ``"lexeme"`` field storing
+            lexeme objects corresponding to tokens.
         """
+        # pylint: disable=too-many-locals
         data = {}
         for phrase in self:
-            key = self.getkey(phrase, keypath)
+            tok = phrase.head.tok
+            if coref:
+                tok = tok.ref
+            key = tok.lemma if lemmatize else tok.text
+            if pos or ent:
+                key = (key,)
+                if pos:
+                    key = (*key, tok.pos)
+                if ent:
+                    key = (*key, tok.ent_type)
             data \
                 .setdefault(key, {}) \
                 .setdefault("phrases", []).append(phrase)
             rec = data[key]
+            if lexeme and (lkey := "lexeme") not in rec \
+            and (vocab := getattr(tok, "vocab", None)):
+                rec[lkey] = vocab[key[0] if isinstance(key, tuple) else key]
             for name in phrase.part_names:
                 if parts and name not in parts:
                     continue
                 for part in getattr(phrase, name, ()):
                     rec.setdefault(name, []).append(part)
         for key in data:
-            data[key] = {
-                k: Conjuncts.get_chain(v)
-                for k, v in data[key].items() if v
-            }
+            data[key] = { k: v for k, v in data[key].items() if v }
         return data

@@ -1,7 +1,8 @@
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,no-name-in-module
 from __future__ import annotations
 from typing import Any, Iterable
 from spacy.tokens import Token, MorphAnalysis
+from spacy.vocab import Vocab
 from .abc import SpacyNLPTokenABC
 from ...tokens import TokenABC
 from ...tokens import DocABC, SpanABC
@@ -29,6 +30,10 @@ class SpacyTokenABC(SpacyNLPTokenABC, TokenABC):
     @property
     def text_with_ws(self) -> str:
         return self.tok.text_with_ws
+
+    @property
+    def vocab(self) -> Vocab:
+        return self.tok.vocab
 
     @property
     def pos(self) -> POS:

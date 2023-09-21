@@ -23,12 +23,11 @@ class Frame(Semantic, Sequence):
     phrases
         Phrases matching the criteria.
     """
-    __slots__ = ("_story", "matcher", "_phrases")
+    __slots__ = ("_story", "matcher")
 
     def __init__(self, story: "Story") -> None:
         self._story = story
         self.matcher = Matcher(self.is_match)
-        self._phrases = ()
 
     def __len__(self) -> int:
         return len(self.phrases)
@@ -66,13 +65,10 @@ class Frame(Semantic, Sequence):
 
     @property
     def phrases(self) -> tuple[Phrase, ...]:
-        if not self._phrases:
-            self._phrases = \
-                Conjuncts.get_chain(
-                    p for p in self.story.phrases
-                    if self.match(p)
-                )
-        return self._phrases
+        return Conjuncts.get_chain(
+            p for p in self.story.phrases
+            if self.match(p)
+        )
 
     # Methods -----------------------------------------------------------------
 
@@ -86,10 +82,6 @@ class Frame(Semantic, Sequence):
     def match(self, phrase: Phrase) -> bool:
         """Match phrase against the selection criteria."""
         return self.matcher(phrase)
-
-    def clear(self) -> None:
-        """Clear phrase sequence."""
-        self._phrases = ()
 
     def copy(self, **kwds: Any) -> Self:
         return self.__class__(self.story, **kwds)
