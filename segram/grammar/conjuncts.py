@@ -144,6 +144,13 @@ class PhraseGroup(ChainGroup):
     """
     __slots__ = ()
 
+    def __init__(self, members: Iterable[Group] = ()) -> None:
+        members = tuple(
+            Conjuncts(m) if not isinstance(m, Group) else m
+            for m in members
+        )
+        super().__init__(members)
+
     def match(
         self,
         *args: Any,
