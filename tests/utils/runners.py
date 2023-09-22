@@ -5,10 +5,10 @@ import re
 import ipdb
 import pytest
 from IPython import embed
-from spacy.tokens import Doc
+from spacy.tokens import Doc as SpacyDoc
 from spacy.language import Language
 from segram import settings
-from segram.nlp.abc import Doc
+from segram.nlp.tokens import Doc
 from segram.utils.resources import JSONResource
 from segram.utils.versioning import is_correct_version
 from segram.utils.meta import get_cname
@@ -226,8 +226,9 @@ class PyTestRunner:
 
 class SpacyTestRunner(PyTestRunner):
     """Test runner for :mod:`spacy`."""
+
     @staticmethod
-    def callback(doc: Doc) -> Doc:
+    def callback(doc: SpacyDoc) -> Doc:
         return getattr(doc._, settings.spacy_alias)
 
     def validate_metadata(self, nlp: Language, tests: TestSet) -> None:

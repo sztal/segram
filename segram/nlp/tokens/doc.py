@@ -4,7 +4,7 @@ from spacy.tokens import Doc as SpacyDoc, Token as SpacyToken
 from .abc import NLP
 from .token import Token
 from .span import Span
-from ... import settings, __title__
+from ... import settings
 from ...utils.registries import grammars
 from ...utils.diff import iter_diffs, equal, IDiffType
 
@@ -103,7 +103,7 @@ class Doc(NLP):
         without any language model data.
         """
         user_data = self.tok.user_data.copy()
-        user_data[("._.", f"{__title__}_cache", None, None)].clear()
+        user_data[("._.", f"{settings.spacy_alias}_cache", None, None)].clear()
         data = {
             "vocab": self.vocab,
             "words": [ t.text for t in self ],
@@ -122,7 +122,7 @@ class Doc(NLP):
     @classmethod
     def from_data(cls, data: dict[str, Any]) -> Self:
         """Construct from data dictionary produced by :meth:`to_data`."""
-        return getattr(SpacyDoc(**data)._, __title__)
+        return getattr(SpacyDoc(**data)._, settings.spacy_alias)
 
     def iter_grammar(self, **kwds: Any) -> Iterable["Sent"]:
         """Iterate over grammar sentence objects.
@@ -145,7 +145,7 @@ class Doc(NLP):
         return self.sns(self.tok.copy())
 
     def get_grammar(self):
-        key = getattr(self._, f"{settings.spacy_alias}_meta")[f"{__title__}_grammar"]
+        key = getattr(self._, f"{settings.spacy_alias}_meta")[f"{settings.spacy_alias}_grammar"]
         return grammars.get(key)
 
 

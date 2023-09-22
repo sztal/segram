@@ -1,5 +1,5 @@
 import pytest
-from .....utils.runners import SpacyTestRunner
+from ....utils.runners import SpacyTestRunner
 
 
 class TestRulebasedEnglishGrammar(

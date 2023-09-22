@@ -6,13 +6,12 @@ from spacy.vocab import Vocab
 from spacy.vectors import Vectors
 from spacy.language import Language
 from .tokens import Doc
-from .. import __title__
+from .. import settings
 
 
 class TokenDistributions(NamedTuple):
     text: Counter
     lemma: Counter
-
 
 
 class Corpus(Sequence):
@@ -80,7 +79,7 @@ class Corpus(Sequence):
     def add_doc(self, doc: Doc) -> None:
         """Add document to the corpus."""
         if isinstance(doc, SpacyDoc):
-            doc = getattr(doc._, __title__)
+            doc = getattr(doc._, settings.spacy_alias)
         if doc not in self:
             self._dmap[hash(doc)] = doc
             self.dist.text.update(t.coref.text for t in doc)
@@ -116,7 +115,7 @@ class Corpus(Sequence):
         obj = cls(nlp.vocab, **kwds)
         pipe_kws = pipe_kws or {}
         obj.add_docs(
-            getattr(d._, __title__)
+            getattr(d._, settings.spacy_alias)
             for d in nlp.pipe(texts, **pipe_kws)
         )
         return obj

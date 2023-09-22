@@ -7,7 +7,6 @@ printing
     implemented as :class:`~segram.colors.Printer` instances.
 """
 from typing import Optional
-from . import __title__
 from .utils.settings import Settings
 from .utils.colors import printer_settings
 

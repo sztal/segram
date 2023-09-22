@@ -89,7 +89,7 @@ class Segram(Pipe):
             "name":                  self.name,
             __title__+"_version":    __version__,
             __title__+"_grammar":    self.grammar,
-            __title__+"_alias":      alias,
+            "spacy_alias":           alias,
             "spacy_version":         spacy.__version__,
             "lang":                  self.nlp.meta["lang"],
             "model":                 self.nlp.meta["name"],
@@ -171,8 +171,8 @@ class Segram(Pipe):
             Passed to :meth:`~spacy.language.Language.add_pipe`.
         """
         components = tuple(
-            f"{__title__}_{c}" for c in components
-            if not c.startswith(__title__+"_")
+            f"{settings.spacy_alias}_{c}" for c in components
+            if not c.startswith(settings.spacy_alias+"_")
         )
         pipes = [ self.normalize_pipe_name(pipe) for pipe in components ]
         for pipe in pipes:
@@ -184,7 +184,7 @@ class Segram(Pipe):
         """Normalize pipeline component name."""
         if "." in pipe:
             _, pipe = pipe.split(".")
-        prefix = __title__+"_"
+        prefix = settings.spacy_alias+"_"
         if not pipe.startswith(prefix):
             pipe = prefix + pipe
         return pipe

@@ -1,11 +1,11 @@
 import pytest
-from .....utils.runners import SpacyTestRunner
+from ....utils.runners import SpacyTestRunner
 
 
 class TestRulebasedEnglishGrammar(
     SpacyTestRunner,
     lang=(lang := "en"),
-    resource=(resource := "en-core-questions.json")
+    resource=(resource := "en-core-complex.json")
 ):
     @pytest.mark.parametrize(
         "key", SpacyTestRunner.casekeys(lang, resource),
