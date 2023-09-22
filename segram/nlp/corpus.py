@@ -1,7 +1,7 @@
 # pylint: disable=no-name-in-module
 from typing import Any, Optional, NamedTuple, Sequence, Iterable, Self
 from collections import Counter
-from spacy.tokens import Doc
+from spacy.tokens import Doc as SpacyDoc
 from spacy.vocab import Vocab
 from spacy.vectors import Vectors
 from spacy.language import Language
@@ -79,6 +79,8 @@ class Corpus(Sequence):
 
     def add_doc(self, doc: Doc) -> None:
         """Add document to the corpus."""
+        if isinstance(doc, SpacyDoc):
+            doc = getattr(doc._, __title__)
         if doc not in self:
             self._dmap[hash(doc)] = doc
             self.dist.text.update(t.coref.text for t in doc)
