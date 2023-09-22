@@ -49,7 +49,7 @@ class Doc(NLP):
     @property
     def id(self) -> int:
         """Hash id of the document tokenization."""
-        return hash(t.attrs for t in self)
+        return hash(tuple(k, tuple(v)) for k, v in self.data.items())
 
     @property
     def noun_chunks(self) -> Iterable[Span]:
@@ -118,6 +118,11 @@ class Doc(NLP):
             "ents": [ f"{t.ent_tag}" for t in self ]
         }
         return data
+
+    @classmethod
+    def from_data(cls, data: dict[str, Any]) -> Self:
+        """Construct from data dictionary produced by :meth:`to_data`."""
+        return getattr(SpacyDoc(**data)._, __title__)
 
     def iter_grammar(self, **kwds: Any) -> Iterable["Sent"]:
         """Iterate over grammar sentence objects.

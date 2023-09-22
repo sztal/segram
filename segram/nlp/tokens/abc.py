@@ -1,7 +1,7 @@
 """Abstract base class for :mod:`segram`-enhanced :mod:`spacy` tokens."""
 # pylint: disable=no-name-in-module
 from __future__ import annotations
-from typing import Any, Callable, Final, Self
+from typing import Any, Self
 from abc import ABC
 from functools import total_ordering
 from spacy.vocab import Vocab
@@ -9,14 +9,6 @@ from spacy.tokens import Doc, Span, Token
 from spacy.tokens.underscore import Underscore
 from ... import settings
 from ...utils.meta import init_class_attrs
-
-
-def attr(prop: Callable) -> Callable:
-    """Mark property as token attribute,
-    so its name is stored in ``__attrs__``.
-    """
-    prop.fget.__is_attr__ = True
-    return prop
 
 
 class NLP(ABC):
@@ -28,7 +20,6 @@ class NLP(ABC):
         Base :mod:`spacy` token object.
     """
     __slots__ = ("tok",)
-    __attrs__: Final[tuple[str, ...]] = ()
 
     def __init__(self, tok: Doc | Span | Token) -> None:
         self.tok = tok
@@ -57,19 +48,9 @@ class NLP(ABC):
             total_ordering(cls)
         except ValueError:
             pass
-        if "__attrs__" in cls.__dict__:
-            raise AttributeError("'__attrs__' class attribute cannot be defined on subclasses")
-        __attrs__ = list(cls.__attrs__)
-        for n, a in vars(cls).items():
-            if isinstance(a, property) and getattr(a.fget, "__is_attr__", False):
-                if n in __attrs__:
-                    raise AttributeError(f"'{n}' is already defined in '__attrs__': {__attrs__}")
-                __attrs__.append(n)
-        cls.__attrs__ = tuple(__attrs__)
 
     # Properties --------------------------------------------------------------
 
-    @attr
     @property
     def text(self) -> str:
         return self.tok.text
@@ -85,10 +66,6 @@ class NLP(ABC):
     @property
     def vocab(self) -> Vocab:
         return self.tok.vocab
-
-    @property
-    def attrs(self) -> tuple[Any, ...]:
-        return tuple(getattr(self, attr) for attr in self.__attrs__)
 
     # Methods -----------------------------------------------------------------
 
