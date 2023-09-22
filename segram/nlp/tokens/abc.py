@@ -1,7 +1,8 @@
 """Abstract base classes for generic tokens."""
 # pylint: disable=import-self
 from __future__ import annotations
-from typing import Any, Optional, Iterable, Final, Callable
+from typing import Any, Optional, Iterable, Final, Callable, NamedTuple
+from collections import Counter
 from functools import total_ordering
 from abc import ABC, abstractmethod
 from ...symbols import POS, Role
@@ -342,6 +343,27 @@ class DocABC(NLPToken):
     def copy(self) -> DocABC:
         """Return copy of the self."""
 
+
+class VocabABC(NLP):
+    """Vocabulary abstract base class.
+
+    Attributes
+    ----------
+    dist
+        Named tuples for `text` frequency distribution
+        over token texts and `lemma` distribution over
+        token lemmas.
+    """
+    __slots__ = ("dist",)
+
+    class Dist(NamedTuple):
+        text: Counter = Counter()
+        lemma: Counter = Counter()
+
+    def __init__(self) -> None:
+        self.dist = self.Dist()
+
+# Comparison functions for testing --------------------------------------------
 
 @equal.register
 def _(obj: DocABC, other: DocABC, *, strict: bool = True) -> bool:
