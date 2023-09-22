@@ -5,5 +5,4 @@ languages and NLP engines (e.g. :mod:`spacy`) from the rest of
 the package concerned with processing the output produced by
 a backend.
 """
-from .tokens import Doc, Span, Token
 from .corpus import Corpus

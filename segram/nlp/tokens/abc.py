@@ -31,9 +31,6 @@ class NLP(ABC):
     def __init__(self, tok: Doc | Span | Token) -> None:
         self.tok = tok
 
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self.tok, name)
-
     def __repr__(self) -> str:
         """String representation."""
         return self.text

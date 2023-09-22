@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import Self, Any, Iterable, MutableMapping, Callable
+from more_itertools import unique_everseen
 from .abc import Semantic
 from .frames import Frame, Actants, Events
 from ..grammar import Sent, Phrase, Conjuncts
+from ..nlp import Corpus
+from ..nlp.tokens import Doc
 
 
 class Story(Semantic, MutableMapping):
@@ -57,13 +60,34 @@ class Story(Semantic, MutableMapping):
     def frames(self) -> tuple[Frame, ...]:
         return tuple(self._frames.values())
 
+    @property
+    def sents(self) -> Iterable[Sent]:
+        yield from unique_everseen(p.sent for p in self.phrases)
+
     # Constructors ------------------------------------------------------------
 
     @classmethod
-    def from_sents(cls, sents: Iterable[Sent], *args: Any, **kwds: Any) -> Self:
-        """Construct from sentence objects."""
+    def from_sents(cls, *sents: Sent) -> Self:
+        """Construct from sentences."""
         phrases = [ p for s in sents for p in s.phrases ]
-        return cls(phrases, *args, **kwds)
+        return cls(phrases)
+
+    @classmethod
+    def from_docs(cls, *docs: Doc, **kwds: Any) -> Self:
+        """Construct from documents.
+
+        ``**kwds`` are passed to :meth:`segram.nlp.tokens.span.Span.grammar`.
+        """
+        sents = [ sent for doc in docs for sent in doc.iter_grammar(**kwds) ]
+        return cls.from_sents(*sents)
+
+    @classmethod
+    def from_corpus(cls, corpus: Corpus, **kwds: Any) -> Self:
+        """Construct from a corpus.
+
+        ``**kwds`` are passed to :meth:`segram.nlp.tokens.span.Span.grammar`.
+        """
+        return cls.from_docs(*corpus.docs, **kwds)
 
     # Methods -----------------------------------------------------------------
 

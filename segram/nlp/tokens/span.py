@@ -82,9 +82,13 @@ class Span(NLP):
         for tok in self.span.subtree:
             yield self.sns(tok)
 
+    @property
+    def grammar(self) -> "Sent":
+        return self.get_grammar(use_data=None)
+
     # Methods -----------------------------------------------------------------
 
-    def grammar(self, *, use_data: Optional[bool] = None) -> "Sent":
+    def get_grammar(self, *, use_data: Optional[bool] = None) -> "Sent":
         """Get grammar sentence object.
 
         Parameters

@@ -88,7 +88,19 @@ class Doc(NLP):
     #             data.append(gtok)
     #     return SimpleDoc(self.lang, tuple(data), tuple(sent_spans))
 
+    @property
+    def grammar(self) -> Iterable["Sent"]:
+        yield from self.iter_grammar(use_data=None)
+
     # Methods -----------------------------------------------------------------
+
+    def iter_grammar(self, **kwds: Any) -> Iterable["Sent"]:
+        """Iterate over grammar sentence objects.
+
+        ``**kwds`` are passed to :meth:`segram.nlp.tokens.span.Span.grammar`.
+        """
+        for sent in self.sents:
+            yield sent.get_grammar(**kwds)
 
     def char_span(self, *args: Any, **kwds: Any) -> Optional[Span]:
         res = self.tok.char_span(*args, **kwds)

@@ -7,7 +7,7 @@ import json
 from murmurhash import hash_unicode
 from segram import settings
 from segram.grammar import Sent
-from segram.nlp.abc import Doc, Span
+from segram.nlp.tokens import Doc, Span
 from segram.utils.types import Namespace
 from segram.utils.meta import get_cname
 from segram.utils.resources import JSONResource
@@ -361,7 +361,7 @@ class SentTestCase:
         self.parent = parent
         self.i = i
         self.sent = sent
-        self.results = self.sent.grammar(use_data=None)
+        self.results = self.sent.get_grammar(use_data=None)
 
     def __repr__(self) -> str:
         msg = settings.printer.get()

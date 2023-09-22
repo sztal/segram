@@ -109,7 +109,7 @@ class Segram(Pipe):
             start = time()
             data = {
                 (sent.start, sent.end): \
-                    sent.grammar(use_data=False).to_data()
+                    sent.get_grammar(use_data=False).to_data()
                 for sent in getattr(doc._, alias).sents
             }
             setattr(doc._, f"{alias}_grammar_data", data)

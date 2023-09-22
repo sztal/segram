@@ -1,15 +1,18 @@
 # pylint: disable=no-name-in-module
 from typing import Any, Optional, NamedTuple, Sequence, Iterable, Self
 from collections import Counter
+from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.vectors import Vectors
 from spacy.language import Language
 from .tokens import Doc
+from .. import __title__
 
 
 class TokenDistributions(NamedTuple):
-    text: Counter = Counter()
-    lemma: Counter = Counter()
+    text: Counter
+    lemma: Counter
+
 
 
 class Corpus(Sequence):
@@ -21,7 +24,9 @@ class Corpus(Sequence):
         Main vocabulary store of the corpus.
     vectors
         Word vector table. If then ``vocab.vectors`` are used
-        as fallback if possible.
+        as fallback if possible. If an instance of :class:`segram.language.Language`
+        or :class:`segram.vocab.Vocab` is provided then the vector table
+        is extracted automatically.
     resolve_coref
         If ``True`` then token coreferences are resolved when
         calculating token text and lemma frequency distributions.
@@ -35,6 +40,11 @@ class Corpus(Sequence):
     ) -> None:
         self._dmap = {}
         self.vocab = vocab
+        self.dist = TokenDistributions(Counter(), Counter())
+        if isinstance(vectors, Language):
+            vectors = vectors.vocab.vectors
+        elif isinstance(vectors, Vocab):
+            vectors = vectors.vectors
         self._vectors = vectors
         self.resolve_coref = resolve_coref
 
@@ -47,7 +57,9 @@ class Corpus(Sequence):
     def __contains__(self, doc: Doc) -> bool:
         if isinstance(doc, Doc):
             return hash(doc) in self._dmap
-        return NotImplemented
+        cn = self.__class__.__name__
+        dn = doc.__class__.__name__
+        raise NotImplementedError(f"'{cn}' cannot contain '{dn}' objects")
 
     # Properties --------------------------------------------------------------
 
@@ -69,8 +81,8 @@ class Corpus(Sequence):
         """Add document to the corpus."""
         if doc not in self:
             self._dmap[hash(doc)] = doc
-            self.vocab.dist.text.update(t.coref.text for t in doc)
-            self.vocab.dist.lemma.update(t.coref.lemma for t in doc)
+            self.dist.text.update(t.coref.text for t in doc)
+            self.dist.lemma.update(t.coref.lemma for t in doc)
 
     def add_docs(self, docs: Iterable[Doc]) -> None:
         """Add documents to the corpus."""
@@ -81,7 +93,7 @@ class Corpus(Sequence):
     def from_texts(
         cls,
         nlp: Language,
-        texts: Iterable[str],
+        *texts: str,
         pipe_kws: Optional[dict[str, Any]] = None,
         **kwds: Any
     ) -> Self:
@@ -91,7 +103,7 @@ class Corpus(Sequence):
         ----------
         nlp
             Language model to use to parse texts.
-        texts
+        *texts
             Texts to parse.
         pipe_kws
             Keyword arguments passed to :meth:`spacy.language.Language.pipe`.
@@ -100,5 +112,9 @@ class Corpus(Sequence):
             Vocabulary is taken from the language model.
         """
         obj = cls(nlp.vocab, **kwds)
-        obj.add_docs(nlp.pipe(texts, **(pipe_kws or {})))
+        pipe_kws = pipe_kws or {}
+        obj.add_docs(
+            getattr(d._, __title__)
+            for d in nlp.pipe(texts, **pipe_kws)
+        )
         return obj
