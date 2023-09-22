@@ -23,7 +23,7 @@ test = [
 ]
 
 [project.entry-points.spacy_factories]
-segram = "segram.nlp.spacy.pipeline.factories:create_base"
+segram = "segram.nlp.pipeline.factories:create_base"
 
 [tool.setuptools]
 include-package-data = true

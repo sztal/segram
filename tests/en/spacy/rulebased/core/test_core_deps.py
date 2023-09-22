@@ -2,7 +2,7 @@ import pytest
 from .....utils.runners import SpacyTestRunner
 
 
-class TestSpacyRulebasedEnglishGrammar(
+class TestRulebasedEnglishGrammar(
     SpacyTestRunner,
     lang=(lang := "en"),
     resource=(resource := "en-core-deps.json")

@@ -12,7 +12,7 @@ from abc import abstractmethod
 import re
 from functools import total_ordering
 from catalogue import Registry
-from ..nlp.abc import DocABC, SpanABC, TokenABC
+from ..nlp.tokens import Doc, Span, Token
 from ..utils.registries import grammars
 from ..abc import SegramWithDocABC
 from ..utils.types import Namespace
@@ -134,7 +134,7 @@ class GrammarElement(Grammar):
         raise NotImplementedError
 
     @abstractmethod
-    def __contains__(self, other: TokenABC | GrammarElement) -> bool:
+    def __contains__(self, other: Token | GrammarElement) -> bool:
         """Check whether ``self`` contains ``other``."""
         raise NotImplementedError
 
@@ -148,12 +148,12 @@ class GrammarElement(Grammar):
 
     @property
     @abstractmethod
-    def tokens(self) -> tuple[TokenABC, ...]:
+    def tokens(self) -> tuple[Token, ...]:
         """Tokens of the element."""
 
     @property
     @abstractmethod
-    def sent(self) -> SpanABC:
+    def sent(self) -> Span:
         """NLP sentence containing the element."""
         raise NotImplementedError
 
@@ -227,14 +227,14 @@ class DocElement(GrammarElement):
     __slots__ = ("_doc",)
     alias: ClassVar[str] = "DocElem"
 
-    def __init__(self, doc: DocABC) -> None:
+    def __init__(self, doc: Doc) -> None:
         self._doc = doc
 
     # Abstract methods --------------------------------------------------------
 
     @classmethod
     @abstractmethod
-    def from_data(cls, doc: DocABC, data: dict[str, Any]) -> Self:
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from sentence and a data dictionary."""
         # pylint: disable=arguments-renamed
         raise NotImplementedError
@@ -242,7 +242,7 @@ class DocElement(GrammarElement):
     # Properties --------------------------------------------------------------
 
     @property
-    def doc(self) -> DocABC:
+    def doc(self) -> Doc:
         return self._doc
 
     # Methods -----------------------------------------------------------------
@@ -274,7 +274,7 @@ class SentElement(GrammarElement):
         return self._sent
 
     @property
-    def doc(self) -> DocABC:
+    def doc(self) -> Doc:
         return self.sent.doc
 
     @property

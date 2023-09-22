@@ -6,8 +6,8 @@ import spacy
 from spacy.language import Language
 from spacy.tokens import Doc
 from spacy.training import Alignment
-from .... import settings
-from ....utils.meta import get_cname
+from ... import settings
+from ...utils.meta import get_cname
 
 
 class Coref:

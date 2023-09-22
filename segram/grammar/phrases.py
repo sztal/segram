@@ -6,7 +6,7 @@ from more_itertools import unique_everseen
 from .abc import SentElement
 from .components import Component, Verb, Noun, Desc, Prep
 from .conjuncts import Conjuncts, PhraseGroup
-from ..nlp.abc import TokenABC
+from ..nlp.tokens import Token
 from ..symbols import Role, Dep
 from ..abc import labelled
 
@@ -42,7 +42,7 @@ class Phrase(SentElement):
         head: Component,
         *,
         dep: Dep = Dep.misc,
-        sconj: Optional[TokenABC] = None,
+        sconj: Optional[Token] = None,
         lead: Optional[int] = None
     ) -> None:
         super().__init__(sent)
@@ -69,12 +69,12 @@ class Phrase(SentElement):
     def __getitem__(self, idx: int | slice) -> Phrase | list[Phrase]:
         return self.tokens[idx]
 
-    def __contains__(self, other: Phrase | Component | TokenABC) -> bool:
+    def __contains__(self, other: Phrase | Component | Token) -> bool:
         if self.is_comparable_with(other):
             return any(other == p for p in self.iter_subdag(skip=1))
         if isinstance(other, Component):
             return any(p.head == other for p in self.iter_subdag())
-        if isinstance(other, TokenABC):
+        if isinstance(other, Token):
             return any(other in p.head for p in self.iter_subdag())
         return super().__contains__(other)
 
@@ -109,11 +109,11 @@ class Phrase(SentElement):
         return self.lead is self
 
     @property
-    def tokens(self) -> tuple[TokenABC, ...]:
+    def tokens(self) -> tuple[Token, ...]:
         return tuple(t for t, _ in self.iter_token_roles())
 
     @property
-    def neg(self) -> TokenABC | None:
+    def neg(self) -> Token | None:
         return self.head.neg
 
     @property
@@ -346,7 +346,7 @@ class Phrase(SentElement):
         self,
         *,
         bg: bool = False
-    ) -> Iterator[TokenABC, Role | None]:
+    ) -> Iterator[Token, Role | None]:
         """Iterate over token-role pairs.
 
         Parameters

@@ -1,13 +1,13 @@
 """Default :mod:`spacy` extension backend."""
 # pylint: disable=protected-access
 from __future__ import annotations
-from typing import Type, ClassVar, Mapping
+from typing import ClassVar, Mapping
 from types import MappingProxyType
 from functools import partial
-from spacy.tokens import Doc, Span, Token
-from ..tokens import SpacyNLPToken
-from ..tokens import SpacyDoc, SpacySpan, SpacyTokenABC
-from .... import settings
+from spacy.tokens import Doc as SpacyDoc, Span as SpacySpan, Token as SpacyToken
+from ..tokens.abc import NLP
+from ..tokens import Doc, Span, Token
+from ... import settings
 
 
 class SpacyExtensions:
@@ -28,9 +28,9 @@ class SpacyExtensions:
     __extension_types__: ClassVar[tuple[str, ...]] = \
         ("method", "getter", "getter_cached")
     __spacy_token_types__: ClassVar[Mapping[str, type]] = MappingProxyType({
-        "token": Token,
-        "span": Span,
-        "doc": Doc
+        "token": SpacyToken,
+        "span": SpacySpan,
+        "doc": SpacyDoc
     })
     __attributes__: ClassVar[dict[str, dict]] = {
         "token": {
@@ -45,9 +45,9 @@ class SpacyExtensions:
 
     def __init__(
         self,
-        doc: Type[SpacyDoc],
-        span: Type[SpacySpan],
-        token: Type[SpacyTokenABC]
+        doc: type[Doc],
+        span: type[Span],
+        token: type[Token]
     ) -> None:
         self.doc = doc
         self.span = span
@@ -67,21 +67,21 @@ class SpacyExtensions:
                     name = f"{alias}_{attr}"
                 tok_types[typ].set_extension(name, **kwds)
         # Register SNS getters and keys
-        Doc.set_extension(alias, getter=partial(self.sns_getter, typ=self.doc))
-        Span.set_extension(alias, getter=partial(self.sns_getter, typ=self.span))
-        Token.set_extension(alias, getter=partial(self.sns_getter, typ=self.token))
+        SpacyDoc.set_extension(alias, getter=partial(self.sns_getter, typ=self.doc))
+        SpacySpan.set_extension(alias, getter=partial(self.sns_getter, typ=self.span))
+        SpacyToken.set_extension(alias, getter=partial(self.sns_getter, typ=self.token))
 
     # Doc extension attributes ------------------------------------------------
 
     @staticmethod
     def sns_getter(
         tok: Doc | Span | Token,
-        typ: Type[SpacyNLPToken]
-    ) -> SpacyNLPToken:
+        typ: type[Doc] | type[Span] | type[Token]
+    ) -> NLP:
         cache = getattr(tok.doc._, f"{settings.spacy_alias}_cache")
-        if isinstance(tok, Token):
+        if isinstance(tok, SpacyToken):
             key = tok.i
-        elif isinstance(tok, Span):
+        elif isinstance(tok, SpacySpan):
             key = (tok.start, tok.end)
         else:
             key = -1

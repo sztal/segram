@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any, Optional, Iterable, Self, Callable
-from ..nlp.abc import TokenABC
+from ..nlp.tokens import Token
 from ..utils.types import Group, ChainGroup
 
 
@@ -25,8 +25,8 @@ class Conjuncts(Group):
         self,
         members: Iterable["Phrase"] = (),
         lead: int = 0,
-        cconj: Optional[TokenABC] = None,
-        preconj: Optional[TokenABC] = None
+        cconj: Optional[Token] = None,
+        preconj: Optional[Token] = None
     ) -> None:
         super().__init__(members)
         self._lead = lead

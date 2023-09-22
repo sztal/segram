@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, ClassVar, Type, Self, Callable
+from typing import Any, Optional, ClassVar, Self, Callable
 from abc import ABC, abstractmethod
 from .utils.docstrings import inherit_docstring
 from .utils.diff import iter_diffs, IDiffType
@@ -19,7 +19,7 @@ class SegramABC(ABC):
     __slots__ = ()
     __dont_compare__ = ()
     slot_names: ClassVar[tuple[str, ...]] = ()
-    differ: Type["Differ"]
+    differ: type["Differ"]
 
     def __hash__(self) -> int:
         return hash(self.hashdata)
@@ -199,7 +199,7 @@ class SegramWithDocABC(SegramABC):
 
     @property
     @abstractmethod
-    def doc(self) -> "DocABC":
+    def doc(self) -> "Doc":
         raise NotImplementedError
 
     # Properties --------------------------------------------------------------

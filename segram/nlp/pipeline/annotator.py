@@ -3,7 +3,7 @@ from typing import Any, Iterable, Mapping
 from spacy.tokens import Token
 from spacy.language import Language
 from spacy.pipeline import AttributeRuler
-from ....utils.resources import JSONResource
+from ...utils.resources import JSONResource
 
 
 class Annotator(AttributeRuler):

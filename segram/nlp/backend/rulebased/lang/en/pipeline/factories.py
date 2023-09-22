@@ -4,7 +4,7 @@ from spacy.lang.en import English
 from .merger import EnglishMerger as Merger
 from .lemmatizer import EnglishLemmatizer as Lemmatizer
 from ......pipeline.coref import Coref
-from ........ import __title__, settings
+from ....... import __title__, settings
 
 
 # Lemmatizer factory ----------------------------------------------------------

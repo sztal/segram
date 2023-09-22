@@ -1,7 +1,7 @@
 from typing import Iterator
 from abc import abstractmethod
 from .grammar import GrammarNLP
-from ..abc import SpanABC
+from ..tokens import Span
 from ...grammar import Phrase, Sent, PhraseGraph, Conjuncts
 from ...symbols import Dep
 
@@ -30,7 +30,7 @@ class SentNLP(GrammarNLP, Sent):
     # Methods -----------------------------------------------------------------
 
     @classmethod
-    def from_sent(cls, sent: SpanABC) -> Sent:
+    def from_sent(cls, sent: Span) -> Sent:
         """Construct from a sentence span object."""
         cls.check_sent(sent)
         sent = cls(sent.doc, sent.start, sent.end)

@@ -9,7 +9,7 @@ from .components import Prep, Desc
 from .phrases import Phrase, VerbPhrase, NounPhrase, DescPhrase, PrepPhrase
 from .graph import PhraseGraph
 from ..settings import settings
-from ..nlp.abc import DocABC, SpanABC, TokenABC
+from ..nlp.tokens import Doc, Span, Token
 from ..symbols import Role
 
 
@@ -48,7 +48,7 @@ class Sent(Sequence, DocElement):
 
     def __init__(
         self,
-        doc: DocABC,
+        doc: Doc,
         start: int,
         end: int,
         verbs: Iterable[Verb] = (),
@@ -79,13 +79,13 @@ class Sent(Sequence, DocElement):
 
     def __contains__(
         self,
-        other: TokenABC | Component
+        other: Token | Component
     ) -> bool:
         if isinstance(other, Phrase):
             return other in self.phrases
         if isinstance(other, Component):
             return other in self.components
-        if isinstance(other, TokenABC):
+        if isinstance(other, Token):
             return other in self.sent
         return super().__contains__(other)
 
@@ -96,7 +96,7 @@ class Sent(Sequence, DocElement):
     # Properties --------------------------------------------------------------
 
     @property
-    def doc(self) -> DocABC:
+    def doc(self) -> Doc:
         return self._doc
 
     @property
@@ -104,7 +104,7 @@ class Sent(Sequence, DocElement):
         return (self.start, self.end)
 
     @property
-    def sent(self) -> SpanABC:
+    def sent(self) -> Span:
         return self.doc[self.start:self.end]
 
     @property
@@ -141,7 +141,7 @@ class Sent(Sequence, DocElement):
         return tuple(p for p in self.phrases if isinstance(p, PrepPhrase))
 
     @property
-    def tokens(self) -> tuple[TokenABC, ...]:
+    def tokens(self) -> tuple[Token, ...]:
         return tuple(self.sent)
 
     @property
@@ -159,8 +159,8 @@ class Sent(Sequence, DocElement):
     # Methods -----------------------------------------------------------------
 
     @classmethod
-    def from_data(cls, doc: DocABC, data: dict[str, Any]) -> Sent:
-        """Construct from a :class:`~segram.nlp.DocABC` and a data dictionary."""
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Sent:
+        """Construct from a :class:`~segram.nlp.Doc` and a data dictionary."""
         sent = cls(doc, data["start"], data["end"])
         sent.nouns = tuple(
             cls.types.Noun.from_data(sent, dct)
@@ -202,7 +202,7 @@ class Sent(Sequence, DocElement):
             conjs=[ c.to_data() for c in self.conjs.values() ]
         )
 
-    def iter_token_roles(self) -> tuple[TokenABC, Role | None]:
+    def iter_token_roles(self) -> tuple[Token, Role | None]:
         """Iterate over token-role pairs."""
         def _iter():
             seen = set()
@@ -225,7 +225,7 @@ class Sent(Sequence, DocElement):
         return isinstance(other, Sent)
 
     @staticmethod
-    def check_sent(span: SpanABC) -> bool:
+    def check_sent(span: Span) -> bool:
         """Check if a span is a proper sentence."""
         if span != span[0].sent:
             raise ValueError("'span' must be a proper sentence")

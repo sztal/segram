@@ -1,15 +1,15 @@
 from typing import Optional, Iterator, Sequence
-from .grammar import SpacyRulebasedEnglishGrammar
-from .......grammar import SentNLP
-from ........grammar.lang.en import EnglishSent
-from ........grammar import Component, Phrase
-from ........grammar import Conjuncts
-from ........nlp.abc import TokenABC
-from ........symbols import Dep
+from .grammar import RulebasedEnglishGrammar
+from ......grammar import SentNLP
+from .......grammar.lang.en import EnglishSent
+from .......grammar import Component, Phrase
+from .......grammar import Conjuncts
+from ......tokens import Token
+from .......symbols import Dep
 
 
-class SpacyRulebasedEnglishSent(
-    SpacyRulebasedEnglishGrammar,
+class RulebasedEnglishSent(
+    RulebasedEnglishGrammar,
     EnglishSent, SentNLP
 ):
     """Rule-based :mod:`spacy` English sentence element."""
@@ -82,7 +82,7 @@ class SpacyRulebasedEnglishSent(
 
     def _expand_conj_group(
         self,
-        group: tuple[TokenABC, tuple[Component, ...]],
+        group: tuple[Token, tuple[Component, ...]],
         groups: Optional[set[tuple[Component, ...]]] = None,
         comps: Optional[Sequence[Component]] = None
     ) -> Iterator[tuple[Component, ...]]:

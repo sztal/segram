@@ -2,7 +2,7 @@
 from typing import Sequence, Literal
 from spacy.language import Language
 from .base import Segram
-from .... import __title__
+from ... import __title__
 
 
 # Language factory (core) -----------------------------------------------------

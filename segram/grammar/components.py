@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any, Optional, Iterable, Iterator, ClassVar, Type, Self
 from .abc import SentElement
 from .conjuncts import Conjuncts
-from ..nlp.abc import TokenABC
+from ..nlp.tokens import Token
 from ..symbols import POS, Role, Tense, Modal, Mood, Symbol
 
 
@@ -64,14 +64,14 @@ class Component(SentElement):
     def __init__(
         self,
         sent: "Sent",
-        tok: TokenABC,
+        tok: Token,
         *,
         role: Optional[Role] = None,
-        sub: Iterable[TokenABC] = (),
-        qmark: Optional[TokenABC] = None,
-        exclam: Optional[TokenABC] = None,
-        intj: Optional[TokenABC] = None,
-        neg: Optional[TokenABC] = None
+        sub: Iterable[Token] = (),
+        qmark: Optional[Token] = None,
+        exclam: Optional[Token] = None,
+        intj: Optional[Token] = None,
+        neg: Optional[Token] = None
     ) -> None:
         super().__init__(sent)
         self._tid = None
@@ -95,17 +95,17 @@ class Component(SentElement):
         obj.sent.pmap[obj.idx] = obj.phrase
         return obj
 
-    def __iter__(self) -> Iterator[TokenABC]:
+    def __iter__(self) -> Iterator[Token]:
         yield from self.tokens
 
     def __len__(self) -> int:
         return len(self.tid)
 
-    def __getitem__(self, idx: int) -> TokenABC | tuple[TokenABC, ...]:
+    def __getitem__(self, idx: int) -> Token | tuple[Token, ...]:
         return self.tokens[idx]
 
-    def __contains__(self, other: TokenABC) -> bool:
-        if isinstance(other, TokenABC):
+    def __contains__(self, other: Token) -> bool:
+        if isinstance(other, Token):
             return other in self.tokens or other in self.sub
         return super().__contains__(other)
 
@@ -145,7 +145,7 @@ class Component(SentElement):
         return self.tok.i
 
     @property
-    def head(self) -> TokenABC:
+    def head(self) -> Token:
         """Component head token."""
         return self.tok
 
@@ -178,11 +178,11 @@ class Component(SentElement):
         return self._tid
 
     @property
-    def tokens(self) -> tuple[TokenABC, ...]:
+    def tokens(self) -> tuple[Token, ...]:
         return tuple(self.doc[i] for i in self.tid)
 
     @property
-    def subtokens(self) -> tuple[TokenABC, ...]:
+    def subtokens(self) -> tuple[Token, ...]:
         return sorted((*self.tokens, *self.sub))
 
     @property
@@ -208,7 +208,7 @@ class Component(SentElement):
         sent: "Sent",
         data: dict[str, Any]
     ) -> Self:
-        """Construct from :class:`~segram.nlp.DocABC` and a data dict."""
+        """Construct from :class:`~segram.nlp.Doc` and a data dict."""
         data = data.copy()
         alias = data.pop("@class")
         typ = cls.types[alias]
@@ -230,7 +230,7 @@ class Component(SentElement):
         for name, tok in self.data.items():
             if name not in slots or not tok:
                 continue
-            if isinstance(tok, TokenABC):
+            if isinstance(tok, Token):
                 data[name] = tok.i
             else:
                 data[name] = [ t.i for t in tok ]
@@ -245,7 +245,7 @@ class Component(SentElement):
         cls,
         role: Role = None,
         pos: Optional[POS] = None
-    ) -> Type[Component]:
+    ) -> type[Component]:
         """Get component type from role or POS tag."""
         return cls.roles.get(role, cls.roles.get(pos, cls))
 
@@ -268,7 +268,7 @@ class Component(SentElement):
         def _iter():
             for name in ("tok", *self.token_names):
                 if (value := getattr(self, name, None)):
-                    if isinstance(value, TokenABC):
+                    if isinstance(value, Token):
                         yield value
                     else:
                         yield from value
@@ -279,7 +279,7 @@ class Component(SentElement):
         *,
         role: Optional[Role] = None,
         bg: bool = False
-    ) -> Iterable[tuple[TokenABC, Optional[Role]]]:
+    ) -> Iterable[tuple[Token, Optional[Role]]]:
         """Iterate over token-role pairs.
 
         Parameters
@@ -365,7 +365,7 @@ class Prep(Component):
     def __init__(
         self,
         *args: Any,
-        preps: Iterable[TokenABC] = (),
+        preps: Iterable[Token] = (),
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)
@@ -389,7 +389,7 @@ class Desc(Component):
     def __init__(
         self,
         *args: Any,
-        mod: Iterable[TokenABC] = (),
+        mod: Iterable[Token] = (),
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)

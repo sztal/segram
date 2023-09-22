@@ -13,8 +13,8 @@ from spacy.tokens import Doc
 from spacy.language import Language
 from spacy.pipeline.pipe import Pipe
 from ..extensions import SpacyExtensions
-from .... import __title__, __version__, settings
-from ....utils.meta import get_cname
+from ... import __title__, __version__, settings
+from ...utils.meta import get_cname
 
 
 class Segram(Pipe):
@@ -84,7 +84,7 @@ class Segram(Pipe):
         self.name = name
         self.store_data = store_data
         self.extensions = self.import_module(grammar, nlp.lang)
-        self.grammar = f"spacy.{grammar}.{nlp.lang}"
+        self.grammar = f"{grammar}.{nlp.lang}"
         self.meta = {
             "name":                  self.name,
             __title__+"_version":    __version__,
@@ -136,9 +136,9 @@ class Segram(Pipe):
         Returns
         -------
         extensions
-            :class:`~segram.nlp.spacy.extensions.SpacyExtensions` instance.
+            :class:`~segram.nlp.extensions.SpacyExtensions` instance.
         """
-        path = f"{__title__}.nlp.spacy.{__title__}.{grammar}.lang.{lang}"
+        path = f"{__title__}.nlp.backend.{grammar}.lang.{lang}"
         module = import_module(path)
         kwds = {}
         for tok_type in ("Doc", "Span", "Token"):

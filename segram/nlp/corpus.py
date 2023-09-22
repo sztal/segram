@@ -4,7 +4,7 @@ from collections import Counter
 from spacy.vocab import Vocab
 from spacy.vectors import Vectors
 from spacy.language import Language
-from .abc import DocABC
+from .tokens import Doc
 
 
 class TokenDistributions(NamedTuple):
@@ -38,21 +38,21 @@ class Corpus(Sequence):
         self._vectors = vectors
         self.resolve_coref = resolve_coref
 
-    def __getitem__(self, idx: int | slice) -> DocABC | tuple[DocABC, ...]:
+    def __getitem__(self, idx: int | slice) -> Doc | tuple[Doc, ...]:
         return self.docs[idx]
 
     def __len__(self) -> int:
         return len(self._dmap)
 
-    def __contains__(self, doc: DocABC) -> bool:
-        if isinstance(doc, DocABC):
+    def __contains__(self, doc: Doc) -> bool:
+        if isinstance(doc, Doc):
             return hash(doc) in self._dmap
         return NotImplemented
 
     # Properties --------------------------------------------------------------
 
     @property
-    def docs(self) -> tuple[DocABC]:
+    def docs(self) -> tuple[Doc]:
         return tuple(self._dmap.values())
 
     @property
@@ -65,14 +65,14 @@ class Corpus(Sequence):
 
     # Methods -----------------------------------------------------------------
 
-    def add_doc(self, doc: DocABC) -> None:
+    def add_doc(self, doc: Doc) -> None:
         """Add document to the corpus."""
         if doc not in self:
             self._dmap[hash(doc)] = doc
             self.vocab.dist.text.update(t.coref.text for t in doc)
             self.vocab.dist.lemma.update(t.coref.lemma for t in doc)
 
-    def add_docs(self, docs: Iterable[DocABC]) -> None:
+    def add_docs(self, docs: Iterable[Doc]) -> None:
         """Add documents to the corpus."""
         for doc in docs:
             self.add_doc(doc)

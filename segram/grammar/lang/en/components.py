@@ -3,7 +3,7 @@ from .grammar import EnglishGrammar
 from ... import Component
 from ... import Verb, Noun
 from ... import Prep, Desc
-from ....nlp.abc import TokenABC
+from ....nlp.tokens import Token
 
 
 class EnglishComponent(EnglishGrammar, Component):
@@ -30,9 +30,9 @@ class EnglishVerb(EnglishComponent, Verb):
     def __init__(
         self,
         *args: Any,
-        part: Optional[TokenABC] = None,
-        aux: tuple[TokenABC, ...] = (),
-        expl: Optional[TokenABC] = None,
+        part: Optional[Token] = None,
+        aux: tuple[Token, ...] = (),
+        expl: Optional[Token] = None,
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)
@@ -55,7 +55,7 @@ class EnglishNoun(EnglishComponent, Noun):
     def __init__(
         self,
         *args: Any,
-        det: Optional[TokenABC] = None,
+        det: Optional[Token] = None,
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)
@@ -75,7 +75,7 @@ class EnglishDesc(EnglishComponent, Desc):
     def __init__(
         self,
         *args: Any,
-        det: Optional[TokenABC] = None,
+        det: Optional[Token] = None,
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)

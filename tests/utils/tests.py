@@ -7,7 +7,7 @@ import json
 from murmurhash import hash_unicode
 from segram import settings
 from segram.grammar import Sent
-from segram.nlp.abc import DocABC, SpanABC
+from segram.nlp.abc import Doc, Span
 from segram.utils.types import Namespace
 from segram.utils.meta import get_cname
 from segram.utils.resources import JSONResource
@@ -39,14 +39,14 @@ class TestSet:
         ----------
         nlp
             Callable converting raw texts into
-            :class:`~segram.nlp.DocABC` instances.
+            :class:`~segram.nlp.Doc` instances.
         resource
             Resource handler.
         callback
             Callback function to be called on documents
             produced by ``self.nlp()``. It can be used to
             postprocess documents to ensure that they are
-            really :class:`~segram.nlp.DocABC` instances.
+            really :class:`~segram.nlp.Doc` instances.
         **kwds
             Additional metadata saved as a namesapce object
             under the ``self.ns`` attribute.
@@ -82,7 +82,7 @@ class TestSet:
     def __delitem__(self, key: int | str) -> None:
         del self.cmap[self.hash_key(key)]
 
-    def __iter__(self) -> Iterable[DocABC]:
+    def __iter__(self) -> Iterable[Doc]:
         for key in self.cmap:
             yield self[key]
 
@@ -121,7 +121,7 @@ class TestSet:
         resource = JSONResource.from_package(package, filename)
         return cls(nlp, resource, **kwds)
 
-    def make_doc(self, text: str) -> DocABC:
+    def make_doc(self, text: str) -> Doc:
         """Make document object."""
         doc = self.nlp(text)
         if self.callback:
@@ -134,7 +134,7 @@ class TestSet:
         index: Optional[int] = None,
         *,
         expected: Iterable[dict[str, Any]] = ()
-    ) -> DocABC:
+    ) -> Doc:
         """Add new test case.
 
         Parameters
@@ -265,7 +265,7 @@ class DocTestCase:
         self,
         tests: TestSet,
         key: int,
-        doc: DocABC,
+        doc: Doc,
         *,
         bad: Optional[Iterable[int]] = None
     ) -> None:
@@ -302,7 +302,7 @@ class DocTestCase:
         return self.data["text"]
 
     @property
-    def sents(self) -> Iterable[SpanABC]:
+    def sents(self) -> Iterable[Span]:
         yield from self.doc.sents
 
     @property
@@ -357,7 +357,7 @@ class SentTestCase:
         Results.
     """
     # pylint: disable=too-many-public-methods
-    def __init__(self, parent: DocTestCase, i: int, sent: SpanABC) -> None:
+    def __init__(self, parent: DocTestCase, i: int, sent: Span) -> None:
         self.parent = parent
         self.i = i
         self.sent = sent
@@ -395,7 +395,7 @@ class SentTestCase:
         )
 
     @property
-    def doc(self) -> DocABC:
+    def doc(self) -> Doc:
         return self.sent.doc
 
     @property

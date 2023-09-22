@@ -1,41 +1,41 @@
 from typing import Iterator
 from spacy.tokens import Token
-from .grammar import SpacyRulebasedEnglishGrammar
-from .......grammar import ComponentNLP
-from ........grammar.lang.en import EnglishComponent
-from ........grammar.lang.en import EnglishVerb, EnglishNoun
-from ........grammar.lang.en import EnglishPrep, EnglishDesc
-from .......abc import TokenABC
-from ........symbols import Dep, Tense, Modal, Mood
+from .grammar import RulebasedEnglishGrammar
+from ......grammar import ComponentNLP
+from .......grammar.lang.en import EnglishComponent
+from .......grammar.lang.en import EnglishVerb, EnglishNoun
+from .......grammar.lang.en import EnglishPrep, EnglishDesc
+from ......tokens import Token
+from .......symbols import Dep, Tense, Modal, Mood
 
 
-class SpacyRulebasedEnglishComponent(
-    SpacyRulebasedEnglishGrammar,
+class RulebasedEnglishComponent(
+    RulebasedEnglishGrammar,
     EnglishComponent, ComponentNLP
 ):
     """Rule-based English :mod:`spacy` grammar component."""
     __slots__ = ()
 
     @classmethod
-    def find_neg(cls, tok: Token) -> TokenABC | None:
+    def find_neg(cls, tok: Token) -> Token | None:
         if tok.is_neg or tok.is_no:
             return tok
         return None
 
     @classmethod
-    def find_qmark(cls, tok: Token) -> TokenABC | None:
+    def find_qmark(cls, tok: Token) -> Token | None:
         if tok.is_qmark:
             return tok
         return None
 
     @classmethod
-    def find_exclam(cls, tok: Token) -> TokenABC | None:
+    def find_exclam(cls, tok: Token) -> Token | None:
         if tok.is_exclam:
             return tok
         return None
 
     @classmethod
-    def find_intj(cls, tok: Token) -> TokenABC | None:
+    def find_intj(cls, tok: Token) -> Token | None:
         if tok.is_intj:
             return tok
         return None
@@ -94,15 +94,15 @@ class SpacyRulebasedEnglishComponent(
         return dep or Dep.misc
 
 
-class SpacyRulebasedEnglishVerb(
-    SpacyRulebasedEnglishComponent, EnglishVerb
+class RulebasedEnglishVerb(
+    RulebasedEnglishComponent, EnglishVerb
 ):
     """Rule-based English :mod:`spacy` verb component."""
     __slots__ = ()
     __inherit_from_lead__ = ("part",)
 
     @classmethod
-    def is_head(cls, tok: TokenABC) -> bool:
+    def is_head(cls, tok: Token) -> bool:
         return tok.is_vp_head
 
     @classmethod
@@ -143,56 +143,56 @@ class SpacyRulebasedEnglishVerb(
         return Mood.REAL
 
     @classmethod
-    def find_part(cls, tok: Token) -> TokenABC | None:
+    def find_part(cls, tok: Token) -> Token | None:
         """Find particle token."""
         if tok.is_part and not tok.is_neg:
             return tok
         return None
 
     @classmethod
-    def find_aux(cls, tok: Token) -> tuple[TokenABC, ...]:
+    def find_aux(cls, tok: Token) -> tuple[Token, ...]:
         """Find (verb) auxiliary tokens."""
         if tok.is_aux_verb and not tok.is_part and not tok.is_conj:
             yield tok
 
     @classmethod
-    def find_expl(cls, tok: Token) -> TokenABC | None:
+    def find_expl(cls, tok: Token) -> Token | None:
         """Find expletive token."""
         if tok.is_expl:
             return tok
         return None
 
 
-class SpacyRulebasedEnglishNoun(
-    SpacyRulebasedEnglishComponent, EnglishNoun
+class RulebasedEnglishNoun(
+    RulebasedEnglishComponent, EnglishNoun
 ):
     """Rule-based English :mod:`spacy` noun component."""
     __slots__ = ()
     __inherit_from_lead__ = ("det",)
 
     @classmethod
-    def is_head(cls, tok: TokenABC) -> bool:
+    def is_head(cls, tok: Token) -> bool:
         return tok.is_np_head
 
     @classmethod
-    def find_det(cls, tok: Token) -> TokenABC | None:
+    def find_det(cls, tok: Token) -> Token | None:
         if tok.is_det and not tok.is_no:
             return tok
         return None
 
 
-class SpacyRulebasedEnglishPrep(
-    SpacyRulebasedEnglishComponent, EnglishPrep
+class RulebasedEnglishPrep(
+    RulebasedEnglishComponent, EnglishPrep
 ):
     """Rule-based English :mod:`spacy` preposition component."""
     __slots__ = ()
 
     @classmethod
-    def is_head(cls, tok: TokenABC) -> bool:
+    def is_head(cls, tok: Token) -> bool:
         return tok.is_pp_head
 
     @classmethod
-    def find_preps(cls, tok: TokenABC) -> Iterator[TokenABC]:
+    def find_preps(cls, tok: Token) -> Iterator[Token]:
         """Find preposition chain."""
         if tok.is_prep and not tok.is_conj:
             yield tok
@@ -200,25 +200,25 @@ class SpacyRulebasedEnglishPrep(
                 yield from cls.find_preps(child)
 
 
-class SpacyRulebasedEnglishDesc(
-    SpacyRulebasedEnglishComponent, EnglishDesc
+class RulebasedEnglishDesc(
+    RulebasedEnglishComponent, EnglishDesc
 ):
     """Rule-based English :mod:`spacy` description component."""
     __slots__ = ()
     __post_init__ = ("det",)
 
     @classmethod
-    def is_head(cls, tok: TokenABC) -> bool:
+    def is_head(cls, tok: Token) -> bool:
         return tok.is_dp_head
 
     @classmethod
-    def find_mod(cls, tok: TokenABC) -> Iterator[TokenABC]:
+    def find_mod(cls, tok: Token) -> Iterator[Token]:
         """Find modifier tokens."""
         if tok.is_desc_mod:
             yield tok
 
     @classmethod
-    def find_det(cls, tok: EnglishDesc) -> TokenABC | None:
+    def find_det(cls, tok: EnglishDesc) -> Token | None:
         """Find determiner token."""
         for t in tok.mod:
             if t.is_desc_mod:

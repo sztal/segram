@@ -2,7 +2,7 @@
 from typing import Any, Optional, Iterable, Sequence, ClassVar
 from abc import abstractmethod
 from .grammar import GrammarNLP
-from ..abc import TokenABC
+from ..tokens import Token
 from ...grammar import Component
 from ...symbols import POS, Role, Dep
 
@@ -39,7 +39,7 @@ class ComponentNLP(GrammarNLP, Component):
 
     @classmethod
     @abstractmethod
-    def is_head(cls, tok: TokenABC) -> bool:
+    def is_head(cls, tok: Token) -> bool:
         """Test for head token."""
         raise NotImplementedError
 
@@ -62,7 +62,7 @@ class ComponentNLP(GrammarNLP, Component):
             if self.is_child_of(comp):
                 yield comp
 
-    def get_sconj(self, parent: Component) -> Optional[TokenABC]:
+    def get_sconj(self, parent: Component) -> Optional[Token]:
         """Get conjunction subordinating ``self`` to ``parent``."""
         if self.head.head == parent.head:
             for tok in self.subtokens:
@@ -70,7 +70,7 @@ class ComponentNLP(GrammarNLP, Component):
                     return tok
         return None
 
-    def get_cconj(self, other: Component) -> Optional[TokenABC]:
+    def get_cconj(self, other: Component) -> Optional[Token]:
         """Get conjunction token coordinating ``self`` and ``other``."""
         conjs = self.head.conjuncts
         if other.head not in conjs:
@@ -85,7 +85,7 @@ class ComponentNLP(GrammarNLP, Component):
     def from_tok(
         cls,
         sent: "Sent",
-        tok: TokenABC,
+        tok: Token,
         pos: Optional[POS] = None,
         role: Optional[Role] = None,
         **kwds: Any
@@ -137,7 +137,7 @@ class ComponentNLP(GrammarNLP, Component):
         }
         for child in tok.children:
             for name, finder in finders.items():
-                if (v := slots.get(name)) and isinstance(v, TokenABC):
+                if (v := slots.get(name)) and isinstance(v, Token):
                     continue
                 if add_tok(finder(child), name, slots):
                     break

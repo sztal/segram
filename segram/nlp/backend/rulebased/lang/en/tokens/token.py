@@ -1,7 +1,7 @@
 # pylint: disable=no-name-in-module,too-many-public-methods
 # pylint: disable=consider-using-ternary
 from __future__ import annotations
-from typing import Optional
+from typing import Self
 from spacy.symbols import DET, NUM, neg, det, expl
 from spacy.symbols import PRON, NOUN, PROPN
 from spacy.symbols import nsubj, nsubjpass, csubj, csubjpass
@@ -17,17 +17,17 @@ from spacy.symbols import relcl, acl, advcl
 from spacy.symbols import ccomp, pcomp, acomp, xcomp
 from spacy.symbols import CCONJ, SCONJ, conj, mark, preconj
 from spacy.symbols import INTJ
-from ......tokens import SpacyTokenABC
-from ........ import settings
-from ........symbols import Tense
+from ......tokens import Token
+from ....... import settings
+from .......symbols import Tense
 
 
-class SpacyRulebasedEnglishToken(SpacyTokenABC):
+class RulebasedEnglishToken(Token):
     """Enhanced token class for rulebased English grammar."""
     __slots__ = ()
 
     @property
-    def lead(self) -> SpacyRulebasedEnglishToken:
+    def lead(self) -> Self:
         # pylint: disable=redefined-outer-name
         for conj in self.conjuncts:
             if not conj.is_conj:
@@ -44,7 +44,7 @@ class SpacyRulebasedEnglishToken(SpacyTokenABC):
         return None
 
     @property
-    def corefs(self) -> Optional[SpacyRulebasedEnglishToken:]:
+    def corefs(self) -> tuple[Self, ...]:
         # pylint: disable=protected-access,redefined-outer-name
         if (refs := getattr(self._, f"{settings.spacy_alias}_corefs")):
             return tuple(self.doc[ref] for ref in refs)
