@@ -1,17 +1,18 @@
 from __future__ import annotations
 from typing import Any, Optional, ClassVar, Iterator, Self
-from collections.abc import Sequence
-from itertools import islice
 from abc import abstractmethod
+from itertools import islice
+from more_itertools import unique_everseen
 from .abc import SentElement
 from .components import Component, Verb, Noun, Desc, Prep
-from .conjuncts import Conjuncts
+from .conjuncts import Conjuncts, PhraseGroup
 from ..nlp import TokenABC
 from ..symbols import Role, Dep
 from ..abc import labelled
 
 
 controlled = labelled("part")
+PGType = PhraseGroup[Conjuncts[PhraseGroup]]
 
 
 class Phrase(SentElement):
@@ -70,11 +71,11 @@ class Phrase(SentElement):
 
     def __contains__(self, other: Phrase | Component | TokenABC) -> bool:
         if self.is_comparable_with(other):
-            return any(other == p for p in self.iter_subtree(skip=1))
+            return any(other == p for p in self.iter_subdag(skip=1))
         if isinstance(other, Component):
-            return any(p.head == other for p in self.iter_subtree())
+            return any(p.head == other for p in self.iter_subdag())
         if isinstance(other, TokenABC):
-            return any(other in p.head for p in self.iter_subtree())
+            return any(other in p.head for p in self.iter_subdag())
         return super().__contains__(other)
 
     # Abstract methods --------------------------------------------------------
@@ -123,24 +124,24 @@ class Phrase(SentElement):
         }
 
     @property
-    def children(self) -> tuple[Phrase, ...]:
+    def children(self) -> PGType:
         """Child phrases."""
-        return self.sent.graph[self]
+        return Conjuncts.get_chain(self.sent.graph[self])
 
     @property
-    def parents(self) -> tuple[Phrase, ...]:
+    def parents(self) -> PGType:
         """Parent phrases."""
-        return self.sent.graph.rev[self]
+        return Conjuncts.get_chain(self.sent.graph.rev[self])
 
     @property
-    def subtree(self) -> tuple[Phrase]:
-        """Phrasal proper subtree."""
-        return tuple(self.iter_subtree(skip=1))
+    def subdag(self) -> PGType:
+        """Phrasal proper subdag."""
+        return Conjuncts.get_chain(self.iter_subdag(skip=1))
 
     @property
-    def suptree(self) -> tuple[Phrase]:
-        """Phrasal proper supertree."""
-        return tuple(self.iter_suptree(skip=1))
+    def supdag(self) -> PGType:
+        """Phrasal proper superdag."""
+        return Conjuncts.get_chain(self.iter_supdag(skip=1))
 
     @property
     def depth(self) -> int:
@@ -171,7 +172,7 @@ class Phrase(SentElement):
 
     @property
     @controlled
-    def subj(self) -> Sequence[Phrase]:
+    def subj(self) -> PGType:
         """Subject phrases."""
         subjects = []
         for c in self.children:
@@ -183,56 +184,56 @@ class Phrase(SentElement):
 
     @property
     @controlled
-    def dobj(self) -> Sequence[Phrase]:
+    def dobj(self) -> PGType:
         """Direct object phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.dobj
         )
     @property
     @controlled
-    def iobj(self) -> Sequence[Phrase]:
+    def iobj(self) -> PGType:
         """Indirect object phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.iobj
         )
     @property
     @controlled
-    def desc(self) -> Sequence[Phrase]:
+    def desc(self) -> PGType:
         """Description phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & (Dep.desc | Dep.misc)
         )
     @property
     @controlled
-    def cdesc(self) -> Sequence[Phrase]:
+    def cdesc(self) -> PGType:
         """Clausal descriptions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.cdesc
         )
     @property
     @controlled
-    def adesc(self) -> Sequence[Phrase]:
+    def adesc(self) -> PGType:
         """Adjectival complement descriptions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.adesc
         )
     @property
     @controlled
-    def prep(self) -> Sequence[Phrase]:
+    def prep(self) -> PGType:
         """Prepositions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.prep
         )
     @property
     @controlled
-    def pobj(self) -> Sequence[Phrase]:
+    def pobj(self) -> PGType:
         """Prepositional objects."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.pobj
         )
     @property
     @controlled
-    def subcl(self) -> Sequence[Phrase]:
+    def subcl(self) -> PGType:
         """Subclauses."""
         return Conjuncts.get_chain(
             c for c in self.children
@@ -241,28 +242,28 @@ class Phrase(SentElement):
         )
     @property
     @controlled
-    def relcl(self) -> Sequence[Phrase]:
+    def relcl(self) -> PGType:
         """Relative clausses."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.relcl
         )
     @property
     @controlled
-    def xcomp(self) -> Sequence[Phrase]:
+    def xcomp(self) -> PGType:
         """Open clausal complements."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.xcomp
         )
     @property
     @controlled
-    def appos(self) -> Sequence[Phrase]:
+    def appos(self) -> PGType:
         """Appositional modifiers."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.appos
         )
     @property
     @controlled
-    def nmod(self) -> Sequence[Phrase]:
+    def nmod(self) -> PGType:
         """Nominal modifiers."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.nmod
@@ -304,21 +305,29 @@ class Phrase(SentElement):
             matched &= self.alias == alias
         return matched
 
-    def iter_subtree(self, *, skip: int = 0) -> Iterator[Phrase]:
-        """Iterate over phrasal subtree and omit ``skip`` first items."""
+    def iter_subdag(self, *, skip: int = 0) -> Iterator[Phrase]:
+        """Iterate over phrasal subtree and omit ``skip`` first items.
+
+        Each phrase is emitted only when reached the first time
+        during the depth-first search.
+        """
         def _iter():
             yield self
             for child in self.children:
-                yield from child.iter_subtree(skip=0)
-        yield from islice(_iter(), skip, None)
+                yield from child.iter_subdag(skip=0)
+        yield from islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None)
 
-    def iter_suptree(self, *, skip: int = 0) -> Iterator[Phrase]:
-        """Iterate over phrasal supertree and omit ``skip`` first items."""
+    def iter_supdag(self, *, skip: int = 0) -> Iterator[Phrase]:
+        """Iterate over phrasal supertree and omit ``skip`` first items.
+
+        Each phrase is emitted only when reached the first time
+        during the depth-first search.
+        """
         def _iter():
             yield self
             for parent in self.parents:
-                yield from parent.iter_suptree(skip=0)
-        yield from islice(_iter(), skip, None)
+                yield from parent.iter_supdag(skip=0)
+        yield from islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None)
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Phrase)

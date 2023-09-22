@@ -10,7 +10,8 @@ authors = [{name = "Szymon Talaga", email = "stalaga@protonmail.com"}]
 readme = "README.rst"
 dependencies = [
     "spacy>=3.4,<=3.5",
-    "spacy-experimental==0.6.1"
+    "spacy-experimental==0.6.1",
+    "more-itertools>=8.0"
 ]
 
 [project.optional-dependencies]

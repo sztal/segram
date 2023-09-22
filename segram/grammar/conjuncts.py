@@ -1,6 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, Iterator, Self, Mapping
-from collections.abc import Iterable
+from typing import Any, Optional, Iterable, Self, Callable
 from ..nlp import TokenABC
 from ..utils.types import Group, ChainGroup
 
@@ -117,7 +116,7 @@ class Conjuncts(Group):
         return isinstance(other, Conjuncts)
 
     @classmethod
-    def find_groups(cls, phrases: Iterable["Phrase"]) -> Iterator[Conjuncts]:
+    def find_groups(cls, phrases: Iterable["Phrase"]) -> Iterable[Conjuncts]:
         """Find conjuncts groups in ``phrases``."""
         groups = {}
         for phrase in phrases:
@@ -140,20 +139,28 @@ class PhraseGroup(ChainGroup):
     """Phrase group class.
 
     This is a chain of groups of conjoined phrases
-    enhanced with several methods for grouping, summarizing
-    and aggregating information from phrases.
+    enhanced with several methods for matching, grouping,
+    summarizing and aggregating information from phrases.
     """
     __slots__ = ()
 
-    @staticmethod
-    def getkey(obj: Any, keypath: str) -> Any:
-        """Get value by attr/key dot-separated path."""
-        for key in keypath.split("."):
-            if isinstance(obj, Mapping):
-                obj = obj[key]
-            else:
-                obj = getattr(obj, key)
-        return obj
+    def match(
+        self,
+        *args: Any,
+        require: Callable[Iterable["Phrase"], bool] = any,
+        **kwds: Any
+    ) -> bool:
+        """Match phrase group against a specification.
+
+        Parameters
+        ----------
+        *args, **kwds
+            Passed to :meth:`segram.grammar.Phrase`.
+        require
+            Function deciding whether the phrase group
+            after filtering satisfies the requirements.
+        """
+        return require(p.match(*args, **kwds) for p in self)
 
     def group_by_doc(self) -> dict[str, PhraseGroup]:
         """Group by documents."""
