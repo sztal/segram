@@ -1,8 +1,9 @@
 # pylint: disable=no-name-in-module
-from typing import Optional, NamedTuple, Sequence, Iterable
+from typing import Any, Optional, NamedTuple, Sequence, Iterable, Self
 from collections import Counter
 from spacy.vocab import Vocab
 from spacy.vectors import Vectors
+from spacy.language import Language
 from .abc import DocABC
 
 
@@ -19,7 +20,8 @@ class Corpus(Sequence):
     vocab
         Main vocabulary store of the corpus.
     vectors
-        Word vector table.
+        Word vector table. If then ``vocab.vectors`` are used
+        as fallback if possible.
     resolve_coref
         If ``True`` then token coreferences are resolved when
         calculating token text and lemma frequency distributions.
@@ -33,7 +35,7 @@ class Corpus(Sequence):
     ) -> None:
         self._dmap = {}
         self.vocab = vocab
-        self.vectors = vectors
+        self._vectors = vectors
         self.resolve_coref = resolve_coref
 
     def __getitem__(self, idx: int | slice) -> DocABC | tuple[DocABC, ...]:
@@ -53,6 +55,14 @@ class Corpus(Sequence):
     def docs(self) -> tuple[DocABC]:
         return tuple(self._dmap.values())
 
+    @property
+    def vectors(self) -> Vectors:
+        return self.vectors or self.vocab.vectors
+
+    @property
+    def has_vectors(self) -> bool:
+        return bool(self.vectors.data.size)
+
     # Methods -----------------------------------------------------------------
 
     def add_doc(self, doc: DocABC) -> None:
@@ -66,3 +76,29 @@ class Corpus(Sequence):
         """Add documents to the corpus."""
         for doc in docs:
             self.add_doc(doc)
+
+    @classmethod
+    def from_texts(
+        cls,
+        nlp: Language,
+        texts: Iterable[str],
+        pipe_kws: Optional[dict[str, Any]] = None,
+        **kwds: Any
+    ) -> Self:
+        """Construct from texts.
+
+        Parameters
+        ----------
+        nlp
+            Language model to use to parse texts.
+        texts
+            Texts to parse.
+        pipe_kws
+            Keyword arguments passed to :meth:`spacy.language.Language.pipe`.
+        **kwds
+            Passed :meth:`__init__`.
+            Vocabulary is taken from the language model.
+        """
+        obj = cls(nlp.vocab, **kwds)
+        obj.add_docs(nlp.pipe(texts, **(pipe_kws or {})))
+        return obj
