@@ -18,7 +18,6 @@ from spacy.symbols import ccomp, pcomp, acomp, xcomp
 from spacy.symbols import CCONJ, SCONJ, conj, mark, preconj
 from spacy.symbols import INTJ
 from ......tokens import Token
-from ....... import settings
 from .......symbols import Tense
 
 
@@ -42,13 +41,6 @@ class RulebasedEnglishToken(Token):
         if "Pres" in t:
             return Tense.PRESENT
         return None
-
-    @property
-    def corefs(self) -> tuple[Self, ...]:
-        # pylint: disable=protected-access,redefined-outer-name
-        if (refs := getattr(self._, f"{settings.spacy_alias}_corefs")):
-            return tuple(self.doc[ref] for ref in refs)
-        return ()
 
     # Flags for nouns and noun components -------------------------------------
 

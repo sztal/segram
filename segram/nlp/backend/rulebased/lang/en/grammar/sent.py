@@ -64,21 +64,16 @@ class RulebasedEnglishSent(
 
     def add_subs(self) -> None:
         """Add free subtree tokens to components."""
-        pmap = {}
-        comps = self.components
-        for comp in comps:
-            comp.sub = list(comp.sub)
-            for tok in comp.subtokens:
-                pmap.setdefault(tok, []).append(comp)
-        for tok in self.sent:
+        comps = [ c.tok for c in self.components ]
+        for tok in self:
+            if tok in comps:
+                continue
             head = tok
-            while not head.is_root and head not in pmap:
+            while not head.is_root:
                 head = head.head
-            if head != tok:
-                for comp in pmap[head]:
-                    comp.sub.append(tok)
-        for comp in comps:
-            comp.sub = tuple(comp.sub)
+                if head in comps:
+                    comp = self.cmap[head.i]
+                    comp.sub = (*comp.sub, tok)
 
     def _expand_conj_group(
         self,

@@ -1,11 +1,13 @@
 # pylint: disable=too-many-public-methods,no-name-in-module
 from __future__ import annotations
 from typing import Any, Iterable, Self
+from abc import abstractmethod
 from spacy.tokens import MorphAnalysis, Token as SpacyToken
 from .abc import NLP
 from ...symbols import POS, Role
 from ...utils.colors import color_role
 from ...utils.diff import iter_diffs, equal, IDiffType
+from ... import settings
 
 
 class Token(NLP):
@@ -28,6 +30,25 @@ class Token(NLP):
         if self.is_comparable_with(other):
             return self.i < other.i
         return NotImplemented
+
+    # Abstract properties -----------------------------------------------------
+
+    @property
+    @abstractmethod
+    def is_negation(self) -> bool:
+        pass
+    @property
+    @abstractmethod
+    def is_qmark(self) -> bool:
+        pass
+    @property
+    @abstractmethod
+    def is_exclam(self) -> bool:
+        pass
+    @property
+    @abstractmethod
+    def is_intj(self) -> bool:
+        pass
 
     # Properties --------------------------------------------------------------
 
@@ -78,6 +99,13 @@ class Token(NLP):
     @property
     def ent(self) -> str:
         return self.tok.ent_type_
+
+    @property
+    def ent_tag(self) -> str:
+        tag = self.tok.ent_iob_
+        if (typ := self.tok.ent_type_):
+            tag += "-"+typ
+        return tag
 
     @property
     def doc(self) -> "Doc":
@@ -131,6 +159,13 @@ class Token(NLP):
     def subtree(self) -> Iterable[Self, ...]:
         for tok in self.tok.subtree:
             yield self.sns(tok)
+
+    @property
+    def corefs(self) -> tuple[Self, ...]:
+        # pylint: disable=protected-access,redefined-outer-name
+        if (refs := getattr(self._, f"{settings.spacy_alias}_corefs", None)):
+            return tuple(self.doc[ref] for ref in refs)
+        return ()
 
     @property
     def coref(self) -> Self:

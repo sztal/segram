@@ -61,6 +61,14 @@ class Doc(NLP):
         for sent in self.tok.sents:
             yield self.sns(sent)
 
+    @property
+    def grammar(self) -> Iterable["Sent"]:
+        yield from self.iter_grammar(use_data=None)
+
+    @property
+    def data(self) -> dict[str, Any]:
+        return self.to_data()
+
     # @property
     # def simple(self) -> SimpleDoc:
     #     """Generic :mod:`segram` document object."""
@@ -88,11 +96,28 @@ class Doc(NLP):
     #             data.append(gtok)
     #     return SimpleDoc(self.lang, tuple(data), tuple(sent_spans))
 
-    @property
-    def grammar(self) -> Iterable["Sent"]:
-        yield from self.iter_grammar(use_data=None)
-
     # Methods -----------------------------------------------------------------
+
+    def to_data(self) -> dict[str, Any]:
+        """Dump to data dictionary sufficient to recreate simple document
+        without any language model data.
+        """
+        user_data = self.tok.user_data.copy()
+        user_data[("._.", f"{__title__}_cache", None, None)].clear()
+        data = {
+            "vocab": self.vocab,
+            "words": [ t.text for t in self ],
+            "spaces": [ t.whitespace for t in self ],
+            "user_data": user_data,
+            "tags": [ t.tag_ for t in self.tok ],
+            "pos": [ t.pos_ for t in self.tok ],
+            "morphs": [ str(t.morph) for t in self.tok ],
+            "lemmas": [ t.lemma_ for t in self.tok ],
+            "heads": [ t.head.i for t in self.tok ],
+            "deps": [ t.dep_ for t in self.tok ],
+            "ents": [ f"{t.ent_tag}" for t in self ]
+        }
+        return data
 
     def iter_grammar(self, **kwds: Any) -> Iterable["Sent"]:
         """Iterate over grammar sentence objects.

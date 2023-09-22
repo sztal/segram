@@ -1,8 +1,10 @@
 """Abstract base class for :mod:`segram`-enhanced :mod:`spacy` tokens."""
+# pylint: disable=no-name-in-module
 from __future__ import annotations
 from typing import Any, Callable, Final, Self
 from abc import ABC
 from functools import total_ordering
+from spacy.vocab import Vocab
 from spacy.tokens import Doc, Span, Token
 from spacy.tokens.underscore import Underscore
 from ... import settings
@@ -79,6 +81,10 @@ class NLP(ABC):
     @property
     def lang(self) -> str:
         return self.doc.lang
+
+    @property
+    def vocab(self) -> Vocab:
+        return self.tok.vocab
 
     @property
     def attrs(self) -> tuple[Any, ...]:

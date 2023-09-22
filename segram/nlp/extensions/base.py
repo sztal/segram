@@ -84,7 +84,7 @@ class SpacyExtensions:
         elif isinstance(tok, SpacySpan):
             key = (tok.start, tok.end)
         else:
-            key = -1
+            key = (-1, hash(tok))
         sns = cache.get(key)
         if sns is None:
             sns = typ(tok)
