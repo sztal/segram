@@ -1,7 +1,7 @@
 # pylint: disable=too-many-public-methods,no-name-in-module
 from __future__ import annotations
 from typing import Any, Iterable, Self
-from spacy.tokens import MorphAnalysis
+from spacy.tokens import MorphAnalysis, Token as SpacyToken
 from .abc import NLP
 from ...symbols import POS, Role
 from ...utils.colors import color_role
@@ -172,6 +172,11 @@ class Token(NLP):
 
     def nbor(self, *args: Any, **kwds: Any) -> Self:
         return self.sns(self.tok.nbor(*args, **kwds))
+
+    def is_ancestor(self, other: SpacyToken | Self) -> bool:
+        if isinstance(other, Token):
+            other = other.tok
+        return self.tok.is_ancestor(other)
 
 
 # Register comparison functions for testing -----------------------------------

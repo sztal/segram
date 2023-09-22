@@ -15,17 +15,14 @@ class SentNLP(GrammarNLP, Sent):
     @abstractmethod
     def find_links(self) -> Iterator[tuple[Phrase, Phrase]]:
         """Find phrase links."""
-        raise NotImplementedError
 
     @abstractmethod
     def find_conjs(self) -> Iterator[Conjuncts]:
         """Iterate over groups of conjoined components."""
-        raise NotImplementedError
 
     @abstractmethod
     def add_subs(self) -> None:
         """Add free subtree tokens to components."""
-        raise NotImplementedError
 
     # Methods -----------------------------------------------------------------
 
