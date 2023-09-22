@@ -5,7 +5,7 @@ from typing import Type, ClassVar, Mapping
 from types import MappingProxyType
 from functools import partial
 from spacy.tokens import Doc, Span, Token
-from ..tokens import SpacyNLPTokenABC
+from ..tokens import SpacyNLPToken
 from ..tokens import SpacyDoc, SpacySpan, SpacyTokenABC
 from .... import settings
 
@@ -34,7 +34,7 @@ class SpacyExtensions:
     })
     __attributes__: ClassVar[dict[str, dict]] = {
         "token": {
-            "refs": { "default": None },
+            "corefs": { "default": None },
         },
         "doc": {
             "meta": { "default": None },
@@ -76,8 +76,8 @@ class SpacyExtensions:
     @staticmethod
     def sns_getter(
         tok: Doc | Span | Token,
-        typ: Type[SpacyNLPTokenABC]
-    ) -> SpacyNLPTokenABC:
+        typ: Type[SpacyNLPToken]
+    ) -> SpacyNLPToken:
         cache = getattr(tok.doc._, f"{settings.spacy_alias}_cache")
         if isinstance(tok, Token):
             key = tok.i

@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import Any, Iterable
 from spacy.tokens import Token, MorphAnalysis
 from spacy.vocab import Vocab
-from .abc import SpacyNLPTokenABC
+from .abc import SpacyNLPToken
 from ...tokens import TokenABC
 from ...tokens import DocABC, SpanABC
 from ....symbols import POS, Role
 
 
-class SpacyTokenABC(SpacyNLPTokenABC, TokenABC):
+class SpacyTokenABC(TokenABC, SpacyNLPToken):
     """Enhanced token class."""
     __slots__ = ()
 
@@ -64,7 +64,7 @@ class SpacyTokenABC(SpacyNLPTokenABC, TokenABC):
         return self.tok.lemma_
 
     @property
-    def ent_type(self) -> str:
+    def ent(self) -> str:
         return self.tok.ent_type_
 
     @property

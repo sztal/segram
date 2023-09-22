@@ -13,9 +13,9 @@ class TokenData(NamedTuple):
     pos: POS
     whitespace: str = ""
     lemma: Optional[str] = None
-    ent_type: Optional[str] = None
+    ent: Optional[str] = None
     role: Optional[Role] = None
-    refs: Optional[tuple[int, ...]] = None
+    corefs: Optional[tuple[int, ...]] = None
     is_negation: bool = False
     is_qmark: bool = False
     is_exclam: bool = False
@@ -79,12 +79,12 @@ class Token(TokenABC):
         return self.data.role
 
     @property
-    def ent_type(self) -> str:
-        return self.data.ent_type
+    def ent(self) -> str:
+        return self.data.ent
 
     @property
-    def refs(self) -> Token:
-        if (refs := self.data.refs):
+    def corefs(self) -> Token:
+        if (refs := self.data.corefs):
             return tuple(self.doc[ref] for ref in refs)
         return ()
 

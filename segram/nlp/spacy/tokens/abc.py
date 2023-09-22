@@ -2,11 +2,11 @@
 from __future__ import annotations
 from spacy.tokens import Doc, Span, Token
 from spacy.tokens.underscore import Underscore
-from ...tokens.abc import NLPTokenABC, DocABC
+from ...tokens.abc import NLPToken, DocABC
 from .... import settings
 
 
-class SpacyNLPTokenABC(NLPTokenABC):
+class SpacyNLPToken(NLPToken):
     """Abstract base class for enhanced :mod:`spacy` tokens.
 
     Attributes
@@ -36,6 +36,6 @@ class SpacyNLPTokenABC(NLPTokenABC):
     # Methods -----------------------------------------------------------------
 
     @classmethod
-    def sns(cls, tok: Doc | Span | Token) -> SpacyNLPTokenABC:
+    def sns(cls, tok: Doc | Span | Token) -> SpacyNLPToken:
         """Get :mod:`segram` namespace from :mod:`spacy` token."""
         return getattr(tok._, settings.spacy_alias)

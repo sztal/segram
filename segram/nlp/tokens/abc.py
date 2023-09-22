@@ -1,7 +1,7 @@
 """Abstract base classes for generic tokens."""
 # pylint: disable=import-self
 from __future__ import annotations
-from typing import Any, Optional, Iterable, ClassVar, Final
+from typing import Any, Optional, Iterable, Final, Callable
 from functools import total_ordering
 from abc import ABC, abstractmethod
 from ...symbols import POS, Role
@@ -10,23 +10,58 @@ from ...utils.diff import iter_diffs, equal, IDiffType
 from ...utils.colors import color_role
 
 
-class NLPTokenABC(ABC):
-    """ABC for defning NLP tokens."""
-    __slots__ = ()
-    __attrs__: ClassVar[tuple[str, ...]] = ()
+def attr(prop: Callable) -> Callable:
+    """Mark property as token attribute,
+    so its name is stored in ``__attrs__``.
+    """
+    prop.fget.__is_attr__ = True
+    return prop
 
-    def __hash__(self) -> int:
-        return hash(self.doc)
+
+class NLP(ABC):
+    """Abstract base class for NLP objects."""
+    __slots__ = ()
+    __attrs__: Final[tuple[str, ...]] = ()
+
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        if "__slots__" not in cls.__dict__:
+            raise TypeError(f"'{cls.__name__}' does not define '__slots__'")
+        init_class_attrs(cls, {
+            "__slots__": "slot_names"
+        })
+        try:
+            total_ordering(cls)
+        except ValueError:
+            pass
+        if "__attrs__" in cls.__dict__:
+            raise AttributeError("'__attrs__' class attribute cannot be defined on subclasses")
+        __attrs__ = list(cls.__attrs__)
+        for n, a in vars(cls).items():
+            if isinstance(a, property) and getattr(a.fget, "__is_attr__", False):
+                if n in __attrs__:
+                    raise AttributeError(f"'{n}' is already defined in '__attrs__': {__attrs__}")
+                __attrs__.append(n)
+        cls.__attrs__ = tuple(__attrs__)
+
+
+class NLPToken(NLP):
+    """ABC for defning generic NLP tokens."""
+    __slots__ = ()
 
     def __repr__(self) -> str:
         """String representation."""
         return self.text
 
-    def __eq__(self, other: NLPTokenABC) -> bool:
+    def __eq__(self, other: NLPToken) -> bool:
         """Check equality with another token of the same type."""
-        if self.is_comparable_with(other):
+        if self.is_comparable_with(other) is True:
             return self.doc == other.doc
         return NotImplemented
+
+    @abstractmethod
+    def __hash__(self) -> int:
+        pass
 
     @property
     def attrs(self) -> tuple[Any, ...]:
@@ -34,6 +69,7 @@ class NLPTokenABC(ABC):
 
     # Abstract methods --------------------------------------------------------
 
+    @attr
     @property
     @abstractmethod
     def text(self) -> str:
@@ -44,43 +80,30 @@ class NLPTokenABC(ABC):
     def doc(self) -> DocABC:
         """Parent document object (or ``self`` for documents)."""
 
-    @abstractmethod
-    def is_comparable_with(self, other: Any) -> bool:
-        """Check if ``self`` defines the same abstract interface as ``other``."""
-
-    # Subclass hook -----------------------------------------------------------
-
-    def __init_subclass__(cls, *args: Any, **kwds: Any) -> None:
-        """Hook for customizing subclasses."""
-        super().__init_subclass__(*args, **kwds)
-        if "__slots__" not in cls.__dict__:
-            raise TypeError(f"'{cls.__name__}' does not define '__slots__'")
-        init_class_attrs(cls, {
-            "__slots__": "slot_names"
-        })
-        try:
-            total_ordering(cls)
-        except ValueError:
-            pass
-
     # Methods -----------------------------------------------------------------
 
-    def equal(self, other: NLPTokenABC, *, strict: bool = True) -> bool:
-        return self.is_comparable_with(other) and equal(self, other, strict=strict)
+    def equal(self, other: NLPToken, *, strict: bool = True) -> bool:
+        return equal(self, other, strict=strict)
+
+    def is_comparable_with(self, other: Any) -> bool:
+        """Check if ``self`` defines the same abstract interface as ``other``."""
+        if not isinstance(other, NLPToken):
+            return NotImplemented
+        if self.doc is not other.doc:
+            raise ValueError("'self' and 'other' are based on different documents")
+        return isinstance(other, self.__class__) or NotImplemented
 
 
 @total_ordering
-class TokenABC(NLPTokenABC):
+class TokenABC(NLPToken):
     """Token abstract base class."""
     __slots__ = ()
-    __attrs__: Final[tuple[str, ...]] = \
-        ("i", "text", "whitespace", "lemma", "pos", "role", "refs")
 
     def __repr__(self) -> str:
         return self.to_str(color=True)
 
     def __hash__(self) -> int:
-        return hash((super().__hash__(), self.i))
+        return hash((hash(self.doc), self.i))
 
     def __eq__(self, other: TokenABC) -> bool:
         if (res := super().__eq__(other)) is NotImplemented:
@@ -93,30 +116,56 @@ class TokenABC(NLPTokenABC):
             return self.i < other.i
         return NotImplemented
 
+    # Attr-properties ---------------------------------------------------------
+
+    @attr
     @property
     @abstractmethod
     def i(self) -> int:
         """Token index within the document sequence."""
 
+    @attr
     @property
     @abstractmethod
     def whitespace(self) -> str:
         """Whitespace following the token."""
 
-    @property
-    @abstractmethod
-    def text_with_ws(self) -> str:
-        """Token text with following whitespace."""
-
+    @attr
     @property
     @abstractmethod
     def lemma(self) -> str:
         """Lemmatized token text."""
 
+    @attr
     @property
     @abstractmethod
     def pos(self) -> POS:
         """Part-of-speech tag (UDEP)."""
+
+    @attr
+    @property
+    @abstractmethod
+    def role(self) -> Role:
+        """Fixed token role."""
+
+    @attr
+    @property
+    @abstractmethod
+    def ent(self) -> Role:
+        """Named entity type."""
+
+    @attr
+    @property
+    @abstractmethod
+    def corefs(self) -> Optional[tuple[TokenABC, ...]]:
+        """Coreference tokens."""
+
+    # Properties --------------------------------------------------------------
+
+    @property
+    @abstractmethod
+    def text_with_ws(self) -> str:
+        """Token text with following whitespace."""
 
     @property
     @abstractmethod
@@ -140,21 +189,6 @@ class TokenABC(NLPTokenABC):
 
     @property
     @abstractmethod
-    def role(self) -> Role:
-        """Fixed token role."""
-
-    @property
-    @abstractmethod
-    def ent_type(self) -> Role:
-        """Named entity type."""
-
-    @property
-    @abstractmethod
-    def refs(self) -> Optional[tuple[TokenABC, ...]]:
-        """Coreference tokens."""
-
-    @property
-    @abstractmethod
     def sent(self) -> SpanABC:
         """Sentence object containing the token."""
 
@@ -165,9 +199,9 @@ class TokenABC(NLPTokenABC):
         return self.doc.lang
 
     @property
-    def ref(self) -> TokenABC:
+    def coref(self) -> TokenABC:
         """Return main coreferred token or self."""
-        if (refs := self.refs):
+        if (refs := self.corefs):
             return refs[0]
         return self
 
@@ -190,7 +224,7 @@ class TokenABC(NLPTokenABC):
             They can be used to override the fixed token role
             with contextual roles using ``role`` keyword argument.
         """
-        refs = self.refs
+        refs = self.corefs
         if refs:
             refs = ",".join(r.to_str(color=False) for r in refs)
             refs = f"[{refs}]"
@@ -202,25 +236,20 @@ class TokenABC(NLPTokenABC):
         kwds = { "role": self.role, **kwds }
         return f"{color_role(self.text, color=color, **kwds)}{refs}"
 
-    def is_comparable_with(self, other: Any) -> bool:
-        """Check if ``self`` defines the same abstract interface as ``other``."""
-        return isinstance(other, TokenABC)
 
-
-class SpanABC(NLPTokenABC):
+class SpanABC(NLPToken):
     """Span abstract base class."""
     __slots__ = ()
-    __attrs__: Final[tuple[str, ...]] = ("start", "end")
 
     def __hash__(self) -> int:
-        return hash(super().__hash__(), self.start, self.end)
+        return hash((hash(self.doc), self.start, self.end))
 
     def __eq__(self, other: SpanABC) -> bool:
         if (res := super().__eq__(other)) is NotImplemented:
             return res
         return res and (self.start, self.end) == (other.start, other.end)
 
-    def __lt__(self, other: NLPTokenABC) -> bool:
+    def __lt__(self, other: NLPToken) -> bool:
         """Is ``self`` earlier in the document than ``other``."""
         if self.is_comparable_with(other):
             return (self.start, self.end) < (other.start, other.end)
@@ -242,11 +271,13 @@ class SpanABC(NLPTokenABC):
     def __contains__(self, tok: TokenABC) -> bool:
         """Check if ``self`` contains ``tok``."""
 
+    @attr
     @property
     @abstractmethod
     def start(self) -> int:
         """Sentence start index."""
 
+    @attr
     @property
     @abstractmethod
     def end(self) -> int:
@@ -258,27 +289,18 @@ class SpanABC(NLPTokenABC):
     def lang(self) -> str:
         return self.doc.lang
 
-    # Methods -----------------------------------------------------------------
 
-    def is_comparable_with(self, other: Any) -> bool:
-        """Check if ``self`` defines the same abstract interface as ``other``."""
-        return isinstance(other, SpanABC)
-
-
-class DocABC(NLPTokenABC):
+class DocABC(NLPToken):
     """Document abstract base class."""
     __slots__ = ()
-    __attrs__: Final[tuple[str, ...]] = ("lang",)
+
+    def __hash__(self) -> int:
+        return id(self)
+
+    def __eq__(self, other: Any) -> bool:
+        return self is other
 
     # Abstract methods --------------------------------------------------------
-
-    @abstractmethod
-    def __hash__(self) -> int:
-        """Document hash value."""
-
-    @abstractmethod
-    def __eq__(self, other: DocABC) -> None:
-        """Is ``self`` equal to ``other``."""
 
     @abstractmethod
     def __iter__(self) -> Iterable[TokenABC]:
@@ -296,6 +318,7 @@ class DocABC(NLPTokenABC):
     def __contains__(self, tok: TokenABC) -> bool:
         """Check if ``self`` contains ``tok``."""
 
+    @attr
     @property
     @abstractmethod
     def lang(self) -> str:
@@ -311,7 +334,7 @@ class DocABC(NLPTokenABC):
     @property
     def id(self) -> int:
         """Hash id of the document tokenization."""
-        return hash(tuple((t.text, t.whitespace) for t in self))
+        return hash(t.attrs for t in self)
 
     # Methods -----------------------------------------------------------------
 
@@ -319,28 +342,22 @@ class DocABC(NLPTokenABC):
     def copy(self) -> DocABC:
         """Return copy of the self."""
 
-    def is_comparable_with(self, other: Any) -> bool:
-        """Check if ``self`` defines the same abstract interface as ``other``."""
-        return isinstance(other, DocABC)
-
 
 @equal.register
 def _(obj: DocABC, other: DocABC, *, strict: bool = True) -> bool:
-    return obj.is_comparable_with(other) \
-        and ((strict and obj == other) or (not strict and obj.id == other.id))
+    return ((strict and obj == other) or (not strict and obj.id == other.id))
 @iter_diffs.register
 def _(obj: DocABC, other: DocABC, *, strict: bool = True) -> IDiffType:
     if not equal(obj, other, strict=strict):
         msg = "DOCUMENT CONTENT"
-        if obj.is_comparable_with(other) and obj.id == other.id:
+        if obj.id == other.id:
             msg = "DOCUMENT TYPE"
         yield msg, obj, other
 
 @equal.register
 def _(obj: SpanABC, other: SpanABC, *, strict: bool = True) -> bool:
-    return obj.is_comparable_with(other) \
-        and (obj.start, obj.end) == (other.start, other.end) \
-        and obj.doc.equal(other.doc, strict=strict)
+    return obj.doc.equal(other.doc, strict=strict) \
+        and (obj.start, obj.end) == (other.start, other.end)
 @iter_diffs.register
 def _(obj: SpanABC, other: SpanABC, *, strict: bool = True) -> IDiffType:
     if not equal(obj, other, strict=strict):
@@ -348,9 +365,8 @@ def _(obj: SpanABC, other: SpanABC, *, strict: bool = True) -> IDiffType:
 
 @equal.register
 def _(obj: TokenABC, other: TokenABC, *, strict: bool = True) -> bool:
-    return obj.is_comparable_with(other) \
-        and (obj.i == other.i) \
-        and equal(obj.doc, other.doc, strict=strict)
+    return equal(obj.doc, other.doc, strict=strict) \
+        and (obj.i == other.i)
 @iter_diffs.register
 def _(obj: TokenABC, other: TokenABC, *, strict: bool = True) -> IDiffType:
     if not equal(obj, other, strict=strict):

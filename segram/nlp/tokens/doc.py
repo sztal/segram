@@ -32,14 +32,6 @@ class Doc(DocABC):
         self.data = tuple(data)
         self.sent_spans = tuple(sent_spans)
 
-    def __hash__(self) -> int:
-        return hash((0, id(self)))
-
-    def __eq__(self, other: Doc) -> bool:
-        if isinstance(other, Doc):
-            return self is other
-        return NotImplemented
-
     def __iter__(self) -> Iterable[TokenABC]:
         for i in range(len(self)):
             yield self[i]

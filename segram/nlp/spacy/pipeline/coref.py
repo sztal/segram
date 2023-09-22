@@ -90,11 +90,11 @@ class Coref:
                 if closest is None or abs(i-j) < closest:
                     closest = j
             if closest is not None:
-                refs = set()
-                refs.add(closest)
+                corefs = set()
+                corefs.add(closest)
                 for conj in doc[closest].conjuncts:
-                    refs.add(conj.i)
-                setattr(doc[i]._, f"{alias}_refs", tuple(sorted(refs)))
+                    corefs.add(conj.i)
+                setattr(doc[i]._, f"{alias}_corefs", tuple(sorted(corefs)))
 
     @classmethod
     def from_model(

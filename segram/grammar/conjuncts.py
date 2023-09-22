@@ -219,14 +219,14 @@ class PhraseGroup(ChainGroup):
         for phrase in self:
             tok = phrase.head.tok
             if coref:
-                tok = tok.ref
+                tok = tok.coref
             key = tok.lemma if lemmatize else tok.text
             if pos or ent:
                 key = (key,)
                 if pos:
                     key = (*key, tok.pos)
                 if ent:
-                    key = (*key, tok.ent_type)
+                    key = (*key, tok.ent)
             data \
                 .setdefault(key, {}) \
                 .setdefault("phrases", []).append(phrase)

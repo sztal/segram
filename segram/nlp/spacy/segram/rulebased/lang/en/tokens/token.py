@@ -44,9 +44,9 @@ class SpacyRulebasedEnglishToken(SpacyTokenABC):
         return None
 
     @property
-    def refs(self) -> Optional[SpacyRulebasedEnglishToken:]:
+    def corefs(self) -> Optional[SpacyRulebasedEnglishToken:]:
         # pylint: disable=protected-access,redefined-outer-name
-        if (refs := getattr(self._, f"{settings.spacy_alias}_refs")):
+        if (refs := getattr(self._, f"{settings.spacy_alias}_corefs")):
             return tuple(self.doc[ref] for ref in refs)
         return ()
 

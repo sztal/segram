@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any, Optional, Iterable
 from spacy.tokens import Doc, Token
-from .abc import SpacyNLPTokenABC
+from .abc import SpacyNLPToken
 from .token import SpacyTokenABC
 from .span import SpacySpan
 from ...tokens import DocABC
@@ -10,7 +10,7 @@ from .... import settings, __title__
 from ....utils.registries import grammars
 
 
-class SpacyDoc(SpacyNLPTokenABC, DocABC):
+class SpacyDoc(DocABC, SpacyNLPToken):
     """Enhanced document class."""
     __slots__ = ()
 
@@ -72,9 +72,9 @@ class SpacyDoc(SpacyNLPTokenABC, DocABC):
                     pos=tok.pos,
                     whitespace=tok.whitespace,
                     lemma=tok.lemma,
-                    ent_type=tok.ent_type,
+                    ent=tok.ent,
                     role=tok.role,
-                    refs=getattr(tok._, f"{settings.spacy_alias}_refs"),
+                    corefs=getattr(tok._, f"{settings.spacy_alias}_corefs"),
                     is_negation=tok.is_negation,
                     is_qmark=tok.is_qmark,
                     is_exclam=tok.is_exclam,

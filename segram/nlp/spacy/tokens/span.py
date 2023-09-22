@@ -2,14 +2,14 @@ from __future__ import annotations
 from typing import Any, Optional, Iterable
 from spacy import displacy
 from spacy.tokens import Span, Token
-from .abc import SpacyNLPTokenABC
+from .abc import SpacyNLPToken
 from .token import SpacyTokenABC
 from ...tokens import DocABC, SpanABC
 from .... import settings
 from ....grammar import Sent
 
 
-class SpacySpan(SpacyNLPTokenABC, SpanABC):
+class SpacySpan(SpanABC, SpacyNLPToken):
     """Enhanced span class."""
     __slots__ = ()
 

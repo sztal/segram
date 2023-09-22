@@ -59,7 +59,7 @@ def create_en_merger(
 @English.factory(
     name=f"{__title__}_coref",
     requires=("token.pos",),
-    assigns=(f"token._.{settings.spacy_alias}_refs",),
+    assigns=(f"token._.{settings.spacy_alias}_corefs",),
     default_config={
         "model": "en_coreference_web_trf",
         "components": ["sentencizer", "transformer", "coref"]
