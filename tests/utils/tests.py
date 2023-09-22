@@ -7,7 +7,7 @@ import json
 from murmurhash import hash_unicode
 from segram import settings
 from segram.grammar import Sent
-from segram.nlp import DocABC, SpanABC
+from segram.nlp.abc import DocABC, SpanABC
 from segram.utils.types import Namespace
 from segram.utils.meta import get_cname
 from segram.utils.resources import JSONResource

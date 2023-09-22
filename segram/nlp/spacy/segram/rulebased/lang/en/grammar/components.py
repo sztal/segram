@@ -5,7 +5,7 @@ from .......grammar import ComponentNLP
 from ........grammar.lang.en import EnglishComponent
 from ........grammar.lang.en import EnglishVerb, EnglishNoun
 from ........grammar.lang.en import EnglishPrep, EnglishDesc
-from .......tokens import TokenABC
+from .......abc import TokenABC
 from ........symbols import Dep, Tense, Modal, Mood
 
 

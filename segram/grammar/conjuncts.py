@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any, Optional, Iterable, Self, Callable
-from ..nlp import TokenABC
+from ..nlp.abc import TokenABC
 from ..utils.types import Group, ChainGroup
 
 

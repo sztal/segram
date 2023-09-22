@@ -4,7 +4,7 @@ from .......grammar import SentNLP
 from ........grammar.lang.en import EnglishSent
 from ........grammar import Component, Phrase
 from ........grammar import Conjuncts
-from ........nlp import TokenABC
+from ........nlp.abc import TokenABC
 from ........symbols import Dep
 
 

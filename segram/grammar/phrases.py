@@ -6,7 +6,7 @@ from more_itertools import unique_everseen
 from .abc import SentElement
 from .components import Component, Verb, Noun, Desc, Prep
 from .conjuncts import Conjuncts, PhraseGroup
-from ..nlp import TokenABC
+from ..nlp.abc import TokenABC
 from ..symbols import Role, Dep
 from ..abc import labelled
 

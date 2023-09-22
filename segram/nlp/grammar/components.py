@@ -2,7 +2,7 @@
 from typing import Any, Optional, Iterable, Sequence, ClassVar
 from abc import abstractmethod
 from .grammar import GrammarNLP
-from ..tokens import TokenABC
+from ..abc import TokenABC
 from ...grammar import Component
 from ...symbols import POS, Role, Dep
 

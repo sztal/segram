@@ -4,7 +4,7 @@ from spacy import displacy
 from spacy.tokens import Span, Token
 from .abc import SpacyNLPToken
 from .token import SpacyTokenABC
-from ...tokens import DocABC, SpanABC
+from ...abc import DocABC, SpanABC
 from .... import settings
 from ....grammar import Sent
 

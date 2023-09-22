@@ -1,7 +1,7 @@
 """_Segram_ generic class for NLP span."""
 from __future__ import annotations
 from typing import Iterable
-from .abc import DocABC, SpanABC, TokenABC
+from ..abc.tokens import DocABC, SpanABC, TokenABC
 
 
 class Span(SpanABC):

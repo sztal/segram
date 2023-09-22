@@ -4,7 +4,7 @@ from spacy.tokens import Doc, Token
 from .abc import SpacyNLPToken
 from .token import SpacyTokenABC
 from .span import SpacySpan
-from ...tokens import DocABC
+from ...abc import DocABC
 from ...tokens import Doc as SimpleDoc, TokenData
 from .... import settings, __title__
 from ....utils.registries import grammars

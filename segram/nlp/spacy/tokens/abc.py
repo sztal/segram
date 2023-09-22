@@ -2,7 +2,8 @@
 from __future__ import annotations
 from spacy.tokens import Doc, Span, Token
 from spacy.tokens.underscore import Underscore
-from ...tokens.abc import NLPToken, DocABC
+from ...abc import NLPToken
+from ...abc.tokens import DocABC
 from .... import settings
 
 

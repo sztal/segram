@@ -3,7 +3,7 @@ from .grammar import EnglishGrammar
 from ... import Component
 from ... import Verb, Noun
 from ... import Prep, Desc
-from ....nlp import TokenABC
+from ....nlp.abc import TokenABC
 
 
 class EnglishComponent(EnglishGrammar, Component):

@@ -4,8 +4,7 @@ from typing import Any, Iterable
 from spacy.tokens import Token, MorphAnalysis
 from spacy.vocab import Vocab
 from .abc import SpacyNLPToken
-from ...tokens import TokenABC
-from ...tokens import DocABC, SpanABC
+from ...abc import DocABC, SpanABC, TokenABC
 from ....symbols import POS, Role
 
 

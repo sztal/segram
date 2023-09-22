@@ -9,7 +9,7 @@ from .components import Prep, Desc
 from .phrases import Phrase, VerbPhrase, NounPhrase, DescPhrase, PrepPhrase
 from .graph import PhraseGraph
 from ..settings import settings
-from ..nlp import DocABC, SpanABC, TokenABC
+from ..nlp.abc import DocABC, SpanABC, TokenABC
 from ..symbols import Role
 
 

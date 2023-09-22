@@ -6,4 +6,3 @@ the package concerned with processing the output produced by
 a backend.
 """
 from .tokens import Doc, Span, Token
-from .tokens import DocABC, SpanABC, TokenABC

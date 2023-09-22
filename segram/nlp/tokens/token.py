@@ -1,7 +1,7 @@
 """_Segram_ generic class for NLP token."""
 from __future__ import annotations
 from typing import Optional, NamedTuple
-from .abc import TokenABC, SpanABC, DocABC
+from ..abc.tokens import TokenABC, SpanABC, DocABC
 from ...symbols import POS, Role
 
 

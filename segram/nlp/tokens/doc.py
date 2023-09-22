@@ -1,7 +1,7 @@
 """_Segram_ generic class for NLP document."""
 from __future__ import annotations
 from typing import Iterable
-from .abc import DocABC, SpanABC, TokenABC
+from ..abc.tokens import DocABC, SpanABC, TokenABC
 from .token import TokenData, Token
 from .span import Span
 

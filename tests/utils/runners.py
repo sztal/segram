@@ -8,7 +8,7 @@ from IPython import embed
 from spacy.tokens import Doc
 from spacy.language import Language
 from segram import settings
-from segram.nlp import DocABC
+from segram.nlp.abc import DocABC
 from segram.utils.resources import JSONResource
 from segram.utils.versioning import is_correct_version
 from segram.utils.meta import get_cname

@@ -1,7 +1,7 @@
 from typing import Iterator
 from abc import abstractmethod
 from .grammar import GrammarNLP
-from ..tokens import SpanABC
+from ..abc import SpanABC
 from ...grammar import Phrase, Sent, PhraseGraph, Conjuncts
 from ...symbols import Dep
 

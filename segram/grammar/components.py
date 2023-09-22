@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any, Optional, Iterable, Iterator, ClassVar, Type, Self
 from .abc import SentElement
 from .conjuncts import Conjuncts
-from ..nlp.tokens import TokenABC
+from ..nlp.abc import TokenABC
 from ..symbols import POS, Role, Tense, Modal, Mood, Symbol
 
 

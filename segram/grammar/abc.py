@@ -12,7 +12,7 @@ from abc import abstractmethod
 import re
 from functools import total_ordering
 from catalogue import Registry
-from ..nlp import DocABC, SpanABC, TokenABC
+from ..nlp.abc import DocABC, SpanABC, TokenABC
 from ..utils.registries import grammars
 from ..abc import SegramWithDocABC
 from ..utils.types import Namespace
