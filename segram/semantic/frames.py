@@ -5,7 +5,7 @@ import re
 from .abc import Semantic
 from ..grammar import Conjuncts, Phrase, NounPhrase, VerbPhrase
 from ..symbols import Dep
-from ..utils.types import Matcher
+# from ..utils.types import Matcher
 
 
 class Frame(Semantic, Sequence):
