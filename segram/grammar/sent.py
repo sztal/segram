@@ -142,7 +142,7 @@ class Sent(Sequence, DocElement):
 
     @property
     def phrases(self) -> tuple[Phrase, ...]:
-        return tuple(self.pmap.values())
+        return Conjuncts.get_chain(self.pmap.values())
 
     @property
     def coverage(self) -> float:

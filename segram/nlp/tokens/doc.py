@@ -117,7 +117,7 @@ class Doc(NLP):
     def copy(self) -> SpacyDoc:
         return self.sns(self.tok.copy())
 
-    def get_grammar(self):
+    def get_grammar_type(self):
         key = getattr(self._, f"{settings.spacy_alias}_meta")[f"{settings.spacy_alias}_grammar"]
         return grammars.get(key)
 

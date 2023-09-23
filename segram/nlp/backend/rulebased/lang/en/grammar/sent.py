@@ -1,4 +1,4 @@
-from typing import Optional, Iterator, Sequence
+from typing import Optional, Iterable, Sequence
 from .grammar import RulebasedEnglishGrammar
 from ......grammar import SentNLP
 from .......grammar.lang.en import EnglishSent
@@ -15,7 +15,7 @@ class RulebasedEnglishSent(
     """Rule-based :mod:`spacy` English sentence element."""
     __slots__ = ()
 
-    def find_links(self) -> Iterator[tuple[Phrase, Phrase]]:
+    def find_links(self) -> Iterable[tuple[Phrase, Phrase]]:
         """Find phrase links.
 
         Yields
@@ -39,7 +39,7 @@ class RulebasedEnglishSent(
                     phrase.sconj = comp.get_sconj(parent)
                     yield parent.phrase, phrase
 
-    def find_conjs(self) -> Iterator[Conjuncts]:
+    def find_conjs(self) -> Iterable[Conjuncts]:
         """Iterate over groups of conjoined comps."""
         groups = set()
         comps = self.components
@@ -82,7 +82,7 @@ class RulebasedEnglishSent(
         group: tuple[Token, tuple[Component, ...]],
         groups: Optional[set[tuple[Component, ...]]] = None,
         comps: Optional[Sequence[Component]] = None
-    ) -> Iterator[tuple[Component, ...]]:
+    ) -> Iterable[tuple[Component, ...]]:
         groups = groups if groups is not None else set()
         comps = comps if comps is not None else self.components
         larger = None

@@ -1,9 +1,10 @@
 from __future__ import annotations
 from typing import Any, Iterable, Iterator, Mapping, MutableMapping, Self
 from graphlib import TopologicalSorter, CycleError
+from ..abc import SegramABC
 
 
-class Graph(MutableMapping):
+class Graph(MutableMapping, SegramABC):
     """Graph.
 
     By default it has a form of a mapping from sources to targets,

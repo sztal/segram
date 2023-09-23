@@ -99,16 +99,16 @@ class Span(NLP):
             sentence. If ``None`` then the data is used if it
             is available.
         """
-        typ = self.doc.get_grammar()
+        typ = self.doc.get_grammar_type()
         alias = settings.spacy_alias
-        if use_data is None or use_data:
+        if use_data is None:
             attr = f"{alias}_grammar_data"
             data = getattr(self.doc._, attr, None)
             use_data = bool(data)
-        if not use_data:
-            return typ.types.Sent.from_sent(self)
-        data = data[(self.start, self.end)]
-        return typ.types.Sent.from_data(self.doc, data)
+        if use_data:
+            data = data[(self.start, self.end)]
+            return typ.types.Sent.from_data(self.doc, data)
+        return typ.types.Sent.from_sent(self)
 
     def char_span(self, *args: Any, **kwds: Any) -> Optional[SpacySpan]:
         out = self.span.char_span(*args, **kwds)

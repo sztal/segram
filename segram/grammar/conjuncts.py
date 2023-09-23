@@ -1,10 +1,11 @@
 from __future__ import annotations
-from typing import Any, Optional, Iterable, Self, Callable
+from typing import Any, Optional, Iterable, Self
 from ..nlp.tokens import Token
-from ..utils.types import Group, ChainGroup
+# from ..utils.types import Group, ChainGroup
+from ..datastruct import DataSequence, DataGrouped
 
 
-class Conjuncts(Group):
+class Conjuncts(DataSequence):
     """Group of conjoined phrases.
 
     Attributes
@@ -28,7 +29,7 @@ class Conjuncts(Group):
         cconj: Optional[Token] = None,
         preconj: Optional[Token] = None
     ) -> None:
-        super().__init__(members)
+        super().__init__(tuple(members))
         self._lead = lead
         self.cconj = cconj
         self.preconj = preconj
@@ -110,7 +111,8 @@ class Conjuncts(Group):
             ).strip()
         if coords:
             coords = f"[{coords}]"
-        return f"{coords}{super().to_str()}"
+        members = ", ".join(m.to_str(color=color, **kwds) for m in self.members)
+        return f"{coords}({members})"
 
     def is_comparable_with(self, other: Conjuncts) -> bool:
         return isinstance(other, Conjuncts)
@@ -125,120 +127,120 @@ class Conjuncts(Group):
             if not group:
                 continue
             if len(group) == 1:
-                yield group
+                yield Conjuncts(group)
             else:
                 yield lead.sent.conjs[lead].copy(members=group)
 
     @classmethod
-    def get_chain(cls, phrases: Iterable["Phrase"]) -> ChainGroup:
+    def get_chain(cls, phrases: Iterable["Phrase"]) -> DataGrouped:
         """Get chain of conjuncts groups in ``phrases``."""
-        return PhraseGroup(cls.find_groups(phrases))
+        return DataGrouped(tuple(cls.find_groups(phrases)))
 
 
-class PhraseGroup(ChainGroup):
-    """Phrase group class.
+# class PhraseGroup(DataGrouped):
+#     """Phrase group class.
 
-    This is a chain of groups of conjoined phrases
-    enhanced with several methods for matching, grouping,
-    summarizing and aggregating information from phrases.
-    """
-    __slots__ = ()
+#     This is a chain of groups of conjoined phrases
+#     enhanced with several methods for matching, grouping,
+#     summarizing and aggregating information from phrases.
+#     """
+#     __slots__ = ()
 
-    def __init__(self, members: Iterable[Group] = ()) -> None:
-        members = tuple(
-            Conjuncts(m) if not isinstance(m, Group) else m
-            for m in members
-        )
-        super().__init__(members)
+#     def __init__(self, members: Iterable[DataSequence] = ()) -> None:
+#         members = DataSequence(
+#             Conjuncts(m) if not isinstance(m, Conjuncts) else m
+#             for m in members
+#         )
+#         super().__init__(members)
 
-    def match(
-        self,
-        *args: Any,
-        require: Callable[Iterable["Phrase"], bool] = any,
-        **kwds: Any
-    ) -> bool:
-        """Match phrase group against a specification.
+#     def match(
+#         self,
+#         *args: Any,
+#         require: Callable[Iterable["Phrase"], bool] = any,
+#         **kwds: Any
+#     ) -> bool:
+#         """Match phrase group against a specification.
 
-        Parameters
-        ----------
-        *args, **kwds
-            Passed to :meth:`segram.grammar.Phrase`.
-        require
-            Function deciding whether the phrase group
-            after filtering satisfies the requirements.
-        """
-        return require(p.match(*args, **kwds) for p in self)
+#         Parameters
+#         ----------
+#         *args, **kwds
+#             Passed to :meth:`segram.grammar.Phrase`.
+#         require
+#             Function deciding whether the phrase group
+#             after filtering satisfies the requirements.
+#         """
+#         return require(p.match(*args, **kwds) for p in self)
 
-    def group_by_doc(self) -> dict[str, PhraseGroup]:
-        """Group by documents."""
-        data = {}
-        for group in self.members:
-            data.setdefault(id(group.lead.doc), []).append(group)
-        final = {}
-        for v in data.values():
-            final[v[0].lead.doc.id] = self.__class__(sorted(v))
-        return final
+#     def group_by_doc(self) -> dict[str, PhraseGroup]:
+#         """Group by documents."""
+#         data = {}
+#         for group in self.members:
+#             data.setdefault(id(group.lead.doc), []).append(group)
+#         final = {}
+#         for v in data.values():
+#             final[v[0].lead.doc.id] = self.__class__(sorted(v))
+#         return final
 
-    def get_conjuncts(self) -> Self:
-        """Get non-trivial conjunct groups."""
-        return self.__class__([
-            m for m in self.members if len(m) > 1
-        ])
+#     def get_conjuncts(self) -> Self:
+#         """Get non-trivial conjunct groups."""
+#         return self.__class__([
+#             m for m in self.members if len(m) > 1
+#         ])
 
-    def group_by_head(
-        self,
-        *parts,
-        lemmatize: bool = True,
-        coref: bool = True,
-        pos: bool = True,
-        ent: bool = True,
-        lexeme: bool = True
-    ) -> dict[str, PhraseGroup]:
-        """Group by phrases by head tokens.
+#     def group_by_head(
+#         self,
+#         *parts,
+#         lemmatize: bool = True,
+#         coref: bool = True,
+#         pos: bool = True,
+#         ent: bool = True,
+#         lexeme: bool = True
+#     ) -> dict[str, PhraseGroup]:
+#         """Group by phrases by head tokens.
 
-        Parameters
-        ----------
-        *parts
-            Names of the parts (e.g. ``"subj"`` or ``"xcomp"``)
-            to use. Use all parts if ``None``.
-        lemmatize
-            Lemmatize token texts used as keys.
-        coref
-            Resolve coreferences (to the leading ref)
-            for use as keys.
-        pos
-            Add POS tags to keys.
-        ent
-            Add entity types to keys.
-        lexeme
-            Add ``"lexeme"`` field storing
-            lexeme objects corresponding to tokens.
-        """
-        # pylint: disable=too-many-locals
-        data = {}
-        for phrase in self:
-            tok = phrase.head.tok
-            if coref:
-                tok = tok.coref
-            key = tok.lemma if lemmatize else tok.text
-            if pos or ent:
-                key = (key,)
-                if pos:
-                    key = (*key, tok.pos)
-                if ent:
-                    key = (*key, tok.ent)
-            data \
-                .setdefault(key, {}) \
-                .setdefault("phrases", []).append(phrase)
-            rec = data[key]
-            if lexeme and (lkey := "lexeme") not in rec \
-            and (vocab := getattr(tok, "vocab", None)):
-                rec[lkey] = vocab[key[0] if isinstance(key, tuple) else key]
-            for name in phrase.part_names:
-                if parts and name not in parts:
-                    continue
-                for part in getattr(phrase, name, ()):
-                    rec.setdefault(name, []).append(part)
-        for key in data:
-            data[key] = { k: v for k, v in data[key].items() if v }
-        return data
+#         Parameters
+#         ----------
+#         *parts
+#             Names of the parts (e.g. ``"subj"`` or ``"xcomp"``)
+#             to use. Use all parts if ``None``.
+#         lemmatize
+#             Lemmatize token texts used as keys.
+#         coref
+#             Resolve coreferences (to the leading ref)
+#             for use as keys.
+#         pos
+#             Add POS tags to keys.
+#         ent
+#             Add entity types to keys.
+#         lexeme
+#             Add ``"lexeme"`` field storing
+#             lexeme objects corresponding to tokens.
+#         """
+#         # pylint: disable=too-many-locals
+#         data = {}
+#         for phrase in self:
+#             tok = phrase.head.tok
+#             if coref:
+#                 tok = tok.coref
+#             key = tok.lemma if lemmatize else tok.text
+#             if pos or ent:
+#                 key = (key,)
+#                 if pos:
+#                     key = (*key, tok.pos)
+#                 if ent:
+#                     key = (*key, tok.ent)
+#             data \
+#                 .setdefault(key, {}) \
+#                 .setdefault("phrases", []).append(phrase)
+#             rec = data[key]
+#             if lexeme and (lkey := "lexeme") not in rec \
+#             and (vocab := getattr(tok, "vocab", None)):
+#                 rec[lkey] = vocab[key[0] if isinstance(key, tuple) else key]
+#             for name in phrase.part_names:
+#                 if parts and name not in parts:
+#                     continue
+#                 for part in getattr(phrase, name, ()):
+#                     rec.setdefault(name, []).append(part)
+#         for key in data:
+#             data[key] = { k: v for k, v in data[key].items() if v }
+#         return data

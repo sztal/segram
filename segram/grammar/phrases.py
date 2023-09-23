@@ -5,14 +5,15 @@ from itertools import islice
 from more_itertools import unique_everseen
 from .abc import SentElement
 from .components import Component, Verb, Noun, Desc, Prep
-from .conjuncts import Conjuncts, PhraseGroup
+from .conjuncts import Conjuncts
 from ..nlp.tokens import Token
 from ..symbols import Role, Dep
 from ..abc import labelled
+from ..datastruct import DataGrouped
 
 
 controlled = labelled("part")
-PGType = PhraseGroup[Conjuncts[PhraseGroup]]
+PGType = DataGrouped[Conjuncts["Phrase"]]
 
 
 class Phrase(SentElement):
