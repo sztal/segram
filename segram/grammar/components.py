@@ -5,10 +5,12 @@ by a root token, e.g. a verb with its auxiliary verbs.
 """
 from __future__ import annotations
 from typing import Any, Optional, Iterable, Iterator, ClassVar, Self
+import numpy as np
 from .abc import SentElement
 from .conjuncts import Conjuncts
 from ..nlp.tokens import Token
 from ..symbols import POS, Role, Tense, Modal, Mood, Symbol
+from ..utils.misc import cosine_similarity
 
 
 class Component(SentElement):
@@ -200,6 +202,16 @@ class Component(SentElement):
             dct[name] = attr
         return dct
 
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        vec = self.head.tok.vector
+        n = 1
+        for tok in self.tokens:
+            if tok is not self.head:
+                vec += tok.vector
+                n += 1
+        return vec / n
+
     # Methods -----------------------------------------------------------------
 
     @classmethod
@@ -299,6 +311,10 @@ class Component(SentElement):
 
     def is_comparable_with(self, other: Any) -> None:
         return isinstance(other, Component)
+
+    def similarity(self, other: Component | Token) -> float:
+        """Cosine similarity to other component."""
+        return cosine_similarity(self.vector, other.vector)
 
 
 # pylint: disable=abstract-method

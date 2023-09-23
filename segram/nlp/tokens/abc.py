@@ -10,6 +10,7 @@ from spacy.tokens import Doc, Span, Token
 from spacy.tokens.underscore import Underscore
 from ... import settings
 from ...utils.meta import init_class_attrs
+from ...utils.misc import cosine_similarity
 
 
 class NLP(ABC):
@@ -98,3 +99,6 @@ class NLP(ABC):
     def sns(cls, tok: Doc | Span | Token) -> Self:
         """Get :mod:`segram` namespace from :mod:`spacy` token."""
         return getattr(tok._, settings.spacy_alias)
+
+    def similarity(self, other: Doc | Span | Token) -> float:
+        return cosine_similarity(self.vector, other.vector)
