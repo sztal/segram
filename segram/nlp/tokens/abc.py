@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any, Self
 from abc import ABC
 from functools import total_ordering
+import numpy as np
 from spacy.vocab import Vocab
 from spacy.tokens import Doc, Span, Token
 from spacy.tokens.underscore import Underscore
@@ -66,6 +67,14 @@ class NLP(ABC):
     @property
     def vocab(self) -> Vocab:
         return self.tok.vocab
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.tok.vector
+
+    @property
+    def has_vectors(self) -> bool:
+        return self.vocab.vectors_length > 0
 
     # Methods -----------------------------------------------------------------
 

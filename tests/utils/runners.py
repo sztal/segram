@@ -253,16 +253,16 @@ class SpacyTestRunner(PyTestRunner):
                     f"is not consistent with the constraint '{allowed}'"
                 )
 
-        if (mlang := meta["lang"]) != (tlang := tests["lang"]):
+        if (mlang := meta["model"]["lang"]) != (tlang := tests["lang"]):
             raise TypeError(f"model language is '{mlang}' but tests are for '{tlang}'")
 
         model = meta["model"]
-        name = f"{mlang}_{model}"
-        version = meta["model_version"]
+        name = f"{mlang}_{model['name']}"
+        version = model["version"]
         allowed = { m["name"]: m["version"] for m in tests["models"] }
-        if model not in allowed:
+        if model["name"] not in allowed:
             raise TypeError(f"test set is not for '{name}' model")
-        if not is_correct_version(version, (const := allowed[model])):
+        if not is_correct_version(version, (const := allowed[model["name"]])):
             raise TypeError(
                 f"'{name}' model version '{version}' "
                 f"is not consistent with the constraint '{const}'"

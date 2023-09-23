@@ -6,6 +6,7 @@ import spacy
 from spacy.language import Language
 from spacy.tokens import Doc
 from spacy.training import Alignment
+from .base import Segram
 from ... import settings
 from ...utils.meta import get_cname
 
@@ -64,6 +65,8 @@ class Coref:
         for spans in cdoc.spans.values():
             cluster = [ int(align.y2x.data[t.i]) for s in spans for t in s ]
             self.set_corefs(doc, cluster)
+        getattr(doc._, f"{settings.spacy_alias}_meta")["coref"] = \
+            Segram.get_model_info(self.model)
         return doc
 
     def set_corefs(self, doc: Doc, cluster: Sequence[int]) -> None:

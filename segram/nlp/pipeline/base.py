@@ -16,7 +16,6 @@ from ..extensions import SpacyExtensions
 from ... import __title__, __version__, settings
 from ...utils.meta import get_cname
 from ...utils.registries import models as models_registry
-from ...utils.registries import vectors as vectors_registry
 
 
 class Segram(Pipe):
@@ -91,27 +90,19 @@ class Segram(Pipe):
         self.extensions = self.import_module(grammar, nlp.lang)
         self.grammar = f"{grammar}.{nlp.lang}"
         if isinstance(vectors, str):
-            vectors = spacy.load(vectors)
-        vectors_name = None
-        if isinstance(vectors, Language):
-            vectors_name = self.get_model_name(vectors)
-            vectors = vectors.vocab.vectors
-            vectors_registry.register(vectors_name, func=vectors)
+            vectors = spacy.load(vectors, enable="tok2vec", vocab=nlp.vocab)
         elif vectors:
             vcn = vectors.__class__.__name__
-            raise ValueError(f"'vectors' cannot be assigned with instance of '{vcn}'")
+            raise ValueError(f"'vectors' must be provided as a language model or a name, not '{vcn}'")
         models_registry.register(self.get_model_name(nlp), func=nlp)
         self.meta = {
-            "name":                  self.name,
-            __title__+"_version":    __version__,
-            __title__+"_grammar":    self.grammar,
-            "spacy_alias":           alias,
-            "spacy_version":         spacy.__version__,
-            "lang":                  self.nlp.meta["lang"],
-            "model":                 self.nlp.meta["name"],
-            "model_version":         self.nlp.meta["version"],
-            "model_description":     self.nlp.meta["description"],
-            "model_vectors":         vectors_name
+            "name":               self.name,
+            __title__+"_version": __version__,
+            __title__+"_grammar": self.grammar,
+            "spacy_alias":        alias,
+            "spacy_version":      spacy.__version__,
+            "model":              self.get_model_info(nlp),
+            "vectors":            self.get_model_info(vectors) if vectors else None
         }
         self.configure_pipeline(*preprocess)
         if not self.__initialized__.get(self.id, False):
@@ -123,7 +114,6 @@ class Segram(Pipe):
         setattr(doc._, f"{alias}_meta", meta)
         setattr(doc._, f"{alias}_cache", {})
         setattr(doc._, f"{alias}_model", self.get_model_name(self.nlp))
-        setattr(doc._, f"{alias}_vectors", meta["model_vectors"])
         if self.store_data:
             start = time()
             data = {
@@ -141,7 +131,12 @@ class Segram(Pipe):
     @property
     def id(self) -> int:
         """Hash id of the component."""
-        return hash(tuple(self.meta.items()))
+        hashdata = []
+        for k, v in self.meta.items():
+            if isinstance(v, dict):
+                v = tuple(v.items())
+            hashdata.append((k, v))
+        return hash(tuple(hashdata))
 
     @property
     def initialized(self) -> bool:
@@ -216,3 +211,13 @@ class Segram(Pipe):
     def get_model_name(nlp: Language) -> str:
         """Get language model name."""
         return f"{nlp.meta['lang']}_{nlp.meta['name']}"
+
+    @staticmethod
+    def get_model_info(nlp: Language) -> str:
+        """Get language model information."""
+        return {
+            "lang":        nlp.meta["lang"],
+            "name":        nlp.meta["name"],
+            "version":     nlp.meta["version"],
+            "description": nlp.meta["description"]
+        }

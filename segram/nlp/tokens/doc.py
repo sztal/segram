@@ -69,33 +69,6 @@ class Doc(NLP):
     def data(self) -> dict[str, Any]:
         return self.to_data()
 
-    # @property
-    # def simple(self) -> SimpleDoc:
-    #     """Generic :mod:`segram` document object."""
-    #     # pylint: disable=protected-access
-    #     data = []
-    #     sent_spans = []
-    #     for sent in self.doc.sents:
-    #         start, end = sent.start, sent.end
-    #         sent_spans.append((start, end))
-    #         for tok in sent:
-    #             gtok = TokenData(
-    #                 text=tok.text,
-    #                 pos=tok.pos,
-    #                 whitespace=tok.whitespace,
-    #                 lemma=tok.lemma,
-    #                 ent=tok.ent,
-    #                 role=tok.role,
-    #                 corefs=getattr(tok._, f"{settings.spacy_alias}_corefs"),
-    #                 is_negation=tok.is_negation,
-    #                 is_qmark=tok.is_qmark,
-    #                 is_exclam=tok.is_exclam,
-    #                 sent_start=start,
-    #                 sent_end=end
-    #             )
-    #             data.append(gtok)
-    #     return SimpleDoc(self.lang, tuple(data), tuple(sent_spans))
-
     # Methods -----------------------------------------------------------------
 
     def to_data(self) -> dict[str, Any]:
