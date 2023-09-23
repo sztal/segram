@@ -4,7 +4,7 @@ It implements the _Segram_ pipe component providing
 all main semantic grammar transformations and related auxiliary methods.
 """
 from __future__ import annotations
-from typing import Any, Sequence, ClassVar, Mapping, Literal
+from typing import Any, Optional, Sequence, ClassVar, Mapping
 from types import MappingProxyType
 from importlib import import_module
 from time import time
@@ -15,6 +15,8 @@ from spacy.pipeline.pipe import Pipe
 from ..extensions import SpacyExtensions
 from ... import __title__, __version__, settings
 from ...utils.meta import get_cname
+from ...utils.registries import models as models_registry
+from ...utils.registries import vectors as vectors_registry
 
 
 class Segram(Pipe):
@@ -37,16 +39,8 @@ class Segram(Pipe):
     meta
         Metadata dictionary with details on :mod:`spacy`
         and `segram` models being used.
-    prefix
-        Prefix used in names of :mod:`segram` extension attributes
-        other than ``'segram_meta'``, which stores general :mod:`segram`
-        metadata.
-    grammar_data
-        Should grammar data be stored in ``'segram_grammar_data'``
-        extension attribute.
     """
     __initialized__: ClassVar[Mapping[int, bool]] = MappingProxyType({})
-    __store_data__ = ("grammar", "semantic", "both", "none")
 
     def __init__(
         self,
@@ -56,7 +50,8 @@ class Segram(Pipe):
         grammar: str,
         preprocess: Sequence[str],
         alias: str = __title__,
-        store_data: Literal[__store_data__] = "grammar"
+        store_data: bool = True,
+        vectors: Optional[str | Language] = None
     ) -> None:
         """Initialization method.
 
@@ -66,6 +61,16 @@ class Segram(Pipe):
             List of :mod:`segram` pipeline components to use for preprocessing
             documents before applying the main :mod:`segram` pipe.
             If ``None`` then all available preprocessing components are used.
+        alias
+            Set ``spacy_alias`` in the global settings.
+            It is used for namespacing extension attributes added
+            by :mod:`segram` in order to avoid collision with other
+            packages.
+        vectors
+            Vector table to use instead of the vectors provided by the main
+            model. Must be provided by the name of a model or the model
+            object itself, so the it is possible to keep track of the model
+            name.
         """
         if not alias:
             raise ValueError(
@@ -85,6 +90,17 @@ class Segram(Pipe):
         self.store_data = store_data
         self.extensions = self.import_module(grammar, nlp.lang)
         self.grammar = f"{grammar}.{nlp.lang}"
+        if isinstance(vectors, str):
+            vectors = spacy.load(vectors)
+        vectors_name = None
+        if isinstance(vectors, Language):
+            vectors_name = self.get_model_name(vectors)
+            vectors = vectors.vocab.vectors
+            vectors_registry.register(vectors_name, func=vectors)
+        elif vectors:
+            vcn = vectors.__class__.__name__
+            raise ValueError(f"'vectors' cannot be assigned with instance of '{vcn}'")
+        models_registry.register(self.get_model_name(nlp), func=nlp)
         self.meta = {
             "name":                  self.name,
             __title__+"_version":    __version__,
@@ -95,6 +111,7 @@ class Segram(Pipe):
             "model":                 self.nlp.meta["name"],
             "model_version":         self.nlp.meta["version"],
             "model_description":     self.nlp.meta["description"],
+            "model_vectors":         vectors_name
         }
         self.configure_pipeline(*preprocess)
         if not self.__initialized__.get(self.id, False):
@@ -105,7 +122,9 @@ class Segram(Pipe):
         meta = self.meta.copy()
         setattr(doc._, f"{alias}_meta", meta)
         setattr(doc._, f"{alias}_cache", {})
-        if self.store_data in ("grammar", "both"):
+        setattr(doc._, f"{alias}_model", self.get_model_name(self.nlp))
+        setattr(doc._, f"{alias}_vectors", meta["model_vectors"])
+        if self.store_data:
             start = time()
             data = {
                 (sent.start, sent.end): \
@@ -189,7 +208,11 @@ class Segram(Pipe):
             pipe = prefix + pipe
         return pipe
 
-
     def get_config(self) -> dict:
         """Get current config dictionary."""
         return self.nlp.config["components"][self.name].copy()
+
+    @staticmethod
+    def get_model_name(nlp: Language) -> str:
+        """Get language model name."""
+        return f"{nlp.meta['lang']}_{nlp.meta['name']}"
