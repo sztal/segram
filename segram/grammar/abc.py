@@ -6,7 +6,7 @@ syntax tree links and can be used to perform various tasks such as
 component and phrase detection.
 """
 from __future__ import annotations
-from typing import Any, Optional, Iterable, MutableMapping, Self
+from typing import Any, Optional, Iterable, MutableMapping, Self, Callable
 from typing import ClassVar, Final
 from abc import abstractmethod
 import re
@@ -180,47 +180,46 @@ class GrammarElement(Grammar):
 
     def match(
         self,
-        text: Optional[str] = None,
-        *,
-        head: bool = False,
-        lemma: bool = False,
-        regex: bool = True,
-        ignore_case: bool = False,
-        flags: re.RegexFlag = re.NOFLAG
+        _pattern: Optional[str] = None,
+        _flag: re.RegexFlag = re.NOFLAG,
+        _ignore_missing: bool = False,
+        **kwds: Any | Callable[[Any], bool]
     ) -> re.Pattern | None:
         """Match element text against a regex pattern
         using :func:`re.search` function.
 
         Parameters
         ----------
-        text
-           String used for matching.
-           No matching is done when ``None``.
-        head
-            Use the head element (e.g. head component of a phrase).
-        lemma
-            Use lemmatized text.
-        regex
-            Should the string be interpreted as regular expresion.
-        ignore_case
-            Should case be ignored.
-        flags
-            Other regex flags has to be passed
-            explicitly as flag objects from :mod:`re`.
+        _pattern
+            Regular expression pattern used for matching.
+            No matching is done when ``None``.
+        _flag
+            Regex flag.
+        _ignore_missing_fields
+            Should missing fields on ``self`` be ignored.
+        **kwds
+            Other keyword arguments can be used for testing
+            values of different attributes on ``self``.
+            If callables are passed as values then they are
+            expected to be predicate functions returning
+            boolean values.
         """
-        if text is None:
-            return True
-        obj = self
-        if head:
-            obj = obj.head  # pylint: disable=no-member
-        obj_text = obj.lemma if lemma else obj.text
-        if text and regex:
-            if ignore_case:
-                flags = flags | re.IGNORECASE if flags is not None else re.IGNORECASE
-            return bool(re.search(text, obj_text, flags))
-        if ignore_case:
-            return obj_text.lower() == text.lower()
-        return obj_text == text
+        is_match = True
+        if _pattern is not None:
+            is_match &= bool(re.search(_pattern, self.text, _flag))
+        for field, test in kwds.items():
+            try:
+                attr = getattr(self, field)
+            except AttributeError as exc:
+                if _ignore_missing:
+                    continue
+                raise exc
+            if isinstance(test, Callable):
+                is_match &= bool(test(attr))
+            else:
+                is_match &= attr == test
+        return is_match
+
 
 class DocElement(GrammarElement):
     """Document element class."""

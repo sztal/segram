@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any, Optional, Iterable, Self
 from ..nlp.tokens import Token
 # from ..utils.types import Group, ChainGroup
-from ..datastruct import DataSequence, DataGrouped
+from ..datastruct import DataSequence, DataChain
 
 
 class Conjuncts(DataSequence):
@@ -111,7 +111,7 @@ class Conjuncts(DataSequence):
             ).strip()
         if coords:
             coords = f"[{coords}]"
-        members = ", ".join(m.to_str(color=color, **kwds) for m in self.members)
+        members = ", ".join(self.stringify(m, color=color, **kwds) for m in self.members)
         return f"{coords}({members})"
 
     def is_comparable_with(self, other: Conjuncts) -> bool:
@@ -132,12 +132,12 @@ class Conjuncts(DataSequence):
                 yield lead.sent.conjs[lead].copy(members=group)
 
     @classmethod
-    def get_chain(cls, phrases: Iterable["Phrase"]) -> DataGrouped:
+    def get_chain(cls, phrases: Iterable["Phrase"]) -> DataChain:
         """Get chain of conjuncts groups in ``phrases``."""
-        return DataGrouped(tuple(cls.find_groups(phrases)))
+        return DataChain(tuple(cls.find_groups(phrases)))
 
 
-# class PhraseGroup(DataGrouped):
+# class PhraseGroup(DataChain):
 #     """Phrase group class.
 
 #     This is a chain of groups of conjoined phrases

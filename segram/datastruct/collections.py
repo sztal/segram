@@ -55,10 +55,31 @@ class DataCollectionABC(Collection, SegramABC):
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Collection)
 
+    def ifilter(
+        self,
+        func: str | Callable[[Any, ...], bool] | None,
+        *args: Any,
+        _drop_empty: bool = True,
+        **kwds: Any
+    ) -> Self:
+        """Filter members iterator."""
+        if func is None:
+            func = bool
+        else:
+            func = self._handle_string_func(func)
+        for member in self.members:
+            if isinstance(member, DataCollectionABC):
+                if (membs := member.filter(func, *args, **kwds)) \
+                or not _drop_empty:
+                    yield membs
+            elif func(member, *args, **kwds):
+                yield member
+
     def filter(
         self,
         func: str | Callable[[Any, ...], bool],
         *args: Any,
+        _drop_empty: bool = True,
         **kwds: Any
     ) -> Self:
         """Filter members.
@@ -68,13 +89,30 @@ class DataCollectionABC(Collection, SegramABC):
         func
             Predicate function. If a string is passed then a method
             of the same name declared on items is used.
+            If ``None`` then all falsy items are dropped.
         *args, **kwds
             Passed to ``func``.
+        _drop_empty:
+            Should nested containers that end up emtpy after
+            filtering be dropped.
         """
-        func = self._handle_string_func(func)
         return self.copy(members=self.members.__class__(
-            m for m in self.members if func(m, *args, **kwds)
+            self.ifilter(func, *args, **kwds)
         ))
+
+    def imap(
+        self,
+        func: str | Callable[[Any, ...], Any],
+        *args: Any,
+        **kwds: Any
+    ) -> Self:
+        """Map iterator."""
+        func = self._handle_string_func(func)
+        for member in self.members:
+            if isinstance(member, DataCollectionABC):
+                yield member.map(func, *args, **kwds)
+            else:
+                yield func(member, *args, **kwds)
 
     def map(
         self,
@@ -92,10 +130,13 @@ class DataCollectionABC(Collection, SegramABC):
         *args, **kwds
             Passed to ``func``.
         """
-        func = self._handle_string_func(func)
         return self.copy(members=self.members.__class__(
-            func(m, *args, **kwds) for m in self.members
+            self.imap(func, *args, **kwds)
         ))
+
+    def extract(self, attr: str) -> Self:
+        """Extract attributes from members."""
+        return self.map(lambda m: getattr(m, attr))
 
     def pipe(
         self,
@@ -106,6 +147,12 @@ class DataCollectionABC(Collection, SegramABC):
         """Pipe self to a function."""
         func = self._handle_string_func(func)
         return func(self, *args, **kwds)
+
+    def any(self) -> bool:
+        return any(self)
+
+    def all(self) -> bool:
+        return all(self)
 
     def flatten(self) -> Self:
         """Flatten nested data."""
@@ -153,8 +200,8 @@ class DataSequence(DataCollectionABC, Sequence):
         return isinstance(self, Sequence)
 
 
-class DataGrouped(DataSequence):
-    """Data grouped sequence class."""
+class DataChain(DataSequence):
+    """Chain of data sequences class."""
     __slots__ = ()
 
     def __init__(self, members: Sequence[Collection[Any]]) -> None:

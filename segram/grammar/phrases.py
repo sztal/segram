@@ -9,11 +9,11 @@ from .conjuncts import Conjuncts
 from ..nlp.tokens import Token
 from ..symbols import Role, Dep
 from ..abc import labelled
-from ..datastruct import DataGrouped
+from ..datastruct import DataSequence, DataChain
 
 
 controlled = labelled("part")
-PGType = DataGrouped[Conjuncts["Phrase"]]
+PGType = DataChain[Conjuncts["Phrase"]]
 
 
 class Phrase(SentElement):
@@ -272,40 +272,6 @@ class Phrase(SentElement):
 
     # Methods -----------------------------------------------------------------
 
-    def match(
-        self,
-        text: Optional[str] = None,
-        *,
-        dep: Optional[Dep | str] = None,
-        alias: Optional[str] = None,
-        **kwds: Any
-    ) -> bool:
-        """Match element text against a regex pattern
-        using :func:`re.search` function.
-
-        Parameters
-        ----------
-        text
-           String used for matching.
-           No matching is done when ``None``.
-        dep
-            Dependency tag to match (partial overlap is considered a match).
-            Can be provided as a string,
-            including alternatives such ``"xcomp|relcl"``.
-        alias
-            Phrase type alias to match.
-        **kwds
-            Passed to :meth:`segram.grammar.abc.GrammarElement.match`.
-        """
-        matched = super().match(text, **kwds)
-        if dep is not None:
-            if isinstance(dep, str):
-                dep = Dep.from_name(dep)
-            matched &= bool(dep & self.dep)
-        if alias is not None:
-            matched &= self.alias == alias
-        return matched
-
     def iter_subdag(self, *, skip: int = 0) -> Iterator[Phrase]:
         """Iterate over phrasal subtree and omit ``skip`` first items.
 
@@ -329,6 +295,26 @@ class Phrase(SentElement):
             for parent in self.parents:
                 yield from parent.iter_supdag(skip=0)
         yield from islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None)
+
+    def dfs(self, subdag: bool = True) -> DataSequence[DataSequence[Phrase]]:
+        """Depth-first search.
+
+        Parameters
+        ----------
+        subdag
+            Should search be performed in the subgraph direction
+            (i.e. through the children).
+        """
+        attr = "children" if subdag else "parents"
+        def _dfs(phrase, chain=()):
+            if (adjacent := getattr(phrase, attr)):
+                for p in adjacent:
+                    new_chain = list(chain)
+                    new_chain.append(p)
+                    yield from _dfs(p, chain=new_chain)
+            else:
+                yield DataSequence(chain)
+        return DataSequence(_dfs(self))
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Phrase)
