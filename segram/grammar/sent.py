@@ -41,7 +41,7 @@ class Sent(Sequence, DocElement):
     __components__ = ("verbs", "nouns", "descs", "preps")
     __slots__ = (
         "start", "end", *__components__,
-        "graph", "conjs", "_cmap", "_pmap"
+        "graph", "conjs", "cmap", "pmap"
     )
     alias = "Sent"
     component_names: ClassVar[tuple[str, ...]] = ()
@@ -68,8 +68,8 @@ class Sent(Sequence, DocElement):
         self.descs = tuple(descs)
         self.graph = graph
         self.conjs = conjs or {}
-        self._cmap = {}
-        self._pmap = {}
+        self.cmap = {}
+        self.pmap = {}
 
     def __len__(self) -> int:
         return len(self.sent)
@@ -106,14 +106,6 @@ class Sent(Sequence, DocElement):
     @property
     def sent(self) -> Span:
         return self.doc[self.start:self.end]
-
-    @property
-    def cmap(self) -> Mapping[int, Component]:
-        return self._cmap
-
-    @property
-    def pmap(self) -> Mapping[int, Phrase]:
-        return self._pmap
 
     @property
     def root(self) -> Component:
@@ -181,6 +173,7 @@ class Sent(Sequence, DocElement):
         for dct in data["phrases"]:
             phrase = cls.types.Phrase.from_data(sent, dct)
             sent.pmap[phrase.idx] = phrase
+        sent.pmap = dict(sorted(sent.pmap.items(), key=lambda x: x[0]))
         sent.graph = PhraseGraph.from_data(sent, data["graph"])
         sent.conjs = {
             (conj := Conjuncts.from_data(sent, c)).lead: conj

@@ -459,7 +459,7 @@ class SentTestCase:
         """Conversion to generic :mod:`segram` NLP document
         and generic language class without NLP backend is correct.
         """
-        doc = self.doc.simple
+        doc = self.doc.__class__.from_data(self.doc.data)
         grammar = self.results.grammars.get(doc.lang)
         other = grammar.types.Sent.from_data(doc, self.results.to_data())
         return GrammarDiff(self.results, other, strict=False)

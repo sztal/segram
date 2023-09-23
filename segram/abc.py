@@ -150,29 +150,7 @@ class SegramABC(ABC):
 
 @iter_diffs.register
 def _(obj: SegramABC, other: Any, *, strict: bool = True) -> IDiffType:
-    def _iter():
-        if strict and type(obj) is not type(other):
-            yield "TYPE", obj.ppath(), obj.ppath(other)
-            return
-        if isinstance(other, SegramABC):
-            if (sn1 := obj.slot_names) != (sn2 := other.slot_names):
-                yield "SLOT NAMES", sn1, sn2
-                return
-            yield from iter_diffs(obj.data, other.data, strict=strict)
-        else:
-            yield from iter_diffs(obj, other, strict=strict)
-    seen = set()
-    for *_, msg, obj1, obj2 in _iter():
-        data = (obj1, obj2)
-        try:
-            if data in seen:
-                continue
-            seen.add(data)
-        except TypeError:
-            pass
-        yield obj.cname(obj1), msg, obj1, obj2
-        if msg in ("TYPE", "SLOT NAMES"):
-            return
+    yield from iter_diffs(obj.to_data(), other.to_data())
 
 
 class SegramWithDocABC(SegramABC):

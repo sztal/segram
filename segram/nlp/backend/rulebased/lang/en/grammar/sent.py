@@ -73,7 +73,9 @@ class RulebasedEnglishSent(
                 head = head.head
                 if head in comps:
                     comp = self.cmap[head.i]
-                    comp.sub = (*comp.sub, tok)
+                    if tok not in comp.tokens:
+                        comp.sub = (*comp.sub, tok)
+                    break
 
     def _expand_conj_group(
         self,
