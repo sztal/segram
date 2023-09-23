@@ -8,7 +8,7 @@ from murmurhash import hash_unicode
 from segram import settings
 from segram.grammar import Sent
 from segram.nlp.tokens import Doc, Span
-from segram.utils.types import Namespace
+from segram.datastruct import Namespace
 from segram.utils.meta import get_cname
 from segram.utils.resources import JSONResource
 from .diffs import GrammarDiff

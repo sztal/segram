@@ -1,7 +1,7 @@
 """Utilities for managing package options."""
 from __future__ import annotations
 from typing import Any, Optional
-from .types import Namespace
+from ..datastruct import Namespace
 
 
 class Settings(Namespace):

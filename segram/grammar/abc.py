@@ -15,7 +15,7 @@ from catalogue import Registry
 from ..nlp.tokens import Doc, Span, Token
 from ..utils.registries import grammars
 from ..abc import SegramWithDocABC
-from ..utils.types import Namespace
+from ..datastruct import Namespace
 
 
 class GrammarNamespace(Namespace):
