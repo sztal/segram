@@ -281,7 +281,8 @@ class Phrase(SentElement):
 
     @property
     def components(self) -> DataChain[DataSequence[Component]]:
-        return self.subdag.get("head")
+        members = [Conjuncts([self.head]), *self.subdag.get("head").members]
+        return DataChain(members)
 
     # Methods -----------------------------------------------------------------
 
@@ -479,7 +480,7 @@ class PhraseVectors:
     """
     __slots__ = (
         "phrase", "spec", "what", "weights",
-        "recursive", "outer", "only", "ignore", "comp_vectors"
+        "recursive", "only", "ignore", "comp_vectors"
     )
     _what_type = str | Iterable[str] | Callable[[Phrase], Iterable[Phrase]]
     _what_vals = ("phrases", "components")
@@ -492,17 +493,15 @@ class PhraseVectors:
         *,
         weights: dict[str, float | int] | None = None,
         recursive: bool = False,
-        outer: bool = False,
         only: str | Iterable[str] = (),
         ignore: str | Iterable[str] = (),
-        comp_vectors: bool = False
+        comp_vectors: bool = True
     ) -> None:
         self.phrase = phrase
         self.spec = spec
         self.what = what
         self.weights = weights or {}
         self.recursive = recursive
-        self.outer = outer
         self.only = only
         self.ignore = ignore
         self.comp_vectors = comp_vectors
@@ -582,21 +581,30 @@ class PhraseVectors:
             denom += 1
             num += 1
 
-        # TODO: outer method is probably not worth it
-        for name, svec in sdict.items():
-            ovec = odict[name]
-            w = self.weights.get(name, 1)
-            total_weight += w
-            sim += self._sim(svec, ovec) * w
+        vocab = phrase.doc.vocab
+        dtype = vocab.vectors.data.dtype
+        vlen = vocab.vectors_length
+        weights = np.empty(len(sdict), dtype=dtype)
+        svecs = np.empty((len(sdict), vlen), dtype=dtype)
+        ovecs = np.empty_like(svecs)
+
+        for i, kv in enumerate(sdict.items()):
+            name, svec = kv
+            svecs[i] = svec
+            ovecs[i] = odict[name]
+            weights[i] = self.weights.get(name, 1)
+
+        total_weight += weights.sum()
         if total_weight == 0:
             return 0
-        return sim / total_weight * (num / denom)
+        cos = cosine_similarity(svecs, ovecs, aligned=True)
+        return (cos * weights).sum() / total_weight * (num / denom)
 
     def _sim(self, X, Y) -> float:
         if not isinstance(X, np.ndarray):
-            X = X.vectors if self.outer else X.vector
-            Y = Y.vectors if self.outer else Y.vector
-        if not self.outer and X.ndim > 1:
+            X = X.vector
+            Y = Y.vector
+        if X.ndim > 1:
             sim = cosine_similarity(X, Y, aligned=True)
         else:
             sim = cosine_similarity(X, Y)
@@ -638,6 +646,6 @@ class PhraseVectors:
     def _get_vectors(self, seq):
         if self.what == "phrases" and self.comp_vectors:
             seq = seq.get("components").flat
-        if self.outer:
-            return seq.flat.get("vectors").pipe(np.vstack)
-        return seq.flat.get("vector").pipe(lambda x: sum(x) / len(x))
+        if (vec := seq.flat.get("vector")):
+            return vec.pipe(lambda x: sum(x) / len(x))
+        return vec

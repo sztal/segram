@@ -178,13 +178,6 @@ class GrammarElement(Grammar):
         toks = self.tokens
         return sum(tok.vector for tok in toks) / len(toks)
 
-    @property
-    def vectors(self) -> np.ndarray[tuple[int, int], np.floating]:
-        """2D array of token vectors in order of appearance in the sentence
-        where each row corresponds to one token vector.
-        """
-        return np.vstack([ tok.vector for tok in self.tokens ])
-
     # Methods -----------------------------------------------------------------
 
     @abstractmethod
