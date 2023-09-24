@@ -531,7 +531,7 @@ class PhraseVectors:
         num = 0
         if self._is_name_ok((name := "head")):
             total_weight += self.weights.get(name, 1)
-            sim += self._cos(phrase.head, other.head) * total_weight
+            sim += self._sim(phrase.head, other.head) * total_weight
             denom += 1
             num += 1
         for name in set(phrase.active_parts).union(other.active_parts):
@@ -578,20 +578,21 @@ class PhraseVectors:
         total_weight = 0
         if self._is_name_ok((name := "head")):
             total_weight += self.weights.get(name, 1)
-            sim += self._cos(phrase.head, other.head) * total_weight
+            sim += self._sim(phrase.head, other.head) * total_weight
             denom += 1
             num += 1
 
+        # TODO: outer method is probably not worth it
         for name, svec in sdict.items():
             ovec = odict[name]
             w = self.weights.get(name, 1)
             total_weight += w
-            sim += self._cos(svec, ovec) * w
+            sim += self._sim(svec, ovec) * w
         if total_weight == 0:
             return 0
         return sim / total_weight * (num / denom)
 
-    def _cos(self, X, Y) -> float:
+    def _sim(self, X, Y) -> float:
         if not isinstance(X, np.ndarray):
             X = X.vectors if self.outer else X.vector
             Y = Y.vectors if self.outer else Y.vector
@@ -602,7 +603,7 @@ class PhraseVectors:
             if not isinstance(sim, np.ndarray):
                 return sim
             if sim.ndim == 2:
-                axis = 0 if sim.shape[0] <= sim.shape[1] else 1
+                axis = 1 if sim.shape[0] <= sim.shape[1] else 0
                 sim = sim.max(axis=axis)
         return sim.mean()
 
