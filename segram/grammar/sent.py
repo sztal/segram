@@ -108,8 +108,14 @@ class Sent(Sequence, DocElement):
 
     @property
     def root(self) -> Component:
+        """Root component."""
         root = self.sent.root
         return next(c for c in self.components if root in c)
+
+    @property
+    def roots(self) -> Conjuncts[Phrase]:
+        """Root phrases."""
+        return self.root.phrase.group
 
     @property
     def sources(self) -> tuple[Phrase, ...]:

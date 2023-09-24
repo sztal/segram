@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Callable, ClassVar, Self, Iterable
+from typing import Any, Callable, ClassVar, Self, Iterable, Literal
 from abc import abstractmethod
 from itertools import islice, product
 from more_itertools import unique_everseen
@@ -279,6 +279,10 @@ class Phrase(SentElement):
     def active_parts(self) -> tuple[str, ...]:
         return tuple(n for n in self.part_names if getattr(self, n))
 
+    @property
+    def components(self) -> DataChain[DataSequence[Component]]:
+        return self.subdag.get("head")
+
     # Methods -----------------------------------------------------------------
 
     def iter_subdag(self, *, skip: int = 0) -> Iterable[Phrase]:
@@ -419,52 +423,6 @@ class Phrase(SentElement):
         )
         return typ(sent, **kwds)
 
-    # Internals ---------------------------------------------------------------
-
-    def _group_components(self) -> dict[str, list[Component]]:
-        cdict = {}
-        for part in self.part_names:
-            comps = self.subdag.get(part).filter(None).flat.get("head")
-            if comps:
-                cdict[part] = comps
-        return cdict
-
-    def _get_component_vectors(
-        self,
-        *,
-        average: bool = False
-    ) -> dict[str, np.ndarray[tuple[int, int], np.floating]]:
-        if not self.head.tok.has_vectors:
-            raise AttributeError("word vectors not defined")
-        vlen = self.head.tok.vocab.vectors_length
-        dtype = self.head.tok.vocab.vectors.data.dtype
-        cdict = self._group_components()
-        for k, v in cdict.items():
-            vecs = np.zeros((len(v), vlen), dtype=dtype)
-            for i, c in enumerate(v):
-                vecs[i] = c.vector
-            cdict[k] = vecs
-        return cdict
-
-    def _sim_comps_outer(self, other: Phrase, **kwds: Any) -> float:
-        # pylint: disable=protected-access
-        sim = self.head.similarity(other.head)
-        svecs = self._get_component_vectors()
-        ovecs = other._get_component_vectors()
-        n = 1
-        for k, sv in svecs.items():
-            if k not in ovecs:
-                continue
-            n += 1
-            ov = ovecs[k]
-            cos = cosine_similarity(sv, ov, **kwds)
-            if isinstance(cos, np.ndarray):
-                axis = 0 if cos.shape[0] >= cos.shape[1] else 1
-                cos = cos.max(axis=axis).mean()
-            sim += cos
-        return float(sim) / n
-
-
 
 class VerbPhrase(Phrase):
     """Abstract base class for verb phrases."""
@@ -519,20 +477,25 @@ class PhraseVectors:
     various types of comparisons between vectors
     based on word vector embeddings.
     """
-    __slots__ = ("phrase", "spec", "what", "weights", "recursive", "outer", "only", "ignore")
+    __slots__ = (
+        "phrase", "spec", "what", "weights",
+        "recursive", "outer", "only", "ignore", "comp_vectors"
+    )
     _what_type = str | Iterable[str] | Callable[[Phrase], Iterable[Phrase]]
+    _what_vals = ("components", "children", "subdag")
 
     def __init__(
         self,
         phrase: Phrase,
         spec: Phrase | str | Iterable[str] | PVSpecType,
-        what: str | dict[str, _what_type],
+        what: Literal[_what_vals] | dict[str, _what_type] = _what_vals[0],
         *,
         weights: dict[str, float | int] | None = None,
         recursive: bool = False,
         outer: bool = False,
         only: str | Iterable[str] = (),
-        ignore: str | Iterable[str] = ()
+        ignore: str | Iterable[str] = (),
+        comp_vectors: bool = False
     ) -> None:
         self.phrase = phrase
         self.spec = spec
@@ -542,6 +505,9 @@ class PhraseVectors:
         self.outer = outer
         self.only = only
         self.ignore = ignore
+        self.comp_vectors = comp_vectors
+        if self.what not in self._what_vals:
+            raise ValueError(f"'what' has to be one of {self._what_vals}")
         if self.only and self.ignore:
             raise ValueError("'only' and 'ignore' cannot be used at the same time")
 
@@ -618,3 +584,6 @@ class PhraseVectors:
                 for p, s in product(phrases, specs)
             ), key=lambda x: -x[0]
         ), key=lambda x: x[idx])
+
+    def _get_vectors(self, seq, outer=False):
+        vecattr = "vectors" if outer else "vector"
