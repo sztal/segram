@@ -1,6 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, ClassVar
-from collections.abc import Iterable, Mapping, Sequence
+from typing import Any, Optional, ClassVar, Self, Iterable, Mapping, Sequence
 from .conjuncts import Conjuncts
 from .abc import DocElement
 from .components import Component
@@ -150,8 +149,15 @@ class Sent(Sequence, DocElement):
 
     # Methods -----------------------------------------------------------------
 
+    def similarity(self, other: Self) -> float:
+        """Structured similarity to other sentence."""
+        return (
+            self.sent.similarity(other.sent) \
+                + self.root.phrase.similarity(other.root.phrase)
+        ) / 2
+
     @classmethod
-    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Sent:
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from a :class:`~segram.nlp.Doc` and a data dictionary."""
         sent = cls(doc, data["start"], data["end"])
         sent.nouns = tuple(

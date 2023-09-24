@@ -1,8 +1,9 @@
 from __future__ import annotations
-from typing import Any, Optional, ClassVar, Iterator, Self
+from typing import Any, Optional, ClassVar, Self, Iterable
 from abc import abstractmethod
-from itertools import islice
+from itertools import islice, product
 from more_itertools import unique_everseen
+import numpy as np
 from .abc import SentElement
 from .components import Component, Verb, Noun, Desc, Prep
 from .conjuncts import Conjuncts
@@ -10,6 +11,7 @@ from ..nlp.tokens import Token
 from ..symbols import Role, Dep
 from ..abc import labelled
 from ..datastruct import DataSequence, DataChain
+from ..utils.misc import cosine_similarity
 
 
 controlled = labelled("part")
@@ -61,7 +63,7 @@ class Phrase(SentElement):
         obj.sent.pmap[obj.idx] = obj
         return obj
 
-    def __iter__(self) -> Iterator[Phrase]:
+    def __iter__(self) -> Iterable[Phrase]:
         yield from self.tokens
 
     def __len__(self) -> int:
@@ -167,6 +169,7 @@ class Phrase(SentElement):
             or Conjuncts([self])
 
     @property
+    @controlled
     def verb(self) -> Optional[Phrase]:
         """Return ``self`` if VP or nothing otherwise."""
         return self if isinstance(self, VerbPhrase) else None
@@ -272,7 +275,7 @@ class Phrase(SentElement):
 
     # Methods -----------------------------------------------------------------
 
-    def iter_subdag(self, *, skip: int = 0) -> Iterator[Phrase]:
+    def iter_subdag(self, *, skip: int = 0) -> Iterable[Phrase]:
         """Iterate over phrasal subtree and omit ``skip`` first items.
 
         Each phrase is emitted only when reached the first time
@@ -284,7 +287,7 @@ class Phrase(SentElement):
                 yield from child.iter_subdag(skip=0)
         yield from islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None)
 
-    def iter_supdag(self, *, skip: int = 0) -> Iterator[Phrase]:
+    def iter_supdag(self, *, skip: int = 0) -> Iterable[Phrase]:
         """Iterate over phrasal supertree and omit ``skip`` first items.
 
         Each phrase is emitted only when reached the first time
@@ -316,6 +319,30 @@ class Phrase(SentElement):
                 yield DataSequence(chain)
         return DataSequence(_dfs(self))
 
+    def zip_parts(self, other: Phrase) -> Iterable[str, PGType, PGType]:
+        """Align iterate over parts present in two phrases."""
+        for name in self.part_names:
+            if not (p1 := getattr(self, name)):
+                continue
+            if not (p2 := getattr(other, name)):
+                continue
+            yield name, p1, p2
+
+    def similarity(
+        self,
+        other: Phrase,
+        **kwds: Any
+    ) -> float:
+        """Structured similarity to other phrase."""
+        sim = self.head.similarity(other.head)
+        n = 1
+        for _, sps, ops in self.zip_parts(other):
+            n += 1
+            sim += max(
+                sp.similarity(op) for sp, op in product(sps, ops)
+            )
+        return sim / n
+
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Phrase)
 
@@ -333,7 +360,7 @@ class Phrase(SentElement):
         self,
         *,
         bg: bool = False
-    ) -> Iterator[Token, Role | None]:
+    ) -> Iterable[Token, Role | None]:
         """Iterate over token-role pairs.
 
         Parameters
@@ -397,6 +424,54 @@ class Phrase(SentElement):
             lead=data["lead"]
         )
         return typ(sent, **kwds)
+
+    # Internals ---------------------------------------------------------------
+
+    def _group_components(self) -> dict[str, list[Component]]:
+        cdict = {}
+        for part in self.part_names:
+            comps = self.subdag.get(part).filter(None).flat.get("head")
+            if comps:
+                cdict[part] = comps
+        return cdict
+
+    def _get_component_vectors(
+        self,
+        *,
+        average: bool = False
+    ) -> dict[str, np.ndarray[tuple[int, int], np.floating]]:
+        if not self.head.tok.has_vectors:
+            raise AttributeError("word vectors not defined")
+        vlen = self.head.tok.vocab.vectors_length
+        dtype = self.head.tok.vocab.vectors.data.dtype
+        cdict = self._group_components()
+        for k, v in cdict.items():
+            vecs = np.zeros((len(v), vlen), dtype=dtype)
+            for i, c in enumerate(v):
+                vecs[i] = c.vector
+            cdict[k] = vecs
+        return cdict
+
+    def _sim_comps_outer(self, other: Phrase, **kwds: Any) -> float:
+        # pylint: disable=protected-access
+        sim = self.head.similarity(other.head)
+        svecs = self._get_component_vectors()
+        ovecs = other._get_component_vectors()
+        n = 1
+        for k, sv in svecs.items():
+            if k not in ovecs:
+                continue
+            n += 1
+            ov = ovecs[k]
+            cos = cosine_similarity(sv, ov, **kwds)
+            if isinstance(cos, np.ndarray):
+                axis = 0 if cos.shape[0] >= cos.shape[1] else 1
+                cos = cos.max(axis=axis).mean()
+            sim += cos
+        return float(sim) / n
+
+    # def _sim_comps_average(self, other: Phrase, **kwds: Any) -> float:
+
 
 
 class VerbPhrase(Phrase):

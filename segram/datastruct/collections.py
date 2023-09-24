@@ -134,7 +134,7 @@ class DataCollectionABC(Collection, SegramABC):
             self.imap(func, *args, **kwds)
         ))
 
-    def extract(self, attr: str) -> Self:
+    def get(self, attr: str) -> Self:
         """Extract attributes from members."""
         return self.map(lambda m: getattr(m, attr))
 
