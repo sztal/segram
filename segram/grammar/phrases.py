@@ -526,8 +526,6 @@ class PhraseVectors:
     @property
     def similarity(self) -> float:
         """Structured similarity between ``self.phrase`` and ``self.spec``."""
-        # TODO: add validation of arguments' clashes etc.
-        # FIXME: general refactor of this class would be nice
         if isinstance(self.spec, Mapping):
             return self._sim_custom_spec(self.phrase, self.spec)
         if not isinstance(self.spec, Phrase):
@@ -545,13 +543,9 @@ class PhraseVectors:
     def _sim_recursive(self, phrase: Phrase, other: Phrase) -> float:
         sim = 0
         total_weight = 0
-        denom = 0
-        num = 0
         if self._is_name_ok((name := "head")):
             total_weight += self.weights.get(name, 1)
             sim += self._sim(phrase.head, other.head) * total_weight
-            denom += 1
-            num += 1
         for name in set(phrase.active_parts).union(other.active_parts):
             if not self._is_name_ok(name):
                 continue
@@ -568,13 +562,13 @@ class PhraseVectors:
             ops = getattr(other, name)
             if not sps or not ops:
                 continue
-            best_matches = tuple(self._best_matches(sps, ops, self._sim_recursive))
-            num += len(best_matches)
-            denom += max(len(ops), len(sps))
-            sim += sum(x for x, *_ in best_matches) * w
+            best_matches = self._best_matches(sps, ops, self._sim_recursive)
+            denom = max(len(ops), len(sps))
+            add_sim = sum(x for x, *_ in best_matches)
+            sim += add_sim * w / denom
         if total_weight == 0:
             return 0.
-        return sim / total_weight * (num / denom)
+        return sim / total_weight
 
     def _sim_phrase(self, phrase: Phrase, other: Phrase) -> float:
         # pylint: disable=too-many-locals
@@ -617,7 +611,7 @@ class PhraseVectors:
         if total_weight == 0:
             return 0.
         cos = cosine_similarity(svecs, ovecs, aligned=True)
-        return (cos * weights).sum() / total_weight * (num / denom)
+        return (sim + (cos * weights).sum()) / total_weight * (num / denom)
 
     def _sim_custom_spec(self, phrase: Phrase, spec: PVSpecType) -> float:
         if isinstance(spec, Mapping):
@@ -684,12 +678,11 @@ class PhraseVectors:
     ) -> Iterable[tuple[float, Phrase, Phrase]]:
         phrases = tuple(phrases)
         idx = 1 if len(phrases) <= len(others) else 2
-        yield from unique_everseen(
-            sorted((
-                (func(p, s, **kwds), p, s)
-                for p, s in product(phrases, others)
-            ), key=lambda x: -x[0]
-        ), key=lambda x: x[idx])
+        pairs = sorted((
+            (func(p, s, **kwds), p, s)
+            for p, s in product(phrases, others)
+        ), key=lambda x: -x[0])
+        yield from unique_everseen(pairs, key=lambda x: x[idx])
 
     def _get_parts(self, phrase: Phrase) -> dict[str, DataSequence[Phrase | Component]]:
         pdict = {}
