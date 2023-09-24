@@ -10,6 +10,7 @@ from .graph import PhraseGraph
 from ..settings import settings
 from ..nlp.tokens import Doc, Span, Token
 from ..symbols import Role
+from ..utils.misc import best_matches
 
 
 class Sent(Sequence, DocElement):
@@ -35,8 +36,6 @@ class Sent(Sequence, DocElement):
     conjuncts
         Mapping from lead components to conjunct groups.
     """
-    # pylint: disable=too-many-public-methods
-    # pylint: disable=too-many-instance-attributes
     __components__ = ("verbs", "nouns", "descs", "preps")
     __slots__ = (
         "start", "end", *__components__,
@@ -155,12 +154,24 @@ class Sent(Sequence, DocElement):
 
     # Methods -----------------------------------------------------------------
 
-    def similarity(self, other: Self) -> float:
-        """Structured similarity to other sentence."""
-        return (
-            self.sent.similarity(other.sent) \
-                + self.root.phrase.similarity(other.root.phrase)
-        ) / 2
+    def similarity(self, other: Self, *args: Any, **kwds: Any) -> float:
+        """Structured similarity to other sentence.
+
+        It is computed as the average similarity between
+        best matching root phrases of the two sentences.
+
+        Parameters
+        ----------
+        other
+            Other sentence.
+        *args, **kwds
+            Passed to :meth:`segram.grammar.Phrase.similarity.
+        """
+        sroots = self.roots
+        oroots = other.roots
+        return sum(score for score, *_ in best_matches(
+            sroots, oroots, lambda s, o: s.similarity(o, *args, **kwds)
+        )) / max(len(sroots), len(oroots))
 
     @classmethod
     def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:

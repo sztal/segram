@@ -2,7 +2,7 @@
 from typing import Any, Union, Callable, ClassVar, Self, Iterable, Mapping
 from typing import Literal, TypeAlias
 from abc import abstractmethod
-from itertools import islice, product
+from itertools import islice
 from more_itertools import unique_everseen
 import numpy as np
 from spacy.vectors import Vectors
@@ -13,7 +13,7 @@ from ..nlp.tokens import Token
 from ..symbols import Role, Dep
 from ..abc import labelled
 from ..datastruct import DataSequence, DataChain
-from ..utils.misc import cosine_similarity
+from ..utils.misc import cosine_similarity, best_matches
 
 
 controlled = labelled("part")
@@ -622,9 +622,9 @@ class PhraseVectors:
             ops = getattr(other, name)
             if not sps or not ops:
                 continue
-            best_matches = self._best_matches(sps, ops, self._sim_recursive)
+            best = best_matches(sps, ops, self._sim_recursive)
             denom = max(len(ops), len(sps))
-            add_sim = sum(x for x, *_ in best_matches)
+            add_sim = sum(x for x, *_ in best)
             sim += add_sim * w / denom
         if total_weight == 0:
             return 0.
@@ -717,6 +717,8 @@ class PhraseVectors:
             sim = cosine_similarity(X, Y)
             if not isinstance(sim, np.ndarray):
                 return sim
+            if sim.size <= 0:
+                return 0.
             if sim.ndim == 2:
                 axis = 1 if sim.shape[0] <= sim.shape[1] else 0
                 sim = sim.max(axis=axis)
@@ -728,21 +730,6 @@ class PhraseVectors:
         if self.only:
             return name in self.only
         return True
-
-    def _best_matches(
-        self,
-        phrases: Iterable[Phrase],
-        others: Iterable[Phrase],
-        func: Callable[[Phrase, Phrase], float],
-        **kwds: Any
-    ) -> Iterable[tuple[float, Phrase, Phrase]]:
-        phrases = tuple(phrases)
-        idx = 1 if len(phrases) <= len(others) else 2
-        pairs = sorted((
-            (func(p, s, **kwds), p, s)
-            for p, s in product(phrases, others)
-        ), key=lambda x: -x[0])
-        yield from unique_everseen(pairs, key=lambda x: x[idx])
 
     def _get_parts(self, phrase: Phrase) -> dict[str, DataSequence[Phrase | Component]]:
         pdict = {}

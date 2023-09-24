@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import Any, Iterable, Self
 from abc import abstractmethod
+import numpy as np
 from spacy.tokens import MorphAnalysis, Token as SpacyToken
 from .abc import NLP
 from ...symbols import POS, Role
@@ -173,6 +174,10 @@ class Token(NLP):
         if (refs := self.corefs):
             return refs[0]
         return self
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.coref.tok.vector
 
     # Methods -----------------------------------------------------------------
 

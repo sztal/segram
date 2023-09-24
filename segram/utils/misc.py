@@ -1,3 +1,6 @@
+from typing import Any, Callable, Iterable
+from itertools import product
+from more_itertools import unique_everseen
 import numpy as np
 from numpy.linalg import norm
 
@@ -41,3 +44,20 @@ def cosine_similarity(
     if cos.size == 1:
         return float(cos[0][0])
     return cos.squeeze()
+
+
+def best_matches(
+    objs: Iterable,
+    others: Iterable,
+    func: Callable[[Any, Any], int | float],
+    *args: Any,
+    **kwds: Any
+) -> Iterable[tuple[int | float, Any, Any]]:
+    objs = tuple(objs)
+    others = tuple(others)
+    idx = 1 if len(objs) <= len(others) else 2
+    pairs = sorted((
+        (func(obj, other, *args, **kwds), obj, other)
+        for obj, other in product(objs, others)
+    ), key=lambda x: -x[0])
+    yield from unique_everseen(pairs, key=lambda x: x[idx])
