@@ -482,7 +482,7 @@ class PhraseVectors:
         "recursive", "outer", "only", "ignore", "comp_vectors"
     )
     _what_type = str | Iterable[str] | Callable[[Phrase], Iterable[Phrase]]
-    _what_vals = ("components", "children", "subdag")
+    _what_vals = ("phrases", "components")
 
     def __init__(
         self,
@@ -524,13 +524,16 @@ class PhraseVectors:
 
     # Internals ---------------------------------------------------------------
 
-    def _sim_recursive(self, phrase: Phrase, other: Phrase, **kwds: Any) -> float:
+    def _sim_recursive(self, phrase: Phrase, other: Phrase) -> float:
         sim = 0
         total_weight = 0
+        denom = 0
+        num = 0
         if self._is_name_ok((name := "head")):
             total_weight += self.weights.get(name, 1)
-            sim += self._cos(phrase.head, other.head, outer=self.outer, **kwds) \
-                * total_weight
+            sim += self._cos(phrase.head, other.head) * total_weight
+            denom += 1
+            num += 1
         for name in set(phrase.active_parts).union(other.active_parts):
             if not self._is_name_ok(name):
                 continue
@@ -547,21 +550,55 @@ class PhraseVectors:
             ops = getattr(other, name)
             if not sps or not ops:
                 continue
-            best_matches = self._best_matches(sps, ops, self._sim_recursive, **kwds)
-            denom = max(len(ops), len(sps))
-            sim += sum(x for x, *_ in best_matches) / denom * w
+            best_matches = tuple(self._best_matches(sps, ops, self._sim_recursive))
+            num += len(best_matches)
+            denom += max(len(ops), len(sps))
+            sim += sum(x for x, *_ in best_matches) * w
         if total_weight == 0:
             return 0
-        return sim / total_weight
+        return sim / total_weight * (num / denom)
 
-    def _cos(self, X, Y, outer=False, **kwds) -> float:
+    def _sim_phrase(self, phrase: Phrase, other: Phrase) -> float:
+        # pylint: disable=too-many-locals
+        sdict = self._get_parts(phrase)
+        odict = self._get_parts(other)
+        shared = set(sdict).intersection(odict)
+        denom = len(set(sdict).union(odict))
+        num = len(shared)
+        sdict = {
+            k: self._get_vectors(v) for k, v in sdict.items()
+            if k in shared and self._is_name_ok(k)
+        }
+        odict = {
+            k: self._get_vectors(v) for k, v in odict.items()
+            if k in shared and self._is_name_ok(k)
+        }
+
+        sim = 0
+        total_weight = 0
+        if self._is_name_ok((name := "head")):
+            total_weight += self.weights.get(name, 1)
+            sim += self._cos(phrase.head, other.head) * total_weight
+            denom += 1
+            num += 1
+
+        for name, svec in sdict.items():
+            ovec = odict[name]
+            w = self.weights.get(name, 1)
+            total_weight += w
+            sim += self._cos(svec, ovec) * w
+        if total_weight == 0:
+            return 0
+        return sim / total_weight * (num / denom)
+
+    def _cos(self, X, Y) -> float:
         if not isinstance(X, np.ndarray):
-            X = X.vectors if outer else X.vector
-            Y = Y.vectors if outer else Y.vector
-        if not outer and X.ndim != 1:
-            sim = cosine_similarity(X, Y, aligned=True, **kwds)
+            X = X.vectors if self.outer else X.vector
+            Y = Y.vectors if self.outer else Y.vector
+        if not self.outer and X.ndim > 1:
+            sim = cosine_similarity(X, Y, aligned=True)
         else:
-            sim = cosine_similarity(X, Y, **kwds)
+            sim = cosine_similarity(X, Y)
             if not isinstance(sim, np.ndarray):
                 return sim
             if sim.ndim == 2:
@@ -585,5 +622,21 @@ class PhraseVectors:
             ), key=lambda x: -x[0]
         ), key=lambda x: x[idx])
 
-    def _get_vectors(self, seq, outer=False):
-        vecattr = "vectors" if outer else "vector"
+    def _get_parts(self, phrase):
+        pdict = {}
+        if self.what == "components":
+            for comp in phrase.components:
+                pdict.setdefault(comp.alias.lower(), []).append(comp)
+            pdict = { k: DataSequence(v) for k, v in pdict.items() }
+        else:
+            for name in phrase.part_names:
+                if (part := getattr(phrase, name)):
+                    pdict[name] = part
+        return pdict
+
+    def _get_vectors(self, seq):
+        if self.what == "phrases" and self.comp_vectors:
+            seq = seq.get("components").flat
+        if self.outer:
+            return seq.flat.get("vectors").pipe(np.vstack)
+        return seq.flat.get("vector").pipe(lambda x: sum(x) / len(x))
