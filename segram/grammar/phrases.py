@@ -1,9 +1,11 @@
+# pylint: disable=no-name-in-module
 from __future__ import annotations
-from typing import Any, Callable, ClassVar, Self, Iterable, Literal
+from typing import Any, Union, Callable, ClassVar, Self, Iterable, Literal, Mapping
 from abc import abstractmethod
 from itertools import islice, product
 from more_itertools import unique_everseen
 import numpy as np
+from spacy.vectors import Vectors
 from .abc import SentElement
 from .components import Component, Verb, Noun, Desc, Prep
 from .conjuncts import Conjuncts
@@ -16,7 +18,10 @@ from ..utils.misc import cosine_similarity
 
 controlled = labelled("part")
 PGType = DataChain[Conjuncts["Phrase"]]
-PVSpecType = dict[str, str | Iterable[str] | Callable[["Phrase"], bool]]
+PVSpecType = dict[str, Union[
+    str, Iterable[str], "Phrase", Component, Token,
+    Callable[[Union["Phrase", Component, Token]], float]
+]]
 
 
 class Phrase(SentElement):
@@ -482,7 +487,7 @@ class PhraseVectors:
         "phrase", "spec", "what", "weights",
         "recursive", "only", "ignore", "comp_vectors"
     )
-    _what_type = str | Iterable[str] | Callable[[Phrase], Iterable[Phrase]]
+    _what_type = str | Callable[[Phrase], DataSequence[Phrase | Component]]
     _what_vals = ("phrases", "components")
 
     def __init__(
@@ -497,6 +502,12 @@ class PhraseVectors:
         ignore: str | Iterable[str] = (),
         comp_vectors: bool = True
     ) -> None:
+        if not phrase.doc.has_vectors:
+            raise ValueError("word vectors not available")
+        if what not in self._what_vals:
+            raise ValueError(f"'what' has to be one of {self._what_vals}")
+        if only and ignore:
+            raise ValueError("'only' and 'ignore' cannot be used at the same time")
         self.phrase = phrase
         self.spec = spec
         self.what = what
@@ -505,21 +516,29 @@ class PhraseVectors:
         self.only = only
         self.ignore = ignore
         self.comp_vectors = comp_vectors
-        if self.what not in self._what_vals:
-            raise ValueError(f"'what' has to be one of {self._what_vals}")
-        if self.only and self.ignore:
-            raise ValueError("'only' and 'ignore' cannot be used at the same time")
 
-    # Methods -----------------------------------------------------------------
+    # Properties --------------------------------------------------------------
 
-    def similarity(self, **kwds: Any) -> float:
-        """Structured similarity between ``self.phrase`` and ``self.spec``.
+    @property
+    def vectors(self) -> Vectors:
+        return self.phrase.doc.vocab.vectors
 
-        Parameters
-        ----------
-        **kwds
-            Passed to :func:`segram.utils.misc.cosine_similarity`.
-        """
+    @property
+    def similarity(self) -> float:
+        """Structured similarity between ``self.phrase`` and ``self.spec``."""
+        # TODO: add validation of arguments' clashes etc.
+        # FIXME: general refactor of this class would be nice
+        if isinstance(self.spec, Mapping):
+            return self._sim_custom_spec(self.phrase, self.spec)
+        if not isinstance(self.spec, Phrase):
+            pcn = Phrase.cname()
+            raise ValueError(
+                f"specification must be a '{pcn}' instance "
+                f"or a 'dict', not '{self.spec.__class__.__name__}'"
+            )
+        if self.recursive:
+            return self._sim_recursive(self.phrase, self.spec)
+        return self._sim_phrase(self.phrase, self.spec)
 
     # Internals ---------------------------------------------------------------
 
@@ -554,7 +573,7 @@ class PhraseVectors:
             denom += max(len(ops), len(sps))
             sim += sum(x for x, *_ in best_matches) * w
         if total_weight == 0:
-            return 0
+            return 0.
         return sim / total_weight * (num / denom)
 
     def _sim_phrase(self, phrase: Phrase, other: Phrase) -> float:
@@ -596,11 +615,45 @@ class PhraseVectors:
 
         total_weight += weights.sum()
         if total_weight == 0:
-            return 0
+            return 0.
         cos = cosine_similarity(svecs, ovecs, aligned=True)
         return (cos * weights).sum() / total_weight * (num / denom)
 
-    def _sim(self, X, Y) -> float:
+    def _sim_custom_spec(self, phrase: Phrase, spec: PVSpecType) -> float:
+        if isinstance(spec, Mapping):
+            pdict = self._get_parts(phrase)
+            sim = 0
+            denom = 0
+            num = 0
+            total_weight = 0
+            for field, req in spec.items():
+                denom += 1
+                if not (val := pdict.get(field)):
+                    continue
+                w = self.weights.get(field, 1)
+                total_weight += w
+                num += 1
+                if isinstance(req, Callable):
+                    sim += req(val) * w
+                else:
+                    req = self._get_text_vector(req)
+                    if isinstance(val, Phrase | Component | Token):
+                        vector = val.vector
+                    elif isinstance(val, Iterable):
+                        vector = sum(map(lambda x: x.vector, val))
+                    sim += cosine_similarity(vector, req) * w
+            if total_weight == 0:
+                return 0.
+            return sim / total_weight * (num / denom)
+
+        vector = self._get_text_vector(spec)
+        return cosine_similarity(phrase.vector, vector)
+
+    def _sim(
+        self,
+        X: np.ndarray[tuple[int] | tuple[int, int], np.floating],
+        Y: np.ndarray[tuple[int] | tuple[int, int], np.floating]
+    ) -> float:
         if not isinstance(X, np.ndarray):
             X = X.vector
             Y = Y.vector
@@ -622,17 +675,30 @@ class PhraseVectors:
             return name in self.only
         return True
 
-    def _best_matches(self, phrases, specs, func, **kwds):
-        idx = 1 if len(phrases) <= len(specs) else 2
+    def _best_matches(
+        self,
+        phrases: Iterable[Phrase],
+        others: Iterable[Phrase],
+        func: Callable[[Phrase, Phrase], float],
+        **kwds: Any
+    ) -> Iterable[tuple[float, Phrase, Phrase]]:
+        phrases = tuple(phrases)
+        idx = 1 if len(phrases) <= len(others) else 2
         yield from unique_everseen(
             sorted((
                 (func(p, s, **kwds), p, s)
-                for p, s in product(phrases, specs)
+                for p, s in product(phrases, others)
             ), key=lambda x: -x[0]
         ), key=lambda x: x[idx])
 
-    def _get_parts(self, phrase):
+    def _get_parts(self, phrase: Phrase) -> dict[str, DataSequence[Phrase | Component]]:
         pdict = {}
+        if isinstance(self.what, Mapping):
+            for k, v in self.what.items():
+                if isinstance(v, str):
+                    pdict[k] = getattr(phrase, v)
+                else:
+                    pdict[k] = v(phrase)
         if self.what == "components":
             for comp in phrase.components:
                 pdict.setdefault(comp.alias.lower(), []).append(comp)
@@ -643,9 +709,21 @@ class PhraseVectors:
                     pdict[name] = part
         return pdict
 
-    def _get_vectors(self, seq):
+    def _get_vectors(self, seq: DataSequence):
         if self.what == "phrases" and self.comp_vectors:
             seq = seq.get("components").flat
         if (vec := seq.flat.get("vector")):
             return vec.pipe(lambda x: sum(x) / len(x))
         return vec
+
+    def _get_text_vector(
+        self,
+        toks: str | Iterable[str]
+    ) -> np.ndarray[tuple[int], np.floating]:
+        if isinstance(toks, str):
+            toks = toks.strip().split()
+        toks = tuple(toks)
+        if not toks:
+            raise ValueError("cannot fetch word vectors; empty token list")
+        vectors = self.vectors
+        return sum(vectors[tok] for tok in toks) / len(toks)
