@@ -1,6 +1,6 @@
 # pylint: disable=no-name-in-module
-from __future__ import annotations
-from typing import Any, Union, Callable, ClassVar, Self, Iterable, Literal, Mapping
+from typing import Any, Union, Callable, ClassVar, Self, Iterable, Mapping
+from typing import Literal, TypeAlias
 from abc import abstractmethod
 from itertools import islice, product
 from more_itertools import unique_everseen
@@ -17,11 +17,14 @@ from ..utils.misc import cosine_similarity
 
 
 controlled = labelled("part")
-PGType = DataChain[Conjuncts["Phrase"]]
-PVSpecType = dict[str, Union[
-    str, Iterable[str], "Phrase", Component, Token,
+PGType: TypeAlias = DataChain[Conjuncts["Phrase"]]
+PVSpecType: TypeAlias = dict[str, Union[
+    str, Iterable[str],
     Callable[[Union["Phrase", Component, Token]], float]
 ]]
+_what_type: TypeAlias = \
+    str | Callable[["Phrase"], DataSequence[Union["Phrase", Component]]]
+_what_vals = ("phrases", "components")
 
 
 class Phrase(SentElement):
@@ -69,16 +72,16 @@ class Phrase(SentElement):
         obj.sent.pmap[obj.idx] = obj
         return obj
 
-    def __iter__(self) -> Iterable[Phrase]:
+    def __iter__(self) -> Iterable[Self]:
         yield from self.tokens
 
     def __len__(self) -> int:
         return len(self.tokens)
 
-    def __getitem__(self, idx: int | slice) -> Phrase | list[Phrase]:
+    def __getitem__(self, idx: int | slice) -> Token | tuple[Token, ...]:
         return self.tokens[idx]
 
-    def __contains__(self, other: Phrase | Component | Token) -> bool:
+    def __contains__(self, other: Self | Component | Token) -> bool:
         if self.is_comparable_with(other):
             return any(other == p for p in self.iter_subdag(skip=1))
         if isinstance(other, Component):
@@ -108,12 +111,12 @@ class Phrase(SentElement):
         return self.head.idx
 
     @property
-    def lead(self) -> Phrase:
+    def lead(self) -> Self:
         """Lead phrase."""
         return self.sent.pmap[self._lead] if self._lead is not None else self
 
     @property
-    def is_lead(self) -> Phrase:
+    def is_lead(self) -> Self:
         """Is the phrase a lead phrase."""
         return self.lead is self
 
@@ -291,7 +294,7 @@ class Phrase(SentElement):
 
     # Methods -----------------------------------------------------------------
 
-    def iter_subdag(self, *, skip: int = 0) -> Iterable[Phrase]:
+    def iter_subdag(self, *, skip: int = 0) -> Iterable[Self]:
         """Iterate over phrasal subtree and omit ``skip`` first items.
 
         Each phrase is emitted only when reached the first time
@@ -303,7 +306,7 @@ class Phrase(SentElement):
                 yield from child.iter_subdag(skip=0)
         yield from islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None)
 
-    def iter_supdag(self, *, skip: int = 0) -> Iterable[Phrase]:
+    def iter_supdag(self, *, skip: int = 0) -> Iterable[Self]:
         """Iterate over phrasal supertree and omit ``skip`` first items.
 
         Each phrase is emitted only when reached the first time
@@ -315,7 +318,7 @@ class Phrase(SentElement):
                 yield from parent.iter_supdag(skip=0)
         yield from islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None)
 
-    def dfs(self, subdag: bool = True) -> DataSequence[DataSequence[Phrase]]:
+    def dfs(self, subdag: bool = True) -> DataSequence[DataSequence[Self]]:
         """Depth-first search.
 
         Parameters
@@ -335,17 +338,65 @@ class Phrase(SentElement):
                 yield DataSequence(chain)
         return DataSequence(_dfs(self))
 
-    def similarity(self, spec: Phrase | PVSpecType) -> float:
+    def similarity(
+        self,
+        spec: Self | str | Iterable[str] | PVSpecType,
+        what: Literal[*_what_vals] | dict[str, _what_type] = _what_vals[0],
+        *,
+        recursive: bool = False,
+        comp_vectors: bool = True,
+        **kwds: Any
+    ) -> float:
         """Similarity score with respect to specification.
 
         Parameters
         ----------
         spec
-            Specification in the form of another phrase,
-            template token(s) or a specification dictionary
-            mapping template token(s) to different
-            or a specification dictionary.
+            Specification against which the phrase is to be compared.
+            Can be another phrase, a string or an iterable of strings,
+            which should be single words.
+            A single strings is splitted at whitespace and turned into
+            multiple words. Finally, an averaged word vector for all words
+            is computed. Alternatively, a specification can have a form
+            of dictionary mapping names of phrase parts (see ``what`` argument)
+            to either strings convertible to word vectors (as used here)
+            or callables, which will be applied to the values of the fields
+            specified by the dictionary keys and are expected to return
+            floats representing structured similarity scores.
+        what
+            Specifies whether comparison with another phrase should be
+            based on phrase parts such as subjects, direct objects etc.,
+            or on a simple comparison based on components, i.e. verbs and nouns.
+            Alternatively, custom parts may be defined by providing a dictionary
+            mapping part names to either phrase attribute names or arbitrary
+            callables accepting a single phrase and producing an instance of
+            :class:`segram.datastruct.DataSequence` populated with phrase
+            or component objects.
+        weights
+            Dictionary mapping phrase part or component names or custom names
+            as defined by ``what`` to arbitrary weights (which must be positive).
+            The weights do not have to be normalized and sum up to one.
+            They are used for reweighting importance of different parts
+            during scoring.
+        recursive
+            Should a more accurate but sometimes somewhat slower
+            recursive scoring algorithm be used.
+        comp_vectors
+            If ``True`` then word vectors are based only on component
+            head tokens instead of all tokens belonging to a given
+            phrase or component.
+        only, ignore
+            Lists of part names to selectively use or ignored
+            even if ``what`` defines more fields. Cannot use both
+            at the same time.
+
+        Raises
+        ------
+        ValueError
+            If word vectors are not available.
         """
+        kwds = dict(recursive=recursive, comp_vectors=comp_vectors, **kwds)
+        return PhraseVectors(self, spec, what, **kwds).similarity
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Phrase)
@@ -364,7 +415,7 @@ class Phrase(SentElement):
         self,
         *,
         bg: bool = False
-    ) -> Iterable[Token, Role | None]:
+    ) -> Iterable[tuple[Token, Role | None]]:
         """Iterate over token-role pairs.
 
         Parameters
@@ -482,36 +533,45 @@ class PhraseVectors:
     This is a helper class for implementing
     various types of comparisons between vectors
     based on word vector embeddings.
+
+    Attributes
+    ----------
+    phrase
+        Main phrase of interest.
     """
+    __doc__ += "\n".join(
+        s[4:] for s in Phrase.similarity.__doc__.split("\n")[4:-1]
+    )
     __slots__ = (
         "phrase", "spec", "what", "weights",
-        "recursive", "only", "ignore", "comp_vectors"
+        "comp_vectors", "recursive", "only", "ignore",
     )
-    _what_type = str | Callable[[Phrase], DataSequence[Phrase | Component]]
-    _what_vals = ("phrases", "components")
 
     def __init__(
         self,
         phrase: Phrase,
         spec: Phrase | str | Iterable[str] | PVSpecType,
-        what: Literal[_what_vals] | dict[str, _what_type] = _what_vals[0],
+        what: Literal[*_what_vals] | dict[str, _what_type] = _what_vals[0],
         *,
         weights: dict[str, float | int] | None = None,
         recursive: bool = False,
+        comp_vectors: bool = True,
         only: str | Iterable[str] = (),
-        ignore: str | Iterable[str] = (),
-        comp_vectors: bool = True
+        ignore: str | Iterable[str] = ()
     ) -> None:
         if not phrase.doc.has_vectors:
             raise ValueError("word vectors not available")
-        if what not in self._what_vals:
-            raise ValueError(f"'what' has to be one of {self._what_vals}")
+        if what not in _what_vals:
+            raise ValueError(f"'what' has to be one of {_what_vals}")
         if only and ignore:
             raise ValueError("'only' and 'ignore' cannot be used at the same time")
+        weights = weights or {}
+        if any(v < 0 for v in weights.values()):
+            raise ValueError("weights must be non-negative")
         self.phrase = phrase
         self.spec = spec
         self.what = what
-        self.weights = weights or {}
+        self.weights = weights
         self.recursive = recursive
         self.only = only
         self.ignore = ignore
