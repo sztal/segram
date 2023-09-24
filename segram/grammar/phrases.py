@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, ClassVar, Self, Iterable
+from typing import Any, Callable, ClassVar, Self, Iterable
 from abc import abstractmethod
 from itertools import islice, product
 from more_itertools import unique_everseen
@@ -16,6 +16,7 @@ from ..utils.misc import cosine_similarity
 
 controlled = labelled("part")
 PGType = DataChain[Conjuncts["Phrase"]]
+PVSpecType = dict[str, str | Iterable[str] | Callable[["Phrase"], bool]]
 
 
 class Phrase(SentElement):
@@ -45,8 +46,8 @@ class Phrase(SentElement):
         head: Component,
         *,
         dep: Dep = Dep.misc,
-        sconj: Optional[Token] = None,
-        lead: Optional[int] = None
+        sconj: Token | None = None,
+        lead: int | None = None
     ) -> None:
         super().__init__(sent)
         self.head = head
@@ -170,9 +171,10 @@ class Phrase(SentElement):
 
     @property
     @controlled
-    def verb(self) -> Optional[Phrase]:
+    def verb(self) -> PGType:
         """Return ``self`` if VP or nothing otherwise."""
-        return self if isinstance(self, VerbPhrase) else None
+        return Conjuncts.get_chain((self,)) \
+            if isinstance(self, VerbPhrase) else DataChain()
 
     @property
     @controlled
@@ -273,6 +275,10 @@ class Phrase(SentElement):
             c for c in self.children if c.dep & Dep.nmod
         )
 
+    @property
+    def active_parts(self) -> tuple[str, ...]:
+        return tuple(n for n in self.part_names if getattr(self, n))
+
     # Methods -----------------------------------------------------------------
 
     def iter_subdag(self, *, skip: int = 0) -> Iterable[Phrase]:
@@ -319,29 +325,17 @@ class Phrase(SentElement):
                 yield DataSequence(chain)
         return DataSequence(_dfs(self))
 
-    def zip_parts(self, other: Phrase) -> Iterable[str, PGType, PGType]:
-        """Align iterate over parts present in two phrases."""
-        for name in self.part_names:
-            if not (p1 := getattr(self, name)):
-                continue
-            if not (p2 := getattr(other, name)):
-                continue
-            yield name, p1, p2
+    def similarity(self, spec: Phrase | PVSpecType) -> float:
+        """Similarity score with respect to specification.
 
-    def similarity(
-        self,
-        other: Phrase,
-        **kwds: Any
-    ) -> float:
-        """Structured similarity to other phrase."""
-        sim = self.head.similarity(other.head)
-        n = 1
-        for _, sps, ops in self.zip_parts(other):
-            n += 1
-            sim += max(
-                sp.similarity(op) for sp, op in product(sps, ops)
-            )
-        return sim / n
+        Parameters
+        ----------
+        spec
+            Specification in the form of another phrase,
+            template token(s) or a specification dictionary
+            mapping template token(s) to different
+            or a specification dictionary.
+        """
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Phrase)
@@ -470,8 +464,6 @@ class Phrase(SentElement):
             sim += cos
         return float(sim) / n
 
-    # def _sim_comps_average(self, other: Phrase, **kwds: Any) -> float:
-
 
 
 class VerbPhrase(Phrase):
@@ -516,3 +508,113 @@ class PrepPhrase(Phrase):
     def governs(cls, comp: Component) -> bool:
         return super().governs(comp) \
             and isinstance(comp, Prep)
+
+
+# -----------------------------------------------------------------------------
+
+class PhraseVectors:
+    """Phrase vectors comparison.
+
+    This is a helper class for implementing
+    various types of comparisons between vectors
+    based on word vector embeddings.
+    """
+    __slots__ = ("phrase", "spec", "what", "weights", "recursive", "outer", "only", "ignore")
+    _what_type = str | Iterable[str] | Callable[[Phrase], Iterable[Phrase]]
+
+    def __init__(
+        self,
+        phrase: Phrase,
+        spec: Phrase | str | Iterable[str] | PVSpecType,
+        what: str | dict[str, _what_type],
+        *,
+        weights: dict[str, float | int] | None = None,
+        recursive: bool = False,
+        outer: bool = False,
+        only: str | Iterable[str] = (),
+        ignore: str | Iterable[str] = ()
+    ) -> None:
+        self.phrase = phrase
+        self.spec = spec
+        self.what = what
+        self.weights = weights or {}
+        self.recursive = recursive
+        self.outer = outer
+        self.only = only
+        self.ignore = ignore
+        if self.only and self.ignore:
+            raise ValueError("'only' and 'ignore' cannot be used at the same time")
+
+    # Methods -----------------------------------------------------------------
+
+    def similarity(self, **kwds: Any) -> float:
+        """Structured similarity between ``self.phrase`` and ``self.spec``.
+
+        Parameters
+        ----------
+        **kwds
+            Passed to :func:`segram.utils.misc.cosine_similarity`.
+        """
+
+    # Internals ---------------------------------------------------------------
+
+    def _sim_recursive(self, phrase: Phrase, other: Phrase, **kwds: Any) -> float:
+        sim = 0
+        total_weight = 0
+        if self._is_name_ok((name := "head")):
+            total_weight += self.weights.get(name, 1)
+            sim += self._cos(phrase.head, other.head, outer=self.outer, **kwds) \
+                * total_weight
+        for name in set(phrase.active_parts).union(other.active_parts):
+            if not self._is_name_ok(name):
+                continue
+            sps = getattr(phrase, name)
+
+            if phrase in sps.flat:
+                # This is to prevent infinite recursion
+                # happening for verb phrases/clauses
+                continue
+
+            w = self.weights.get(name, 1)
+            total_weight += w
+
+            ops = getattr(other, name)
+            if not sps or not ops:
+                continue
+            best_matches = self._best_matches(sps, ops, self._sim_recursive, **kwds)
+            denom = max(len(ops), len(sps))
+            sim += sum(x for x, *_ in best_matches) / denom * w
+        if total_weight == 0:
+            return 0
+        return sim / total_weight
+
+    def _cos(self, X, Y, outer=False, **kwds) -> float:
+        if not isinstance(X, np.ndarray):
+            X = X.vectors if outer else X.vector
+            Y = Y.vectors if outer else Y.vector
+        if not outer and X.ndim != 1:
+            sim = cosine_similarity(X, Y, aligned=True, **kwds)
+        else:
+            sim = cosine_similarity(X, Y, **kwds)
+            if not isinstance(sim, np.ndarray):
+                return sim
+            if sim.ndim == 2:
+                axis = 0 if sim.shape[0] <= sim.shape[1] else 1
+                sim = sim.max(axis=axis)
+        return sim.mean()
+
+    def _is_name_ok(self, name: str) -> bool:
+        if self.ignore:
+            return name not in self.ignore
+        if self.only:
+            return name in self.only
+        return True
+
+    def _best_matches(self, phrases, specs, func, **kwds):
+        idx = 1 if len(phrases) <= len(specs) else 2
+        yield from unique_everseen(
+            sorted((
+                (func(p, s, **kwds), p, s)
+                for p, s in product(phrases, specs)
+            ), key=lambda x: -x[0]
+        ), key=lambda x: x[idx])

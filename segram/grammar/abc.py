@@ -12,6 +12,7 @@ from abc import abstractmethod
 import re
 from functools import total_ordering
 from catalogue import Registry
+import numpy as np
 from ..nlp.tokens import Doc, Span, Token
 from ..utils.registries import grammars
 from ..abc import SegramWithDocABC
@@ -170,6 +171,19 @@ class GrammarElement(Grammar):
     @property
     def lemma(self) -> str:
         return "".join(t.lemma+t.whitespace for t in self.tokens).strip()
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        """Average token word vector."""
+        toks = self.tokens
+        return sum(tok.vector for tok in toks) / len(toks)
+
+    @property
+    def vectors(self) -> np.ndarray[tuple[int, int], np.floating]:
+        """2D array of token vectors in order of appearance in the sentence
+        where each row corresponds to one token vector.
+        """
+        return np.vstack([ tok.vector for tok in self.tokens ])
 
     # Methods -----------------------------------------------------------------
 

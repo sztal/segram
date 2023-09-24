@@ -12,7 +12,7 @@ class DataCollectionABC(Collection, SegramABC):
     __slots__ = ("members",)
 
     @abstractmethod
-    def __init__(self, members: Collection[Any]) -> None:
+    def __init__(self, members: Collection[Any] = ()) -> None:
         """Initialization method."""
         if not isinstance(members, DataCollectionABC):
             members = tuple(members)
@@ -204,7 +204,7 @@ class DataChain(DataSequence):
     """Chain of data sequences class."""
     __slots__ = ()
 
-    def __init__(self, members: Sequence[Collection[Any]]) -> None:
+    def __init__(self, members: Sequence[Collection[Any]] = ()) -> None:
         super().__init__(members)
 
     def __iter__(self) -> Iterable[Any]:
@@ -220,7 +220,7 @@ class DataChain(DataSequence):
 
     @property
     def groups(self) -> DataSequence:
-        return self.members
+        return DataSequence(self.members)
 
     # Methods -----------------------------------------------------------------
 

@@ -33,7 +33,7 @@ class Resource:
         self,
         path: str | bytes | os.PathLike,
         *,
-        compression: Optional[Literal[list(__compressions__)]] = None
+        compression: Optional[Literal[*__compressions__]] = None
     ) -> None:
         self.path = Path(path)
         self._compression = compression

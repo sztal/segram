@@ -5,7 +5,6 @@ by a root token, e.g. a verb with its auxiliary verbs.
 """
 from __future__ import annotations
 from typing import Any, Optional, Iterable, Iterator, ClassVar, Self
-import numpy as np
 from .abc import SentElement
 from .conjuncts import Conjuncts
 from ..nlp.tokens import Token
@@ -201,16 +200,6 @@ class Component(SentElement):
                 attr = attr.name
             dct[name] = attr
         return dct
-
-    @property
-    def vector(self) -> np.ndarray[tuple[int], np.floating]:
-        vec = self.head.tok.vector
-        n = 1
-        for tok in self.tokens:
-            if tok is not self.head:
-                vec += tok.vector
-                n += 1
-        return vec / n
 
     # Methods -----------------------------------------------------------------
 
