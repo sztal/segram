@@ -13,7 +13,7 @@ from ... import __title__
         "grammar": "rulebased",
         "preprocess": ["lemmatizer", "merger"],
         "alias": __title__,
-        "store_data": True,
+        "lazy_data": True,
         "vectors": None
     }
 )
@@ -24,7 +24,7 @@ def create_base(
     grammar: str,
     preprocess: Sequence,
     alias: str,
-    store_data: bool,
+    lazy_data: bool,
     vectors: str | Language | None
 ) -> Segram:
     return Segram(
@@ -33,6 +33,6 @@ def create_base(
         grammar=grammar,
         preprocess=preprocess,
         alias=alias,
-        store_data=store_data,
+        lazy_data=lazy_data,
         vectors=vectors
     )

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Mapping
 from itertools import product
 from more_itertools import unique_everseen
 import numpy as np
@@ -61,3 +61,10 @@ def best_matches(
         for obj, other in product(objs, others)
     ), key=lambda x: -x[0])
     yield from unique_everseen(pairs, key=lambda x: x[idx])
+
+
+def sort_map(mapping: Mapping) -> Mapping:
+    return mapping.__class__({
+        k: v for k, v
+        in sorted(mapping.items(), key=lambda x: x[1])
+    })

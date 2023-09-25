@@ -138,8 +138,8 @@ class DataCollectionABC(Collection, SegramABC):
 
     def sort(
         self,
-        key: str | Callable,
-        *args: Any,
+        key: str | Callable | None = None,
+        *,
         reverse: bool = False,
         scores: bool = False,
         **kwds: Any
@@ -160,20 +160,22 @@ class DataCollectionABC(Collection, SegramABC):
         *args, **kwds
             Passed to the sorting callable.
         """
-        keyfunc = self._get_keyfunc(key, *args, **kwds)
+        keyfunc = self._get_keyfunc(key, **kwds)
         members = sorted(self.members, key=keyfunc, reverse=reverse)
-        if scores:
+        if key and scores:
             members = zip(sorted(self.map(keyfunc), reverse=reverse), members)
         return self.copy(members=members)
 
-    def groupby(self, key: str | Callable, *args: Any, **kwds: Any) -> Self:
+    def groupby(self, key: str | Callable | None = None, **kwds: Any) -> Self:
         """Group by key attribute or function/method.
 
         Importantly, the key function/values must be sortable.
         """
+        if key is None:
+            return self
         members = []
-        keyfunc = self._get_keyfunc(key, *args, **kwds)
-        for _, group in self.sort(key, *args, **kwds).pipe(groupby, key=keyfunc):
+        keyfunc = self._get_keyfunc(key, **kwds)
+        for _, group in self.sort(key, **kwds).pipe(groupby, key=keyfunc):
             members.append(DataSequence(group))
         return DataChain(members)
 

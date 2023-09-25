@@ -154,11 +154,6 @@ class GrammarElement(Grammar, Sequence):
         """Represent as a string."""
         raise NotImplementedError
 
-    @classmethod
-    @abstractmethod
-    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
-        """Construct from document and data dictionary."""
-
     def match(
         self,
         _pattern: str | None = None,
@@ -231,7 +226,7 @@ class DocElement(GrammarElement):
         e.g. an element initialized from the same data twice may have
         differen ``.idx`` values each time.
         """
-        return hash(self)
+        return hash(self.doc)
 
     @property
     def id(self) -> int:
@@ -241,6 +236,13 @@ class DocElement(GrammarElement):
         on the same exact data.
         """
         return self.doc.id
+
+    # Methods -----------------------------------------------------------------
+
+    @classmethod
+    @abstractmethod
+    def from_data(cls, data: dict[str, Any]) -> Self:
+        """Construct data dictionary."""
 
 
 @total_ordering
@@ -273,7 +275,7 @@ class SentElement(GrammarElement):
 
     @property
     def doc(self) -> DocElement:
-        return self.sent.doc
+        return self.sent.doc.grammar
 
     @property
     def root(self) -> Token:
@@ -294,6 +296,13 @@ class SentElement(GrammarElement):
         the parent document.
         """
         return (self.start, self.end)
+
+    # Methods -----------------------------------------------------------------
+
+    @classmethod
+    @abstractmethod
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
+        """Construct from document and data dictionary."""
 
 
 @total_ordering
@@ -322,7 +331,7 @@ class TokenElement(GrammarElement):
 
     @property
     def doc(self) -> DocElement:
-        return self.tok.doc
+        return self.tok.doc.grammar
 
     @property
     def sent(self) -> SentElement:
@@ -332,3 +341,10 @@ class TokenElement(GrammarElement):
     def idx(self) -> int:
         """Token index within the parent document."""
         return self.tok.i
+
+    # Methods -----------------------------------------------------------------
+
+    @classmethod
+    @abstractmethod
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
+        """Construct from document and data dictionary."""

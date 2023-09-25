@@ -68,6 +68,10 @@ class Doc(NLP):
     def cache(self) -> dict[str, dict[int | tuple[int, int], Any]]:
         return getattr(self._, f"{settings.spacy_alias}_cache")
 
+    @property
+    def grammar(self) -> "Doc":
+        return getattr(self._, f"{settings.spacy_alias}_grammar")
+
     # Methods -----------------------------------------------------------------
 
     def to_data(self) -> dict[str, Any]:
@@ -76,7 +80,7 @@ class Doc(NLP):
         """
         user_data = self.tok.user_data.copy()
         cachekey = ("._.", f"{settings.spacy_alias}_cache", None, None)
-        user_data[cachekey] = {}
+        user_data[cachekey].clear()
         data = {
             "vocab": self.vocab,
             "words": [ t.text for t in self ],

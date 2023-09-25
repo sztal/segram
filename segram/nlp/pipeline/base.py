@@ -48,7 +48,7 @@ class Segram(Pipe):
         grammar: str,
         preprocess: Sequence[str],
         alias: str = __title__,
-        store_data: bool = True,
+        lazy_data: bool = True,
         vectors: str | Language | None = None
     ) -> None:
         """Initialization method.
@@ -69,6 +69,9 @@ class Segram(Pipe):
             model. Must be provided by the name of a model or the model
             object itself, so the it is possible to keep track of the model
             name.
+        lazy_data
+            Should grammar data be generated lazily only when needed
+            for the first time.
         """
         if not alias:
             raise ValueError(
@@ -85,7 +88,7 @@ class Segram(Pipe):
         settings.spacy_alias = alias
         self.nlp = nlp
         self.name = name
-        self.store_data = store_data
+        self.lazy_data = lazy_data
         self.extensions = self.import_module(grammar, nlp.lang)
         self.grammar = f"{grammar}.{nlp.lang}"
         if isinstance(vectors, str):
@@ -110,11 +113,10 @@ class Segram(Pipe):
     def __call__(self, doc: Doc) -> Doc:
         alias = settings.spacy_alias
         meta = self.meta.copy()
-        cache = { "nlp": {}, "grammar": {} }
         setattr(doc._, f"{alias}_meta", meta)
-        setattr(doc._, f"{alias}_cache", cache)
+        setattr(doc._, f"{alias}_cache", {})
         setattr(doc._, f"{alias}_model", self.get_model_name(self.nlp))
-        if self.store_data:
+        if not self.lazy_data:
             start = time()
             data = {
                 (sent.start, sent.end): \

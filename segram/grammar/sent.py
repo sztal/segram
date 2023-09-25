@@ -9,7 +9,7 @@ from ..settings import settings
 from ..nlp.tokens import Doc, Span, Token
 from ..symbols import Role
 from ..abc import labelled
-from ..utils.misc import best_matches
+from ..utils.misc import best_matches, sort_map
 from ..datastruct import DataChain, DataSequence
 
 
@@ -49,16 +49,16 @@ class Sent(SentElement):
         conjs: Mapping[Component, Conjuncts] | None = None
     ) -> None:
         super().__init__(sent)
-        self.cmap = self._sort_map(cmap or {})
-        self.pmap = self._sort_map(pmap or {})
+        self.cmap = sort_map(cmap or {})
+        self.pmap = sort_map(pmap or {})
         self.graph = graph
         self.conjs = conjs or {}
 
     def __new__(cls, *args: Any, **kwds: Any) -> None:
         obj = super().__new__(cls)
         obj.__init__(*args, **kwds)
-        cache = obj.sent.doc.cache.setdefault("grammar", {})
         idx = obj.idx
+        cache = obj.doc.smap
         if (cur := cache.get(idx)):
             cur.__init__(**obj.data)
             return cur
@@ -192,14 +192,14 @@ class Sent(SentElement):
 
     def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary."""
-        return dict(
-            start=self.start,
-            end=self.end,
-            cmap={ idx: c.to_data() for idx, c in self.cmap.items() },
-            pmap={ idx: p.to_data() for idx, p in self.pmap.items() },
-            graph=self.graph.to_data(),
-            conjs=[ c.to_data() for c in self.conjs.values() ]
-        )
+        return {
+            "start": self.start,
+            "end":   self.end,
+            "cmap":  { idx: c.to_data() for idx, c in self.cmap.items() },
+            "pmap":  { idx: p.to_data() for idx, p in self.pmap.items() },
+            "graph": self.graph.to_data(),
+            "conjs": [ c.to_data() for c in self.conjs.values() ]
+        }
 
     def iter_token_roles(self) -> tuple[Token, Role | None]:
         """Iterate over token-role pairs."""
@@ -260,12 +260,3 @@ class Sent(SentElement):
                 else:
                     for comp in vals:
                         print(f"{comp.idx}:", comp)
-
-    # Internals ---------------------------------------------------------------
-
-    @staticmethod
-    def _sort_map(mapping: Mapping) -> dict:
-        return mapping.__class__({
-            k: v for k, v
-            in sorted(mapping.items(), key=lambda x: x[1])
-        })
