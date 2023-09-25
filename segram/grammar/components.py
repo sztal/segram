@@ -89,7 +89,8 @@ class Component(TokenElement):
         obj = super().__new__(cls)
         obj.__init__(*args, **kwds)
         if (cur := obj.sent.cmap.get(obj.idx)):
-            cur.__init__(**obj.data)
+            data = { k: v for k, v in obj.data.items() if k in cur.slot_names }
+            cur.__init__(**data)
             return cur
         obj.sent.cmap[obj.idx] = obj
         obj.sent.pmap[obj.idx] = obj.phrase

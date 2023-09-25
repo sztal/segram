@@ -17,41 +17,45 @@ class Story(Semantic, MutableMapping):
     phrases
         Tuple of phrases the story operates on.
     """
-    __slots__ = ("_phrases", "_frames")
+    __slots__ = ("_phrases", "frames")
 
     def __init__(
         self,
-        phrases: Iterable[Phrase] = ()
+        phrases: Iterable[Phrase] = (),
+        **kwds: Frame
     ) -> None:
         self._phrases = Conjuncts.get_chain(phrases)
-        self._frames = {
+        self.frames = {
             "actants": Actants(self),
-            "events": Events(self)
+            "events": Events(self),
+            **kwds
         }
 
     def __getitem__(self, key: str) -> Frame:
-        return self._frames[key]
+        return self.frames[key]
 
     def __setitem__(self, key: str, value: Frame) -> None:
         if isinstance(value, Callable) \
         and not isinstance(value, Frame):
             value = Frame.subclass(value)(self)
-        self._frames[key] = value
+        self.frames[key] = value
 
     def __delitem__(self, key: str) -> None:
-        del self._frames[key]
+        del self.frames[key]
 
     def __iter__(self) -> Iterable[str]:
-        yield from self._frames
+        yield from self.frames
 
     def __len__(self) -> int:
-        return len(self._frames)
+        return len(self.frames)
 
     # Properties --------------------------------------------------------------
 
     @property
     def phrases(self) -> DataSequence[Phrase]:
-        return DataSequence(self._phrases)
+        return self._phrases \
+            .groupby(lambda p: p.lead.sent.idx) \
+            .groupby(lambda g: hash(g[0].doc))
     @phrases.setter
     def _(self, phrases: Iterable[Phrase]) -> None:
         self._phrases = Conjuncts.get_chain(phrases)
@@ -59,15 +63,11 @@ class Story(Semantic, MutableMapping):
             frame.clear()
 
     @property
-    def frames(self) -> tuple[Frame, ...]:
-        return self._frames
-
-    @property
     def sents(self) -> Iterable[Sent]:
         return DataSequence(unique_everseen(
             (p.sent for p in self.phrases),
             key=lambda s: (hash(s.doc), s.idx)
-        ))
+        )).groupby(lambda s: hash(s.doc))
 
     # Constructors ------------------------------------------------------------
 
@@ -78,21 +78,15 @@ class Story(Semantic, MutableMapping):
         return cls(phrases)
 
     @classmethod
-    def from_docs(cls, *docs: Doc, **kwds: Any) -> Self:
-        """Construct from documents.
-
-        ``**kwds`` are passed to :meth:`segram.nlp.tokens.span.Span.grammar`.
-        """
-        sents = [ sent for doc in docs for sent in doc.iter_grammar(**kwds) ]
+    def from_docs(cls, *docs: Doc) -> Self:
+        """Construct from documents."""
+        sents = [ sent.grammar for doc in docs for sent in doc.sents ]
         return cls.from_sents(*sents)
 
     @classmethod
-    def from_corpus(cls, corpus: Corpus, **kwds: Any) -> Self:
-        """Construct from a corpus.
-
-        ``**kwds`` are passed to :meth:`segram.nlp.tokens.span.Span.grammar`.
-        """
-        return cls.from_docs(*corpus.docs, **kwds)
+    def from_corpus(cls, corpus: Corpus) -> Self:
+        """Construct from a corpus."""
+        return cls.from_docs(*corpus.docs)
 
     # Methods -----------------------------------------------------------------
 
@@ -102,5 +96,5 @@ class Story(Semantic, MutableMapping):
     def copy(self, **kwds: Any) -> Self:
         # pylint: disable=protected-access
         new = self.__class__(phrases=self.phrases, **kwds)
-        new._frames = self._frames.copy()
+        new.frames = self.frames.copy()
         return new

@@ -167,7 +167,7 @@ class Sent(SentElement):
         """
         proots = self.proots
         if isinstance(spec, Sent):
-            oroots = spec.roots
+            oroots = spec.proots
             return sum(score for score, *_ in best_matches(
                 proots, oroots, lambda s, o: s.similarity(o, *args, **kwds)
             )) / max(len(proots), len(oroots))

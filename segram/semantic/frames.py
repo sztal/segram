@@ -73,7 +73,8 @@ class Frame(Semantic, Sequence):
         return Conjuncts.get_chain(
             p for p in self.story.phrases
             if self.match(p)
-        ).groupby(lambda p: p.sent.idx).groupby(lambda s: hash(s.doc))
+        ).groupby(lambda p: p.lead.sent.idx) \
+            .groupby(lambda g: hash(g[0].doc))
 
     @property
     def sents(self) -> DataChain[Sent]:
