@@ -1,21 +1,22 @@
 from typing import Self, Any, Iterable, MutableMapping, Callable
 from more_itertools import unique_everseen
-from .abc import Semantic
+from spacy.language import Language
 from .frames import Frame, Actants, Events
 from ..grammar import Sent, Phrase, Conjuncts
-from ..nlp import Corpus, Doc
-from ..datastruct import DataSequence
+from ..nlp import Corpus
+from ..grammar import Doc, Sent, Phrase
+from ..datastruct import DataSequence, DataChain
 
 
-class Story(Semantic, MutableMapping):
-    """Semantic story class.
+class Story(MutableMapping):
+    """Story class.
 
     Attributes
     ----------
     phrases
         Tuple of phrases the story operates on.
     """
-    __slots__ = ("corpus", "_phrases", "frames")
+    __slots__ = ("corpus", "frames")
 
     def __init__(
         self,
@@ -50,49 +51,21 @@ class Story(Semantic, MutableMapping):
     # Properties --------------------------------------------------------------
 
     @property
-    def phrases(self) -> DataSequence[Phrase]:
-        return self._phrases \
-            .groupby(lambda p: p.lead.sent.idx) \
-            .groupby(lambda g: hash(g[0].doc))
-    @phrases.setter
-    def _(self, phrases: Iterable[Phrase]) -> None:
-        self._phrases = Conjuncts.get_chain(phrases)
-        for frame in self.frames:
-            frame.clear()
+    def docs(self) -> DataSequence[Doc]:
+        """Enhanced grammar documents in the story."""
 
     @property
-    def sents(self) -> Iterable[Sent]:
-        return DataSequence(unique_everseen(
-            (p.sent for p in self.phrases),
-            key=lambda s: (hash(s.doc), s.idx)
-        )).groupby(lambda s: hash(s.doc))
-
-    # Constructors ------------------------------------------------------------
-
-    @classmethod
-    def from_sents(cls, *sents: Sent) -> Self:
-        """Construct from sentences."""
-        phrases = [ p for s in sents for p in s.phrases ]
-        return cls(phrases)
-
-    @classmethod
-    def from_docs(cls, *docs: Doc) -> Self:
-        """Construct from documents."""
-        sents = [ sent.grammar for doc in docs for sent in doc.sents ]
-        return cls.from_sents(*sents)
-
-    @classmethod
-    def from_corpus(cls, corpus: Corpus) -> Self:
-        """Construct from a corpus."""
-        return cls.from_docs(*corpus.docs)
+    def sents(self) -> DataChain[DataSequence[Sent]]:
+        """Enhanced grammar sentences in the story."""
+        return DataChain(DataSequence(doc.sents) for doc in self.corpus)
 
     # Methods -----------------------------------------------------------------
 
-    def is_comparable_with(self, other: Any) -> bool:
-        return isinstance(other, Story)
+    @classmethod
+    def from_texts(cls, nlp: Language, *texts: str, **kwds: Any) -> Self:
+        """Construct from texts.
 
-    def copy(self, **kwds: Any) -> Self:
-        # pylint: disable=protected-access
-        new = self.__class__(phrases=self.phrases, **kwds)
-        new.frames = self.frames.copy()
-        return new
+        All arguments are passed to :meth:`segram.nlp.Corpus`.
+        """
+        corpus = Corpus.from_texts(nlp, *texts, **kwds)
+        return cls(corpus)

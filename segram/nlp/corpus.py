@@ -122,6 +122,8 @@ class Corpus(Sequence):
         nlp: Language,
         *texts: str,
         pipe_kws: dict[str, Any] | None = None,
+        progress: bool = False,
+        tqdm_kws: dict[str, Any] | None = None,
         **kwds: Any
     ) -> Self:
         """Construct from texts.
@@ -140,10 +142,11 @@ class Corpus(Sequence):
         """
         obj = cls(**kwds)
         pipe_kws = pipe_kws or {}
-        obj.add_docs(
+        tqdm_kws = tqdm_kws or {}
+        obj.add_docs((
             getattr(d._, settings.spacy_alias)
             for d in nlp.pipe(texts, **pipe_kws)
-        )
+        ), progress=progress, **tqdm_kws)
         return obj
 
     # Internals ---------------------------------------------------------------

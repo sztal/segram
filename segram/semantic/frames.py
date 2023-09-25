@@ -2,14 +2,13 @@ from typing import Self, Any, Sequence, Callable
 from abc import abstractmethod
 import re
 from more_itertools import unique_everseen
-from .abc import Semantic
 from ..grammar import Conjuncts, Sent, Phrase, NounPhrase, VerbPhrase
 from ..symbols import Dep
 from ..utils.matching import Matcher
 from ..datastruct import DataChain, DataSequence
 
 
-class Frame(Semantic, Sequence):
+class Frame(Sequence):
     """Semantic frame class.
 
     Semantic frames groups phrases from a given :class:`segram.semantic.Story`
