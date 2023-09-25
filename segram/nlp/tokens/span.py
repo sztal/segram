@@ -1,5 +1,4 @@
-from __future__ import annotations
-from typing import Any, Iterable
+from typing import Any, Iterable, Self
 from spacy import displacy
 from spacy.tokens import Span as SpacySpan
 from .abc import NLP
@@ -19,7 +18,7 @@ class Span(NLP):
     def __len__(self) -> int:
         return len(self.span)
 
-    def __getitem__(self, idx: int | slice) -> Span | Token:
+    def __getitem__(self, idx: int | slice) -> Self | Token:
         return self.sns(self.span[idx])
 
     def __contains__(self, other: Token | Token) -> bool:
@@ -30,7 +29,7 @@ class Span(NLP):
     # Properties --------------------------------------------------------------
 
     @property
-    def span(self) -> Span:
+    def span(self) -> Self:
         return self.tok
 
     @property

@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Any, Iterable, Self
 from spacy.tokens import Doc as SpacyDoc, Token as SpacyToken
 from .abc import NLP
@@ -103,7 +102,7 @@ class Doc(NLP):
         return res if res is None else self.sns(res)
 
     @classmethod
-    def from_docs(cls, *args: Any, **kwds: Any) -> Doc | None:
+    def from_docs(cls, *args: Any, **kwds: Any) -> Self | None:
         res = Doc.from_docs(*args, **kwds)
         return res if res is None else cls.sns(res)
 

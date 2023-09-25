@@ -1,6 +1,5 @@
 """Utilities for managing package options."""
-from __future__ import annotations
-from typing import Any
+from typing import Any, Self
 from ..datastruct import Namespace
 
 
@@ -17,7 +16,7 @@ class Settings(Namespace):
             self.default = default
         super().__init__(**kwds)
 
-    def __enter__(self) -> Settings:
+    def __enter__(self) -> Self:
         for group in self.__dict__.values():
             group.maps.appendleft({})
 

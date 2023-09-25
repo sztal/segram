@@ -1,6 +1,5 @@
 """Segram coreference pipeline component."""
-from __future__ import annotations
-from typing import Any, Sequence
+from typing import Any, Sequence, Self
 import os
 import spacy
 from spacy.language import Language
@@ -107,7 +106,7 @@ class Coref:
         model: str,
         components: Sequence[str] | None = None,
         **kwds: Any
-    ) -> Coref:
+    ) -> Self:
         """Initialize from model name.
 
         ``**kwds`` are passed to :func:`spacy.load`.
@@ -119,7 +118,7 @@ class Coref:
         """Serialize the coreference model to disk."""
         self.model.to_disk(path, **kwds)
 
-    def from_disk(self, path: str | bytes | os.PathLike, **kwds: Any) -> Coref:
+    def from_disk(self, path: str | bytes | os.PathLike, **kwds: Any) -> Self:
         """Load from disk."""
         self.model = spacy.load(path, **kwds)
         return self

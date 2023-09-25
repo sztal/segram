@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Self, Any, Iterable, MutableMapping, Callable
 from more_itertools import unique_everseen
 from .abc import Semantic

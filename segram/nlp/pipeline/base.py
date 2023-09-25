@@ -3,7 +3,6 @@
 It implements the _Segram_ pipe component providing
 all main semantic grammar transformations and related auxiliary methods.
 """
-from __future__ import annotations
 from typing import Any, Sequence, ClassVar, Mapping
 from types import MappingProxyType
 from importlib import import_module

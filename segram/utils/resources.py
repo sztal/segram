@@ -1,6 +1,5 @@
 """Utilities for accessing package resources."""
-from __future__ import annotations
-from typing import Any, Literal, Iterator, Iterable, Mapping
+from typing import Any, Literal, Iterator, Iterable, Mapping, Self
 from pathlib import Path
 import os
 import gzip
@@ -51,7 +50,7 @@ class Resource:
     # Methods -----------------------------------------------------------------
 
     @classmethod
-    def from_package(cls, package: str, filename: str) -> Resource:
+    def from_package(cls, package: str, filename: str) -> Self:
         """Construct from a package/filename specification.
 
         Parameters

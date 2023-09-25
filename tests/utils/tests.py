@@ -1,6 +1,5 @@
 """Test sets for grammar classes."""
-from __future__ import annotations
-from typing import Any, Iterable, Callable
+from typing import Any, Iterable, Callable, Self
 from pathlib import Path
 from copy import deepcopy
 import json
@@ -67,7 +66,7 @@ class TestSet:
     def __len__(self) -> int:
         return len(self.cmap)
 
-    def __getitem__(self, key: int | str) -> DocTestCase:
+    def __getitem__(self, key: int | str) -> Self:
         key = self.hash_key(key)
         data = self.cmap[key]
         if "expected" not in data:
@@ -96,7 +95,7 @@ class TestSet:
         return Path(self.resource.path)
 
     @property
-    def cases(self) -> list[DocTestCase]:
+    def cases(self) -> list[Self]:
         return list(self.cmap.values())
 
     @property
@@ -116,7 +115,7 @@ class TestSet:
         package: str,
         filename: str,
         **kwds: Any
-    ) -> TestSet:
+    ) -> Self:
         """Construct from package and resource names."""
         resource = JSONResource.from_package(package, filename)
         return cls(nlp, resource, **kwds)
@@ -280,7 +279,7 @@ class DocTestCase:
     def __len__(self) -> int:
         return len(self.expected)
 
-    def __iter__(self) -> Iterable[SentTestCase]:
+    def __iter__(self) -> Iterable["SentTestCase"]:
         yield from self.cases
 
     # Properties --------------------------------------------------------------
@@ -306,7 +305,7 @@ class DocTestCase:
         yield from self.doc.sents
 
     @property
-    def cases(self) -> Iterable[SentTestCase]:
+    def cases(self) -> Iterable["SentTestCase"]:
         for i, sent in enumerate(self.sents):
             yield SentTestCase(self, i, sent)
 
@@ -325,7 +324,7 @@ class DocTestCase:
         text: str,
         offset: int = 0,
         **kwds: Any
-    ) -> DocTestCase:
+    ) -> Self:
         """Insert new document case after ``self``.
 
         Parameters

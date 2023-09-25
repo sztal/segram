@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Any, ClassVar, Self, Mapping
 from .conjuncts import Conjuncts
 from .abc import SentElement
@@ -224,7 +223,7 @@ class Sent(SentElement):
             s += tok.to_str(color=color, role=role)+tok.whitespace
         return s
 
-    def is_comparable_with(self, other: Sent) -> None:
+    def is_comparable_with(self, other: Any) -> None:
         return isinstance(other, Sent)
 
     @staticmethod

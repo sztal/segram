@@ -1,5 +1,4 @@
-from __future__ import annotations
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Self
 from spacy.tokens import Token
 from spacy.language import Language
 from spacy.pipeline import AttributeRuler
@@ -21,7 +20,7 @@ class Annotator(AttributeRuler):
         *,
         patterns: Mapping[str, str],
         **kwds: Any
-    ) -> Annotator:
+    ) -> Self:
         """Initialize from a patterns packahe resource."""
         obj = cls(nlp.vocab, name, **kwds)
         patterns = JSONResource.from_package(**patterns).get()

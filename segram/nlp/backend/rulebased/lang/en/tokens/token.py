@@ -1,6 +1,5 @@
 # pylint: disable=no-name-in-module,too-many-public-methods
 # pylint: disable=consider-using-ternary
-from __future__ import annotations
 from typing import Self
 from spacy.symbols import DET, NUM, neg, det, expl
 from spacy.symbols import PRON, NOUN, PROPN

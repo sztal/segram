@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Self, Any, Sequence, Callable
 from abc import abstractmethod
 import re
@@ -37,7 +36,7 @@ class Frame(Semantic, Sequence):
     def __getitem__(self, idx: int | slice) -> Phrase | tuple[Phrase, ...]:
         return self.phrases[idx]
 
-    def __and__(self, other: Frame) -> Frame:
+    def __and__(self, other: Self) -> Self:
         if isinstance(other, Frame | Callable):
             new = self.copy()
             func = other.matcher if isinstance(other, Frame) else other
@@ -45,10 +44,10 @@ class Frame(Semantic, Sequence):
             return new
         return NotImplemented
 
-    def __rand__(self, other: Frame) -> Frame:
+    def __rand__(self, other: Self) -> Self:
         return self & other
 
-    def __or__(self, other: Frame) -> Frame:
+    def __or__(self, other: Self) -> Self:
         if isinstance(other, Frame | Callable):
             new = self.copy()
             func = other.matcher if isinstance(other, Frame) else other
@@ -56,7 +55,7 @@ class Frame(Semantic, Sequence):
             return new
         return NotImplemented
 
-    def __ror__(self, other: Frame) -> Frame:
+    def __ror__(self, other: Self) -> Self:
         return self | other
 
     def __call__(self, phrase: Phrase) -> bool:
@@ -100,7 +99,7 @@ class Frame(Semantic, Sequence):
         return self.__class__(self.story, **kwds)
 
     @classmethod
-    def subclass(cls, is_match: Callable[[Phrase], bool]) -> type[Frame]:
+    def subclass(cls, is_match: Callable[[Phrase], bool]) -> type[Self]:
         """Make subclass from a callable.
 
         Callable is injected into a class as a staticmethod,

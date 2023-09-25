@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Any, ClassVar, Self, Callable
 from abc import ABC, abstractmethod
 from .utils.docstrings import inherit_docstring

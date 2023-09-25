@@ -1,6 +1,5 @@
 """Abstract base class for :mod:`segram`-enhanced :mod:`spacy` tokens."""
 # pylint: disable=no-name-in-module
-from __future__ import annotations
 from typing import Any, Self
 from abc import ABC
 from functools import total_ordering

@@ -1,5 +1,4 @@
-from __future__ import annotations
-from typing import Any, Callable
+from typing import Any, Callable, Self
 
 
 class Matcher:
@@ -20,24 +19,24 @@ class Matcher:
             return self.func(obj)
         return self.match(obj)
 
-    def __and__(self, other: Matcher) -> Matcher:
+    def __and__(self, other: Self) -> Self:
         if isinstance(other, Matcher):
             return Matcher(lambda obj: self(obj) and other(obj))
         if isinstance(other, Callable):
             return self & Matcher(other)
         return NotImplemented
 
-    def __rand__(self, other: Matcher) -> Matcher:
+    def __rand__(self, other: Self) -> Self:
         return self & other
 
-    def __or__(self, other: Matcher) -> Matcher:
+    def __or__(self, other: Self) -> Self:
         if isinstance(other, Matcher):
             return Matcher(lambda obj: self(obj) or other(obj))
         if isinstance(other, Callable):
             return self | Matcher(other)
         return NotImplemented
 
-    def __ror__(self, other: Matcher) -> Matcher:
+    def __ror__(self, other: Self) -> Self:
         return self | other
 
     @staticmethod

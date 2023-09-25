@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Any, Iterable, Self
 from ..nlp.tokens import Token
 from ..datastruct import DataSequence, DataChain
@@ -114,11 +113,11 @@ class Conjuncts(DataSequence):
         members = ", ".join(self.stringify(m, color=color, **kwds) for m in self.members)
         return f"{coords}({members})"
 
-    def is_comparable_with(self, other: Conjuncts) -> bool:
+    def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Conjuncts)
 
     @classmethod
-    def find_groups(cls, phrases: Iterable["Phrase"]) -> Iterable[Conjuncts]:
+    def find_groups(cls, phrases: Iterable["Phrase"]) -> Iterable[Self]:
         """Find conjuncts groups in ``phrases``."""
         groups = {}
         for phrase in phrases:

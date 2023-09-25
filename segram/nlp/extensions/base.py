@@ -1,6 +1,5 @@
 """Default :mod:`spacy` extension backend."""
 # pylint: disable=protected-access
-from __future__ import annotations
 from typing import ClassVar, Mapping
 from types import MappingProxyType
 from functools import partial

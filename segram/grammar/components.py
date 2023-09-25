@@ -3,7 +3,6 @@
 Grammar components are groups of associated tokens controlled
 by a root token, e.g. a verb with its auxiliary verbs.
 """
-from __future__ import annotations
 from typing import Any, Iterable, Iterator, ClassVar, Self
 from .abc import TokenElement
 from .conjuncts import Conjuncts
@@ -146,7 +145,7 @@ class Component(TokenElement):
         return self.tok
 
     @property
-    def lead(self) -> Component:
+    def lead(self) -> Self:
         """Head component of the lead phrase."""
         return self.phrase.lead.head
 
@@ -156,7 +155,7 @@ class Component(TokenElement):
         return self.phrase.is_lead
 
     @property
-    def conjuncts(self) -> Conjuncts[Component]:
+    def conjuncts(self) -> Conjuncts[Self]:
         return (conjs := self.phrase.conjuncts).copy(
             members=tuple(m.head for m in conjs.members)
         )
@@ -236,7 +235,7 @@ class Component(TokenElement):
         cls,
         role: Role = None,
         pos: POS | None = None
-    ) -> type[Component]:
+    ) -> type[Self]:
         """Get component type from role or POS tag."""
         return cls.roles.get(role, cls.roles.get(pos, cls))
 
@@ -291,7 +290,7 @@ class Component(TokenElement):
     def is_comparable_with(self, other: Any) -> None:
         return isinstance(other, Component)
 
-    def similarity(self, other: Component | Token) -> float:
+    def similarity(self, other: Self | Token) -> float:
         """Cosine similarity to other component."""
         return cosine_similarity(self.vector, other.vector)
 

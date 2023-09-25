@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Any, Iterable, Iterator, Mapping, MutableMapping, Self
 from graphlib import TopologicalSorter, CycleError
 from ..abc import SegramABC
@@ -53,13 +52,13 @@ class Graph(MutableMapping, SegramABC):
                 yield parent, child
 
     @property
-    def rev(self) -> Graph:
+    def rev(self) -> Self:
         if self._rev is None:
             self._rev = self.get_rev()
         return self._rev
 
     @property
-    def sorted(self) -> Graph:
+    def sorted(self) -> Self:
         return self.__class__({
             k: tuple(sorted(v))
             for k, v in sorted(self.items(), key=lambda x: x[0])
@@ -96,7 +95,7 @@ class Graph(MutableMapping, SegramABC):
 
     # Methods -----------------------------------------------------------------
 
-    def get_rev(self) -> Graph:
+    def get_rev(self) -> Self:
         """Get reversed graph (mapping children to parent sets)."""
         graph = {}
         for parent, children in self.items():
@@ -149,7 +148,7 @@ class Graph(MutableMapping, SegramABC):
     def from_links(
         cls,
         links: Iterable[tuple[Any, Any]]
-    ) -> Graph:
+    ) -> Self:
         """Construct from links.
 
         Parameters
@@ -185,7 +184,7 @@ class PhraseGraph(Graph):
 
     # Methods -----------------------------------------------------------------
 
-    def is_comparable_with(self, other: PhraseGraph) -> bool:
+    def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, PhraseGraph)
 
     def to_str(self, *, color: bool = False, indent: int = 4, **kwds: Any) -> str:

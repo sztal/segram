@@ -1,5 +1,4 @@
 # pylint: disable=too-many-public-methods,no-name-in-module
-from __future__ import annotations
 from typing import Any, Iterable, Self
 from abc import abstractmethod
 import numpy as np
@@ -142,22 +141,22 @@ class Token(NLP):
         return tuple(self.sns(c) for c in self.tok.conjuncts)
 
     @property
-    def children(self) -> Iterable[Self, ...]:
+    def children(self) -> Iterable[Self]:
         for child in self.tok.children:
             yield self.sns(child)
 
     @property
-    def lefts(self) -> Iterable[Self, ...]:
+    def lefts(self) -> Iterable[Self]:
         for tok in self.tok.lefts:
             yield self.sns(tok)
 
     @property
-    def rights(self) -> Iterable[Self, ...]:
+    def rights(self) -> Iterable[Self]:
         for tok in self.tok.rights:
             yield self.sns(tok)
 
     @property
-    def subtree(self) -> Iterable[Self, ...]:
+    def subtree(self) -> Iterable[Self]:
         for tok in self.tok.subtree:
             yield self.sns(tok)
 

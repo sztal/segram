@@ -6,7 +6,7 @@ The advantage of using symbols, implemented based on :class:`enum.Flag`,
 is that it allows combining and filtering based on symbols using simple
 boolean logic.
 """
-from __future__ import annotations
+from typing import Self
 from enum import Flag, auto
 
 __all__ = ("POS", "Role", "Tense")
@@ -25,7 +25,7 @@ class Symbol(Flag):
         return str(self).lower() or None
 
     @classmethod
-    def from_name(cls, name: str) -> Symbol:
+    def from_name(cls, name: str) -> Self:
         neg = False
         if name.startswith("~"):
             name = name[1:]
@@ -66,7 +66,7 @@ class POS(Symbol):
     OTHER    = X
 
     @classmethod
-    def from_name(cls, name: str) -> POS:
+    def from_name(cls, name: str) -> Self:
         return super().from_name(name.upper())
 
 

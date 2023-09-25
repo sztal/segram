@@ -1,4 +1,3 @@
-from __future__ import annotations
 from spacy.tokens import Doc
 from spacy.util import filter_spans
 from .annotator import Annotator
