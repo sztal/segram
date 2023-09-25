@@ -65,6 +65,10 @@ class Doc(NLP):
     def data(self) -> dict[str, Any]:
         return self.to_data()
 
+    @property
+    def cache(self) -> dict[str, dict[int | tuple[int, int], Any]]:
+        return getattr(self._, f"{settings.spacy_alias}_cache")
+
     # Methods -----------------------------------------------------------------
 
     def to_data(self) -> dict[str, Any]:
@@ -72,7 +76,8 @@ class Doc(NLP):
         without any language model data.
         """
         user_data = self.tok.user_data.copy()
-        user_data[("._.", f"{settings.spacy_alias}_cache", None, None)].clear()
+        cachekey = ("._.", f"{settings.spacy_alias}_cache", None, None)
+        user_data[cachekey] = {}
         data = {
             "vocab": self.vocab,
             "words": [ t.text for t in self ],

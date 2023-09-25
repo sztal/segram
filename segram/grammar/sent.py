@@ -58,10 +58,7 @@ class Sent(SentElement):
     def __new__(cls, *args: Any, **kwds: Any) -> None:
         obj = super().__new__(cls)
         obj.__init__(*args, **kwds)
-        cache = getattr(
-            obj.sent.doc._,
-             f"{settings.spacy_alias}_cache"
-        )["grammar"]
+        cache = obj.sent.doc.cache.setdefault("grammar", {})
         idx = obj.idx
         if (cur := cache.get(idx)):
             cur.__init__(**obj.data)
@@ -180,11 +177,16 @@ class Sent(SentElement):
     @classmethod
     def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from a :class:`~segram.nlp.Doc` and a data dictionary."""
+        data = data.copy()
         sent = doc[data.pop("start"):data.pop("end")]
-        for idx, dct in data["cmap"].items():
-            data["cmap"][idx] = cls.types.Component.from_data(doc, dct)
-        for idx, dct in data["pmap"].items():
-            data["pmap"][idx] = cls.types.Phrase.from_data(doc, dct)
+        data["cmap"] = {
+            idx: cls.types.Component.from_data(doc, dct)
+            for idx, dct in data["cmap"].items()
+        }
+        data["pmap"] = {
+            idx: cls.types.Phrase.from_data(doc, dct)
+            for idx, dct in data["pmap"].items()
+        }
         data["graph"] = PhraseGraph.from_data(sent, data["graph"])
         data["conjs"] = {
             (conj := Conjuncts.from_data(sent, c)).lead: conj

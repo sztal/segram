@@ -85,7 +85,7 @@ class Span(NLP):
     @property
     def grammar(self) -> "Sent":
         """Grammar sentence object associated with the NLP sentence."""
-        cache = getattr(self.doc._, f"{settings.spacy_alias}_cache")["grammar"]
+        cache = self.doc.cache.setdefault("grammar", {})
         if (obj := cache.get((self.start, self.end))):
             return obj
         return self.make_grammar(use_data=None)
@@ -114,7 +114,7 @@ class Span(NLP):
             obj = typ.types.Sent.from_data(self.doc, data)
         else:
             obj = typ.types.Sent.from_sent(self)
-        cache = getattr(self.doc._, f"{settings.spacy_alias}_cache")["grammar"]
+        cache = self.doc.cache.setdefault("grammar", {})
         cache[obj.idx] = obj
         return obj
 

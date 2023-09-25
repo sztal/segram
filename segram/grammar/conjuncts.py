@@ -70,6 +70,7 @@ class Conjuncts(DataSequence):
             Mapping from ordinal numbers to components.
         """
         doc = sent.doc
+        sent = sent.grammar
         lead = data["lead"]
         cconj = data.get("cconj")
         pconj = data.get("preconj")
