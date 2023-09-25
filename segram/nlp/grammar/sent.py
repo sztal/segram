@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterable
 from abc import abstractmethod
 from .grammar import GrammarNLP
 from ..tokens import Span
@@ -13,11 +13,11 @@ class SentNLP(GrammarNLP, Sent):
     __slots__ = ()
 
     @abstractmethod
-    def find_links(self) -> Iterator[tuple[Phrase, Phrase]]:
+    def find_links(self) -> Iterable[tuple[Phrase, Phrase]]:
         """Find phrase links."""
 
     @abstractmethod
-    def find_conjs(self) -> Iterator[Conjuncts]:
+    def find_conjs(self) -> Iterable[Conjuncts]:
         """Iterate over groups of conjoined components."""
 
     @abstractmethod

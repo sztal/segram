@@ -1,5 +1,5 @@
 """Utilities for accessing package resources."""
-from typing import Any, Literal, Iterator, Iterable, Mapping, Self
+from typing import Any, Literal, Iterable, Mapping, Self
 from pathlib import Path
 import os
 import gzip
@@ -196,7 +196,7 @@ class JSONLinesResource(JSONResource):
         *,
         json_kws: Mapping | None,
         **kwds: Any
-    ) -> Iterator[str | list | dict]:
+    ) -> Iterable[str | list | dict]:
         """Get resource data line by line.
 
         Parameters
@@ -219,7 +219,7 @@ class JSONLinesResource(JSONResource):
         *,
         json_kws: Mapping | None,
         **kwds: Any
-    ) -> Iterator[str | list | dict]:
+    ) -> Iterable[str | list | dict]:
         """Get resource data line by line.
 
         Parameters

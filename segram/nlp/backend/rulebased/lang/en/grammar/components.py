@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterable
 from spacy.tokens import Token
 from .grammar import RulebasedEnglishGrammar
 from ......grammar import ComponentNLP
@@ -192,7 +192,7 @@ class RulebasedEnglishPrep(
         return tok.is_pp_head
 
     @classmethod
-    def find_preps(cls, tok: Token) -> Iterator[Token]:
+    def find_preps(cls, tok: Token) -> Iterable[Token]:
         """Find preposition chain."""
         if tok.is_prep and not tok.is_conj:
             yield tok
@@ -212,7 +212,7 @@ class RulebasedEnglishDesc(
         return tok.is_dp_head
 
     @classmethod
-    def find_mod(cls, tok: Token) -> Iterator[Token]:
+    def find_mod(cls, tok: Token) -> Iterable[Token]:
         """Find modifier tokens."""
         if tok.is_desc_mod:
             yield tok

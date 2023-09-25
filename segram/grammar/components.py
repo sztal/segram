@@ -3,7 +3,7 @@
 Grammar components are groups of associated tokens controlled
 by a root token, e.g. a verb with its auxiliary verbs.
 """
-from typing import Any, Iterable, Iterator, ClassVar, Self
+from typing import Any, Iterable, ClassVar, Self
 from .abc import TokenElement
 from .conjuncts import Conjuncts
 from ..nlp.tokens import Token
@@ -95,14 +95,8 @@ class Component(TokenElement):
         obj.sent.pmap[obj.idx] = obj.phrase
         return obj
 
-    def __iter__(self) -> Iterator[Token]:
-        yield from self.tokens
-
     def __len__(self) -> int:
         return len(self.tid)
-
-    def __getitem__(self, idx: int) -> Token | tuple[Token, ...]:
-        return self.tokens[idx]
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()

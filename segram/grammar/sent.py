@@ -65,6 +65,9 @@ class Sent(SentElement):
         cache[idx] = obj
         return obj
 
+    def __len__(self) -> int:
+        return len(self.sent)
+
     def __init_subclass__(cls):
         super().__init_subclass__()
         cls.init_class_attrs({ "__components__": "component_names" })

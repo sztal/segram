@@ -69,15 +69,6 @@ class Phrase(TokenElement):
         obj.sent.pmap[obj.idx] = obj
         return obj
 
-    def __iter__(self) -> Iterable[Self]:
-        yield from self.tokens
-
-    def __len__(self) -> int:
-        return len(self.tokens)
-
-    def __getitem__(self, idx: int | slice) -> Token | tuple[Token, ...]:
-        return self.tokens[idx]
-
     # Properties --------------------------------------------------------------
 
     @property

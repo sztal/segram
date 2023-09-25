@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Iterator, Mapping, MutableMapping, Self
+from typing import Any, Iterable, Mapping, MutableMapping, Self
 from graphlib import TopologicalSorter, CycleError
 from ..abc import SegramABC
 from ..nlp.tokens import Span
@@ -24,7 +24,7 @@ class Graph(MutableMapping, SegramABC):
     def __repr__(self) -> str:
         return repr(self.data)
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Iterable[Any]:
         yield from self.data
 
     def __len__(self) -> int:
@@ -46,7 +46,7 @@ class Graph(MutableMapping, SegramABC):
         return self._data
 
     @property
-    def links(self) -> Iterator[tuple[Any, Any]]:
+    def links(self) -> Iterable[tuple[Any, Any]]:
         for parent, children in self.items():
             for child in children:
                 yield parent, child
