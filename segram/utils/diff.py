@@ -1,5 +1,5 @@
 from typing import Any, Sized, Iterable
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from functools import singledispatch
 from .meta import get_ppath
 
