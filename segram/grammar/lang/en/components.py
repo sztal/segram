@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 from .grammar import EnglishGrammar
 from ... import Component
 from ... import Verb, Noun
@@ -30,9 +30,9 @@ class EnglishVerb(EnglishComponent, Verb):
     def __init__(
         self,
         *args: Any,
-        part: Optional[Token] = None,
+        part: Token | None = None,
         aux: tuple[Token, ...] = (),
-        expl: Optional[Token] = None,
+        expl: Token | None = None,
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)
@@ -55,7 +55,7 @@ class EnglishNoun(EnglishComponent, Noun):
     def __init__(
         self,
         *args: Any,
-        det: Optional[Token] = None,
+        det: Token | None = None,
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)
@@ -75,7 +75,7 @@ class EnglishDesc(EnglishComponent, Desc):
     def __init__(
         self,
         *args: Any,
-        det: Optional[Token] = None,
+        det: Token | None = None,
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)

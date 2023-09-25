@@ -5,9 +5,8 @@ syntactical relationships within sentences which go beyond simple
 syntax tree links and can be used to perform various tasks such as
 component and phrase detection.
 """
-from __future__ import annotations
-from typing import Any, Optional, Iterable, MutableMapping, Self, Callable
-from typing import ClassVar, Final
+from typing import Any, Self, Callable, ClassVar, Final
+from typing import MutableMapping, Container
 from abc import abstractmethod
 import re
 from functools import total_ordering
@@ -16,7 +15,7 @@ import numpy as np
 from ..nlp.tokens import Doc, Span, Token
 from ..utils.registries import grammars
 from ..abc import SegramWithDocABC
-from ..datastruct import Namespace
+from ..datastruct import Namespace, DataSequence
 
 
 class GrammarNamespace(Namespace):
@@ -34,7 +33,7 @@ class GrammarNamespace(Namespace):
     Sent: type["Sent"]
 
 
-class Grammar(SegramWithDocABC):
+class Grammar(SegramWithDocABC, Container):
     """Abstract base class for grammar classes.
 
     All grammar classes must be defined as **slots** classes.
@@ -58,18 +57,12 @@ class Grammar(SegramWithDocABC):
     def __hash__(self) -> int:
         return super().__hash__()
 
-    def __eq__(self, other: Grammar) -> bool:
+    def __eq__(self, other: Self) -> bool:
         if isinstance(other, Grammar):
             return id(self.doc) == id(other.doc)
         return NotImplemented
 
-    def __contains__(self, other: Any) -> bool:
-        raise TypeError(
-            f"'{self.cname(other)}' objects cannot "
-            f"be contained in '{self.cname()}' instances"
-        )
-
-    def __init_subclass__(cls, *, register: Optional[str] = None) -> None:
+    def __init_subclass__(cls, *, register: str | None = None) -> None:
         super().__init_subclass__()
         if register:
             cls.types = GrammarNamespace()
@@ -91,13 +84,8 @@ class Grammar(SegramWithDocABC):
         raise NotImplementedError
 
 
-@total_ordering
 class GrammarElement(Grammar):
-    """Grammar element is any group of one or more tokens
-    linked together by well-defined syntactic relationships.
-
-    It is used to derive component classes.
-    """
+    """Abstract base class for grammar elements."""
     __slots__ = ()
     alias: ClassVar[str] = "GElem"
 
@@ -107,37 +95,18 @@ class GrammarElement(Grammar):
     def __hash__(self) -> int:
         return super().__hash__()
 
-    def __eq__(self, other: GrammarElement) -> bool:
+    def __eq__(self, other: Self) -> bool:
         if self.is_comparable_with(other):
             return self.idx == other.idx
-        return NotImplemented
-
-    def __lt__(self, other: GrammarElement) -> bool:
-        if self.is_comparable_with(other):
-            return self.idx < other.idx
         return NotImplemented
 
     def __bool__(self) -> bool:
         return self.idx is not None
 
-    # Abstract methods --------------------------------------------------------
-
     @abstractmethod
-    def __iter__(self) -> Iterable[GrammarElement]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __len__(self) -> int:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __getitem__(self, i: int) -> GrammarElement:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __contains__(self, other: Token | GrammarElement) -> bool:
-        """Check whether ``self`` contains ``other``."""
-        raise NotImplementedError
+    def __contains__(self, other: Any) -> bool:
+        ocn = other.__class__.__name__
+        raise TypeError(f"'{self.cname()}' cannot contain '{ocn}'")
 
     # Properties --------------------------------------------------------------
 
@@ -149,14 +118,8 @@ class GrammarElement(Grammar):
 
     @property
     @abstractmethod
-    def tokens(self) -> tuple[Token, ...]:
-        """Tokens of the element."""
-
-    @property
-    @abstractmethod
-    def sent(self) -> Span:
-        """NLP sentence containing the element."""
-        raise NotImplementedError
+    def tokens(self) -> DataSequence[Token]:
+        """Tokens sequence of the element."""
 
     @property
     def hashdata(self) -> tuple[Any, ...]:
@@ -185,9 +148,14 @@ class GrammarElement(Grammar):
         """Represent as a string."""
         raise NotImplementedError
 
+    @classmethod
+    @abstractmethod
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
+        """Construct from document and data dictionary."""
+
     def match(
         self,
-        _pattern: Optional[str] = None,
+        _pattern: str | None = None,
         _flag: re.RegexFlag = re.NOFLAG,
         _ignore_missing: bool = False,
         **kwds: Any | Callable[[Any], bool]
@@ -236,20 +204,42 @@ class DocElement(GrammarElement):
     def __init__(self, doc: Doc) -> None:
         self._doc = doc
 
-    # Abstract methods --------------------------------------------------------
-
-    @classmethod
-    @abstractmethod
-    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
-        """Construct from sentence and a data dictionary."""
-        # pylint: disable=arguments-renamed
-        raise NotImplementedError
+    def __contains__(self, other: Any) -> bool:
+        tokens = self.tokens
+        if isinstance(other, SentElement | TokenElement):
+            return all(tok in tokens for tok in other.tokens)
+        if isinstance(other, Span):
+            return all(tok in tokens for tok in other)
+        if isinstance(other, Token):
+            return other in tokens
+        return super().__contains__(other)
 
     # Properties --------------------------------------------------------------
 
     @property
     def doc(self) -> Doc:
+        """NLP document as an instance of :class:`segram.nlp.tokens.Doc`."""
         return self._doc
+
+    @property
+    def idx(self) -> int:
+        """Fast document id.
+
+        It is stable for an instance, and allows for hashing,
+        but is not stable for different objects with the same data,
+        e.g. an element initialized from the same data twice may have
+        differen ``.idx`` values each time.
+        """
+        return hash(self)
+
+    @property
+    def id(self) -> int:
+        """Slow persistent document id.
+
+        It will be always the same for documents based
+        on the same exact data.
+        """
+        return self.doc.id
 
     # Methods -----------------------------------------------------------------
 
@@ -257,37 +247,114 @@ class DocElement(GrammarElement):
         return self.__class__(**{ "doc": self.doc, **self.data, **kwds })
 
 
+@total_ordering
 class SentElement(GrammarElement):
-    """Sentence element class."""
-    __slots__ = ("_sent",)
+    """Grammar element based on a sentence span."""
+    __slots__ = ("_start", "_end")
     alias: ClassVar[str] = "SentElem"
 
-    def __init__(self, sent: "Sent") -> None:
+    def __init__(self, sent: Span) -> None:
+        if sent.root.sent is not sent:
+            raise ValueError("'sent' has to be a proper sentence span object")
         self._sent = sent
 
-    # Abstract methods --------------------------------------------------------
+    def __contains__(self, other: Any) -> bool:
+        tokens = self.tokens
+        if isinstance(other, TokenElement):
+            return all(tok in tokens for tok in other.tokens)
+        if isinstance(other, Span):
+            return all(tok in tokens for tok in other)
+        if isinstance(other, Token):
+            return other in tokens
+        return super().__contains__(other)
 
-    @classmethod
-    @abstractmethod
-    def from_data(cls, sent: "Sent", data: dict[str, Any]) -> Grammar:
-        """Construct from sentence and a data dictionary."""
-        raise NotImplementedError
+    def __lt__(self, other: Self) -> bool:
+        if self.is_comparable_with(other):
+            return self.idx < other.idx
+        return NotImplemented
 
     # Properties --------------------------------------------------------------
 
     @property
-    def sent(self) -> "Sent":
+    def sent(self) -> Span:
         return self._sent
 
     @property
-    def doc(self) -> Doc:
-        return self.sent.doc
+    def root(self) -> Token:
+        return self.sent.root
+
+    @property
+    def start(self) -> int:
+        return self.sent.start
+
+    @property
+    def end(self) -> int:
+        return self.sent.end
+
+    @property
+    def idx(self) -> tuple[int, int]:
+        """Sentence index equal to ``(self.start, self.end)``
+        allowing for identification/hashing and sorting within
+        the parent document.
+        """
+        return (self.start, self.end)
+
+    @property
+    def doc(self) -> DocElement:
+        return self.sent.doc.grammar
 
     @property
     def hashdata(self) -> tuple[Any, ...]:
-        return (self.ppath(), id(self.doc), id(self.sent), self.idx)
+        return (*super().hashdata, self.idx)
 
     # Methods -----------------------------------------------------------------
 
-    def copy(self, **kwds: Any) -> SentElement:
+    def copy(self, **kwds: Any) -> Self:
         return self.__class__(**{ "sent": self.sent, **self.data, **kwds })
+
+
+@total_ordering
+class TokenElement(GrammarElement):
+    """Grammar element based on a token."""
+    __slots__ = ("_tok",)
+    alias: ClassVar[str] = "TokElem"
+
+    def __init__(self, tok: Token) -> None:
+        self._tok = tok
+
+    def __contains__(self, other: Any) -> bool:
+        tokens = self.tokens
+        if isinstance(other, Span):
+            return all(tok in tokens for tok in other.tokens)
+        if isinstance(other, Token):
+            return other in tokens
+        return super().__contains__(other)
+
+    def __lt__(self, other: Self) -> bool:
+        if self.is_comparable_with(other):
+            return self.idx < other.idx
+        return NotImplemented
+
+    # Properties --------------------------------------------------------------
+
+    @property
+    def tok(self) -> Token:
+        return self._tok
+
+    @property
+    def idx(self) -> int:
+        """Token index within the parent document."""
+        return self.tok.i
+
+    @property
+    def sent(self) -> SentElement:
+        return self.tok.sent.grammar
+
+    @property
+    def doc(self) -> DocElement:
+        return self.tok.doc.grammar
+
+    # Methods -----------------------------------------------------------------
+
+    def copy(self, **kwds: Any) -> Self:
+        return self.__class__(**{ "tok": self.tok, **self.data, **kwds })

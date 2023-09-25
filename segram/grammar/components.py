@@ -4,15 +4,17 @@ Grammar components are groups of associated tokens controlled
 by a root token, e.g. a verb with its auxiliary verbs.
 """
 from __future__ import annotations
-from typing import Any, Optional, Iterable, Iterator, ClassVar, Self
-from .abc import SentElement
+from typing import Any, Iterable, Iterator, ClassVar, Self
+from .abc import TokenElement
 from .conjuncts import Conjuncts
 from ..nlp.tokens import Token
 from ..symbols import POS, Role, Tense, Modal, Mood, Symbol
 from ..utils.misc import cosine_similarity
+from ..datastruct import DataSequence
+from ..nlp.tokens import Doc
 
 
-class Component(SentElement):
+class Component(TokenElement):
     """Abstract base class for grammar components.
 
     Components consists of a root token associated with (optional)
@@ -64,17 +66,16 @@ class Component(SentElement):
 
     def __init__(
         self,
-        sent: "Sent",
         tok: Token,
         *,
-        role: Optional[Role] = None,
+        role: Role | None = None,
         sub: Iterable[Token] = (),
-        qmark: Optional[Token] = None,
-        exclam: Optional[Token] = None,
-        intj: Optional[Token] = None,
-        neg: Optional[Token] = None
+        qmark: Token | None = None,
+        exclam: Token | None = None,
+        intj: Token | None = None,
+        neg: Token | None = None
     ) -> None:
-        super().__init__(sent)
+        super().__init__(tok)
         self._tid = None
         self.tok = tok
         role = role or self.__role__
@@ -83,7 +84,7 @@ class Component(SentElement):
         self.exclam = exclam
         self.intj = intj
         self.neg = neg
-        self.sub = tuple(sub)
+        self.sub = DataSequence(sub)
 
     def __new__(cls, *args: Any, **kwds: Any) -> None:
         obj = super().__new__(cls)
@@ -104,11 +105,6 @@ class Component(SentElement):
 
     def __getitem__(self, idx: int) -> Token | tuple[Token, ...]:
         return self.tokens[idx]
-
-    def __contains__(self, other: Token) -> bool:
-        if isinstance(other, Token):
-            return other in self.tokens or other in self.sub
-        return super().__contains__(other)
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
@@ -204,25 +200,21 @@ class Component(SentElement):
     # Methods -----------------------------------------------------------------
 
     @classmethod
-    def from_data(
-        cls,
-        sent: "Sent",
-        data: dict[str, Any]
-    ) -> Self:
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from :class:`~segram.nlp.Doc` and a data dict."""
         data = data.copy()
         alias = data.pop("@class")
         typ = cls.types[alias]
-        doc = sent.doc
         for name in ("tok", *typ.token_names, "sub"):
             if name not in data:
                 continue
             idx = data[name]
+            import ipdb; ipdb.set_trace()
             if isinstance(idx, int):
                 data[name] =  doc[idx]
             else:
                 data[name] = [ doc[i] for i in idx ]
-        return typ(sent, **data)
+        return typ(0 **data)
 
     def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary."""
@@ -235,6 +227,7 @@ class Component(SentElement):
                 data[name] = tok.i
             else:
                 data[name] = [ t.i for t in tok ]
+        import ipdb; ipdb.set_trace()
         return {
             "@class": self.alias,
             **data,
@@ -245,12 +238,12 @@ class Component(SentElement):
     def get_comp_type(
         cls,
         role: Role = None,
-        pos: Optional[POS] = None
+        pos: POS | None = None
     ) -> type[Component]:
         """Get component type from role or POS tag."""
         return cls.roles.get(role, cls.roles.get(pos, cls))
 
-    def to_str(self, *, color: bool = False, role: Optional[Role] = None, **kwds: Any) -> str:
+    def to_str(self, *, color: bool = False, role: Role | None = None, **kwds: Any) -> str:
         """Represent as a string.
 
         Parameters
@@ -278,9 +271,9 @@ class Component(SentElement):
     def iter_token_roles(
         self,
         *,
-        role: Optional[Role] = None,
+        role: Role | None = None,
         bg: bool = False
-    ) -> Iterable[tuple[Token, Optional[Role]]]:
+    ) -> Iterable[tuple[Token, Role | None]]:
         """Iterate over token-role pairs.
 
         Parameters

@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 from itertools import zip_longest
 from textwrap import shorten
 import re
@@ -99,7 +99,7 @@ class GrammarDiff:
         """Lengths of ``s`` with and without ANSI escape characters."""
         return len(self.rx_ansi_escape.sub(r"", s)), len(s)
 
-    def rpad(self, s: str, width: Optional[int] = None) -> str:
+    def rpad(self, s: str, width: int | None = None) -> str:
         """Right-pad string to be consistent with ``width``."""
         width = width or self.max_width
         l, _ = self.strlens(s)

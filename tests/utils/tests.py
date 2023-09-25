@@ -1,6 +1,6 @@
 """Test sets for grammar classes."""
 from __future__ import annotations
-from typing import Any, Optional, Iterable, Callable
+from typing import Any, Iterable, Callable
 from pathlib import Path
 from copy import deepcopy
 import json
@@ -30,7 +30,7 @@ class TestSet:
         nlp: Callable,
         resource: JSONResource,
         *,
-        callback: Optional[Callable] = None,
+        callback: Callable | None = None,
         **kwds: Any
     ) -> None:
         """Initialization method.
@@ -131,7 +131,7 @@ class TestSet:
     def add(
         self,
         text: str,
-        index: Optional[int] = None,
+        index: int | None = None,
         *,
         expected: Iterable[dict[str, Any]] = ()
     ) -> Doc:
@@ -267,7 +267,7 @@ class DocTestCase:
         key: int,
         doc: Doc,
         *,
-        bad: Optional[Iterable[int]] = None
+        bad: Iterable[int] | None = None
     ) -> None:
         self.tests = tests
         self.key = key

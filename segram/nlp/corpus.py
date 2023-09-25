@@ -1,4 +1,4 @@
-from typing import Any, Optional, NamedTuple, Sequence, Iterable, Self
+from typing import Any, NamedTuple, Sequence, Iterable, Self
 from collections import Counter
 from spacy.tokens import Doc as SpacyDoc
 from spacy.language import Language
@@ -69,7 +69,7 @@ class Corpus(Sequence):
         cls,
         nlp: Language,
         *texts: str,
-        pipe_kws: Optional[dict[str, Any]] = None,
+        pipe_kws: dict[str, Any] | None = None,
         **kwds: Any
     ) -> Self:
         """Construct from texts.

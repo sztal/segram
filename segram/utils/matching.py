@@ -1,6 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, Callable
-
+from typing import Any, Callable
 
 
 class Matcher:
@@ -13,7 +12,7 @@ class Matcher:
         If ``None`` then fallback to :meth:`match` is attempted.
         The `match` method should be defined as a static method.
     """
-    def __init__(self, func: Optional[Callable] = None) -> None:
+    def __init__(self, func: Callable | None = None) -> None:
         self.func = func
 
     def __call__(self, obj: Any) -> bool:

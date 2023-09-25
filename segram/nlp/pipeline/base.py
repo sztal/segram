@@ -4,7 +4,7 @@ It implements the _Segram_ pipe component providing
 all main semantic grammar transformations and related auxiliary methods.
 """
 from __future__ import annotations
-from typing import Any, Optional, Sequence, ClassVar, Mapping
+from typing import Any, Sequence, ClassVar, Mapping
 from types import MappingProxyType
 from importlib import import_module
 from time import time
@@ -50,7 +50,7 @@ class Segram(Pipe):
         preprocess: Sequence[str],
         alias: str = __title__,
         store_data: bool = True,
-        vectors: Optional[str | Language] = None
+        vectors: str | Language | None = None
     ) -> None:
         """Initialization method.
 

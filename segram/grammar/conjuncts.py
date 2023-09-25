@@ -1,7 +1,6 @@
 from __future__ import annotations
-from typing import Any, Optional, Iterable, Self
+from typing import Any, Iterable, Self
 from ..nlp.tokens import Token
-# from ..utils.types import Group, ChainGroup
 from ..datastruct import DataSequence, DataChain
 
 
@@ -26,8 +25,8 @@ class Conjuncts(DataSequence):
         self,
         members: Iterable["Phrase"] = (),
         lead: int = 0,
-        cconj: Optional[Token] = None,
-        preconj: Optional[Token] = None
+        cconj: Token | None = None,
+        preconj: Token | None = None
     ) -> None:
         super().__init__(tuple(members))
         self._lead = lead
@@ -57,7 +56,7 @@ class Conjuncts(DataSequence):
     def from_data(
         cls,
         sent: "Sent",
-        data: dict[str, Optional[int] | list[int]],
+        data: dict[str, int | list[int] | None ],
     ) -> Self:
         """Construct from data dictionary.
 
@@ -81,7 +80,7 @@ class Conjuncts(DataSequence):
             pconj = doc[pconj]
         return cls(members, lead, cconj, pconj)
 
-    def to_data(self) -> dict[str, Optional[int] | list[int]]:
+    def to_data(self) -> dict[str, int | list[int] | None]:
         """Dump to data dictionary.
 
         Parameters

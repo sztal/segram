@@ -1,6 +1,6 @@
 """Segram coreference pipeline component."""
 from __future__ import annotations
-from typing import Any, Optional, Sequence
+from typing import Any, Sequence
 import os
 import spacy
 from spacy.language import Language
@@ -27,7 +27,7 @@ class Coref:
         nlp: Language,
         name: str,
         model: Language,
-        components: Optional[Sequence[str]] = None
+        components: Sequence[str] | None = None
     ) -> None:
         """Initilization method.
 
@@ -105,7 +105,7 @@ class Coref:
         nlp: Language,
         name: str,
         model: str,
-        components: Optional[Sequence[str]] = None,
+        components: Sequence[str] | None = None,
         **kwds: Any
     ) -> Coref:
         """Initialize from model name.

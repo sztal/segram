@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, Iterable
+from typing import Any, Iterable
 from spacy import displacy
 from spacy.tokens import Span as SpacySpan
 from .abc import NLP
@@ -88,7 +88,7 @@ class Span(NLP):
 
     # Methods -----------------------------------------------------------------
 
-    def get_grammar(self, *, use_data: Optional[bool] = None) -> "Sent":
+    def get_grammar(self, *, use_data: bool | None = None) -> "Sent":
         """Get grammar sentence object.
 
         Parameters
@@ -110,7 +110,7 @@ class Span(NLP):
             return typ.types.Sent.from_data(self.doc, data)
         return typ.types.Sent.from_sent(self)
 
-    def char_span(self, *args: Any, **kwds: Any) -> Optional[SpacySpan]:
+    def char_span(self, *args: Any, **kwds: Any) -> SpacySpan | None:
         out = self.span.char_span(*args, **kwds)
         if out is not None:
             out = self.sns(out)

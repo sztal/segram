@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, ClassVar, Self, Callable
+from typing import Any, ClassVar, Self, Callable
 from abc import ABC, abstractmethod
 from .utils.docstrings import inherit_docstring
 from .utils.diff import iter_diffs, IDiffType
@@ -69,12 +69,12 @@ class SegramABC(ABC):
     # Methods -----------------------------------------------------------------
 
     @classmethod
-    def cname(cls, obj: Optional[Any] = None) -> str:
+    def cname(cls, obj: Any | None = None) -> str:
         """Get class name."""
         return get_cname(obj if obj is not None else cls)
 
     @classmethod
-    def ppath(cls, obj: Optional[Any] = None) -> str:
+    def ppath(cls, obj: Any | None = None) -> str:
         """Get full python path of the class."""
         return get_ppath(obj if obj is not None else cls)
 

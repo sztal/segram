@@ -1,5 +1,5 @@
 """Factory functions for :mod:`spacy` pipeline components."""
-from typing import Optional, Sequence
+from typing import Sequence
 from spacy.language import Language
 from .base import Segram
 from ... import __title__
@@ -25,7 +25,7 @@ def create_base(
     preprocess: Sequence,
     alias: str,
     store_data: bool,
-    vectors: Optional[str | Language]
+    vectors: str | Language | None
 ) -> Segram:
     return Segram(
         nlp=nlp,

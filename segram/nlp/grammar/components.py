@@ -1,5 +1,5 @@
 # pylint: disable=abstract-method
-from typing import Any, Optional, Iterable, Sequence, ClassVar
+from typing import Any, Iterable, Sequence, ClassVar
 from abc import abstractmethod
 from .grammar import GrammarNLP
 from ..tokens import Token
@@ -44,7 +44,7 @@ class ComponentNLP(GrammarNLP, Component):
         raise NotImplementedError
 
     @abstractmethod
-    def get_dep(self, parent: Component) -> Optional[Dep]:
+    def get_dep(self, parent: Component) -> Dep | None:
         """Get dependency between ``self`` and ``parent``."""
         raise NotImplementedError
 
@@ -62,7 +62,7 @@ class ComponentNLP(GrammarNLP, Component):
             if self.is_child_of(comp):
                 yield comp
 
-    def get_sconj(self, parent: Component) -> Optional[Token]:
+    def get_sconj(self, parent: Component) -> Token | None:
         """Get conjunction subordinating ``self`` to ``parent``."""
         if self.head.head == parent.head:
             for tok in self.subtokens:
@@ -70,7 +70,7 @@ class ComponentNLP(GrammarNLP, Component):
                     return tok
         return None
 
-    def get_cconj(self, other: Component) -> Optional[Token]:
+    def get_cconj(self, other: Component) -> Token | None:
         """Get conjunction token coordinating ``self`` and ``other``."""
         conjs = self.head.conjuncts
         if other.head not in conjs:
@@ -86,8 +86,8 @@ class ComponentNLP(GrammarNLP, Component):
         cls,
         sent: "Sent",
         tok: Token,
-        pos: Optional[POS] = None,
-        role: Optional[Role] = None,
+        pos: POS | None = None,
+        role: Role | None = None,
         **kwds: Any
     ) -> Component:
         """Construct from a token.

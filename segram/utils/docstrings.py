@@ -1,6 +1,6 @@
 """Utility classes and methods for docstrings."""
 from __future__ import annotations
-from typing import Any, Optional, Literal, Callable
+from typing import Any, Literal, Callable
 from functools import wraps, partial
 import re
 
@@ -128,7 +128,7 @@ class NumpyDocString:
 
 def _inherit_docstring(
     typ: type,
-    spec: Optional[dict[str, Any]] = None,
+    spec: dict[str, Any] | None = None,
     *,
     default: Literal["replace", "append"] = "append",
     stop_at: type = object

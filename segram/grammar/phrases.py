@@ -7,10 +7,10 @@ from more_itertools import unique_everseen
 import numpy as np
 from spacy.vocab import Vocab
 from spacy.vectors import Vectors
-from .abc import SentElement
+from .abc import TokenElement
 from .components import Component, Verb, Noun, Desc, Prep
 from .conjuncts import Conjuncts
-from ..nlp.tokens import Token
+from ..nlp.tokens import Doc, Token
 from ..symbols import Role, Dep
 from ..abc import labelled
 from ..datastruct import DataSequence, DataChain
@@ -28,15 +28,13 @@ _what_type: TypeAlias = \
 _what_vals = ("phrases", "components")
 
 
-class Phrase(SentElement):
+class Phrase(TokenElement):
     """Sentence phrase class.
 
     Attributes
     ----------
-    sent
-        Sentence the phrase belongs to.
-    head
-        Phrase head component.
+    tok
+        Head token object.
     dep
         Dependency relative to the (main) parent.
     sconj
@@ -45,21 +43,19 @@ class Phrase(SentElement):
         Lead phrase, initialized from index.
     """
     # pylint: disable=too-many-public-methods
-    __slots__ = ("head", "dep", "sconj", "_lead")
+    __slots__ = ("dep", "sconj", "_lead")
     alias: ClassVar[str] = "Phrase"
     part_names: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
         self,
-        sent: "Sent",
-        head: Component,
+        tok: Token,
         *,
         dep: Dep = Dep.misc,
         sconj: Token | None = None,
         lead: int | None = None
     ) -> None:
-        super().__init__(sent)
-        self.head = head
+        super().__init__(tok)
         self.dep = dep
         self.sconj = sconj
         self._lead = lead
@@ -82,34 +78,16 @@ class Phrase(SentElement):
     def __getitem__(self, idx: int | slice) -> Token | tuple[Token, ...]:
         return self.tokens[idx]
 
-    def __contains__(self, other: Self | Component | Token) -> bool:
-        if self.is_comparable_with(other):
-            return any(other == p for p in self.iter_subdag(skip=1))
-        if isinstance(other, Component):
-            return any(p.head == other for p in self.iter_subdag())
-        if isinstance(other, Token):
-            return any(other in p.head for p in self.iter_subdag())
-        return super().__contains__(other)
-
-    # Abstract methods --------------------------------------------------------
-
-    @classmethod
-    @abstractmethod
-    def governs(cls, comp: Component) -> bool:
-        """Check whether given phrase class may govern ``comp``."""
-        if isinstance(comp, Component):
-            return True
-        raise TypeError(
-            f"'{cls.cname()}' cannot control "
-            f"'{cls.cname(comp)}' objects"
-        )
-
     # Properties --------------------------------------------------------------
 
     @property
     def idx(self) -> int:
-        """Index of the head component."""
-        return self.head.idx
+        """Index of the head token."""
+        return self.tok.idx
+
+    @property
+    def head(self) -> Component:
+        """Head component of the phrase."""
 
     @property
     def lead(self) -> Self:
@@ -295,6 +273,17 @@ class Phrase(SentElement):
 
     # Methods -----------------------------------------------------------------
 
+    @classmethod
+    @abstractmethod
+    def governs(cls, comp: Component) -> bool:
+        """Check whether given phrase class may govern ``comp``."""
+        if isinstance(comp, Component):
+            return True
+        raise TypeError(
+            f"'{cls.cname()}' cannot control "
+            f"'{cls.cname(comp)}' objects"
+        )
+
     def iter_subdag(self, *, skip: int = 0) -> Iterable[Self]:
         """Iterate over phrasal subtree and omit ``skip`` first items.
 
@@ -468,18 +457,17 @@ class Phrase(SentElement):
         }
 
     @classmethod
-    def from_data(cls, sent: "Sent", data: dict[str, Any]) -> Self:
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from sentence and data dictionary."""
         data = data.copy()
-        doc = sent.doc
         typ = cls.types[data.pop("@class")]
+        tok = doc[data["head"]]
         kwds = dict(
-            head=sent.cmap[data["head"]],
             dep=Dep.from_name(data["dep"]),
             sconj=doc[i] if (i := data["sconj"]) is not None else None,
             lead=data["lead"]
         )
-        return typ(sent, **kwds)
+        return typ(tok, **kwds)
 
 
 class VerbPhrase(Phrase):

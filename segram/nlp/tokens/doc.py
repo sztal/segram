@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, Iterable, Self
+from typing import Any, Iterable, Self
 from spacy.tokens import Doc as SpacyDoc, Token as SpacyToken
 from .abc import NLP
 from .token import Token
@@ -105,12 +105,12 @@ class Doc(NLP):
         for sent in self.sents:
             yield sent.get_grammar(**kwds)
 
-    def char_span(self, *args: Any, **kwds: Any) -> Optional[Span]:
+    def char_span(self, *args: Any, **kwds: Any) -> Span | None:
         res = self.tok.char_span(*args, **kwds)
         return res if res is None else self.sns(res)
 
     @classmethod
-    def from_docs(cls, *args: Any, **kwds: Any) -> Optional[Doc]:
+    def from_docs(cls, *args: Any, **kwds: Any) -> Doc | None:
         res = Doc.from_docs(*args, **kwds)
         return res if res is None else cls.sns(res)
 

@@ -1,5 +1,5 @@
 """Base test runner class."""
-from typing import Any, Optional, Callable
+from typing import Any, Callable
 from functools import partial
 import re
 import ipdb
@@ -37,8 +37,8 @@ class PyTestRunner:
 
     def __init_subclass__(
         cls,
-        lang: Optional[str] = None,
-        resource: Optional[str] = None
+        lang: str | None = None,
+        resource: str | None = None
     ) -> None:
         if not lang:
             return

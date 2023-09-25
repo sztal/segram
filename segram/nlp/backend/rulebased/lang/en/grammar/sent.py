@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, Sequence
+from typing import Iterable, Sequence
 from .grammar import RulebasedEnglishGrammar
 from ......grammar import SentNLP
 from .......grammar.lang.en import EnglishSent
@@ -80,8 +80,8 @@ class RulebasedEnglishSent(
     def _expand_conj_group(
         self,
         group: tuple[Token, tuple[Component, ...]],
-        groups: Optional[set[tuple[Component, ...]]] = None,
-        comps: Optional[Sequence[Component]] = None
+        groups: set[tuple[Component, ...]] | None = None,
+        comps: Sequence[Component] | None = None
     ) -> Iterable[tuple[Component, ...]]:
         groups = groups if groups is not None else set()
         comps = comps if comps is not None else self.components
