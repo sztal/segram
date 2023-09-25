@@ -58,7 +58,10 @@ class Sent(SentElement):
     def __new__(cls, *args: Any, **kwds: Any) -> None:
         obj = super().__new__(cls)
         obj.__init__(*args, **kwds)
-        cache = getattr(obj.sent.doc._, f"{settings.spacy_alias}_cache")["sents"]
+        cache = getattr(
+            obj.sent.doc._,
+             f"{settings.spacy_alias}_cache"
+        )["grammar"]
         idx = obj.idx
         if (cur := cache.get(idx)):
             cur.__init__(**obj.data)
