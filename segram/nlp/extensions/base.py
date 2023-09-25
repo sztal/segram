@@ -79,13 +79,13 @@ class SpacyExtensions:
         tok: Doc | Span | Token,
         typ: type[Doc] | type[Span] | type[Token]
     ) -> NLP:
-        cache = getattr(tok.doc._, f"{settings.spacy_alias}_cache")
+        cache = getattr(tok.doc._, f"{settings.spacy_alias}_cache")["nlp"]
         if isinstance(tok, SpacyToken):
             key = tok.i
         elif isinstance(tok, SpacySpan):
             key = (tok.start, tok.end)
         else:
-            key = (-1, hash(tok))
+            key = -1
         sns = cache.get(key)
         if sns is None:
             sns = typ(tok)

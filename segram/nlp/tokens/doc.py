@@ -62,10 +62,6 @@ class Doc(NLP):
             yield self.sns(sent)
 
     @property
-    def grammar(self) -> Iterable["Sent"]:
-        yield from self.iter_grammar(use_data=None)
-
-    @property
     def data(self) -> dict[str, Any]:
         return self.to_data()
 
@@ -96,14 +92,6 @@ class Doc(NLP):
     def from_data(cls, data: dict[str, Any]) -> Self:
         """Construct from data dictionary produced by :meth:`to_data`."""
         return getattr(SpacyDoc(**data)._, settings.spacy_alias)
-
-    def iter_grammar(self, **kwds: Any) -> Iterable["Sent"]:
-        """Iterate over grammar sentence objects.
-
-        ``**kwds`` are passed to :meth:`segram.nlp.tokens.span.Span.grammar`.
-        """
-        for sent in self.sents:
-            yield sent.get_grammar(**kwds)
 
     def char_span(self, *args: Any, **kwds: Any) -> Span | None:
         res = self.tok.char_span(*args, **kwds)

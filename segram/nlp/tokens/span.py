@@ -84,12 +84,16 @@ class Span(NLP):
 
     @property
     def grammar(self) -> "Sent":
-        return self.get_grammar(use_data=None)
+        """Grammar sentence object associated with the NLP sentence."""
+        cache = getattr(self.doc._, f"{settings.spacy_alias}_cache")["sents"]
+        if (obj := cache.get((self.start, self.end))):
+            return obj
+        return self.make_grammar(use_data=None)
 
     # Methods -----------------------------------------------------------------
 
-    def get_grammar(self, *, use_data: bool | None = None) -> "Sent":
-        """Get grammar sentence object.
+    def make_grammar(self, *, use_data: bool | None = None) -> "Sent":
+        """Make and cache grammar sentence object.
 
         Parameters
         ----------
@@ -107,8 +111,12 @@ class Span(NLP):
             use_data = bool(data)
         if use_data:
             data = data[(self.start, self.end)]
-            return typ.types.Sent.from_data(self.doc, data)
-        return typ.types.Sent.from_sent(self)
+            obj = typ.types.Sent.from_data(self.doc, data)
+        else:
+            obj = typ.types.Sent.from_sent(self)
+        cache = getattr(self.doc._, f"{settings.spacy_alias}_cache")["sents"]
+        cache[obj.idx] = obj
+        return obj
 
     def char_span(self, *args: Any, **kwds: Any) -> SpacySpan | None:
         out = self.span.char_span(*args, **kwds)

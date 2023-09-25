@@ -83,7 +83,7 @@ class Phrase(TokenElement):
     @property
     def idx(self) -> int:
         """Index of the head token."""
-        return self.tok.idx
+        return self.tok.i
 
     @property
     def head(self) -> Component:
@@ -443,7 +443,7 @@ class Phrase(TokenElement):
             or getattr(typ, "__abstractmethods__", None):
                 continue
             if typ.governs(comp):
-                return typ(comp.sent, comp, **kwds)
+                return typ(comp.tok, **kwds)
         raise ValueError(f"no matching phrase type for '{cls.cname(comp)}'")
 
     def to_data(self) -> dict[str, Any]:

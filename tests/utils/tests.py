@@ -361,7 +361,7 @@ class SentTestCase:
         self.parent = parent
         self.i = i
         self.sent = sent
-        self.results = self.sent.get_grammar(use_data=None)
+        self.results = self.sent.make_grammar(use_data=None)
 
     def __repr__(self) -> str:
         msg = settings.printer.get()

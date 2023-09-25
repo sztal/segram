@@ -42,10 +42,7 @@ class Sent(SentElement):
     """
     # pylint: disable=too-many-public-methods
     __components__ = ("verbs", "nouns", "descs", "preps")
-    __slots__ = (
-        "start", "end", *__components__,
-        "graph", "conjs", "cmap", "pmap"
-    )
+    __slots__ = (*__components__, "graph", "conjs", "cmap", "pmap")
     alias = "Sent"
     component_names: ClassVar[tuple[str, ...]] = ()
 
@@ -71,6 +68,17 @@ class Sent(SentElement):
         self.conjs = conjs or {}
         self.cmap = cmap or {}
         self.pmap = pmap or {}
+
+    def __new__(cls, *args: Any, **kwds: Any) -> None:
+        obj = super().__new__(cls)
+        obj.__init__(*args, **kwds)
+        cache = getattr(obj.sent.doc._, f"{settings.spacy_alias}_cache")["sents"]
+        idx = obj.idx
+        if (cur := cache.get(idx)):
+            cur.__init__(obj.sent, **obj.data)
+            return cur
+        cache[idx] = obj
+        return obj
 
     def __len__(self) -> int:
         return len(self.sent)
@@ -188,12 +196,12 @@ class Sent(SentElement):
             phrase = cls.types.Phrase.from_data(sent, dct)
             pmap[phrase.idx] = phrase
         pmap = dict(sorted(pmap.items(), key=lambda x: x[0]))
-        sent.graph = PhraseGraph.from_data(sent, data["graph"])
-        sent.conjs = {
+        graph = PhraseGraph.from_data(sent, data["graph"])
+        conjs = {
             (conj := Conjuncts.from_data(sent, c)).lead: conj
             for c in data["conjs"]
         }
-        return cls(sent, pmap=pmap, **kwds)
+        return cls(sent, pmap=pmap, graph=graph, conjs=conjs, **kwds)
 
     def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary."""

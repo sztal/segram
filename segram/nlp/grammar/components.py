@@ -84,7 +84,6 @@ class ComponentNLP(GrammarNLP, Component):
     @classmethod
     def from_tok(
         cls,
-        sent: "Sent",
         tok: Token,
         pos: POS | None = None,
         role: Role | None = None,
@@ -94,8 +93,6 @@ class ComponentNLP(GrammarNLP, Component):
 
         Parameters
         ----------
-        sent
-            Grammar sentence object.
         tok
             NLP token object.
         pos
@@ -128,7 +125,7 @@ class ComponentNLP(GrammarNLP, Component):
             role = Role.from_name(role)
         typ = cls.get_comp_type(role, tok.pos)
         if typ is not cls:
-            return typ.from_tok(sent, tok, pos, role=role, **kwds)
+            return typ.from_tok(tok, pos, role=role, **kwds)
         slots = {}
         finders = {
             name: getattr(cls, f"find_{name}")
@@ -148,7 +145,7 @@ class ComponentNLP(GrammarNLP, Component):
                     continue
                 finder = getattr(cls, f"find_{name}")
                 slots[name] = next((finder(c) for c in lead.children), None)
-        comp = cls(sent, tok, role=role, **slots, **kwds)
+        comp = cls(tok, role=role, **slots, **kwds)
         # Apply post-init finders ---------------------------------------------
         for name in comp.__class__.post_init:
             finder = getattr(comp.__class__, f"find_{name}")

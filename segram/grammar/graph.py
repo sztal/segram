@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Iterable, Iterator, Mapping, MutableMapping, Self
 from graphlib import TopologicalSorter, CycleError
 from ..abc import SegramABC
+from ..nlp.tokens import Span
 
 
 class Graph(MutableMapping, SegramABC):
@@ -220,7 +221,7 @@ class PhraseGraph(Graph):
         print(self.to_str(**kwds))
 
     @classmethod
-    def from_data(cls, sent: "Sent", data: dict[int, tuple[int, int]]) -> Self:
+    def from_data(cls, sent: Span, data: dict[int, tuple[int, int]]) -> Self:
         """Construct from data dictionary.
 
         Parameters
@@ -232,6 +233,7 @@ class PhraseGraph(Graph):
         cdict
             Mapping from ordinal numbers to nodes.
         """
+        sent = sent.grammar
         graph = {}
         for idx, children in data.items():
             parent = sent.pmap[idx]

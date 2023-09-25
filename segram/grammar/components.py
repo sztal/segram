@@ -59,7 +59,7 @@ class Component(TokenElement):
     """
     __role__ = None
     __tokens__ = ("qmark", "exclam", "intj", "neg")
-    __slots__ = ("_tid", "tok", "role", "sub", *__tokens__)
+    __slots__ = ("_tid", "role", "sub", *__tokens__)
     alias: ClassVar[str] = "Component"
     token_names: ClassVar[tuple[str, ...]] = ()
     attr_names: ClassVar[tuple[str, ...]] = ()
@@ -77,7 +77,6 @@ class Component(TokenElement):
     ) -> None:
         super().__init__(tok)
         self._tid = None
-        self.tok = tok
         role = role or self.__role__
         self.role = Role.from_name(role) if isinstance(role, str) else role
         self.qmark = qmark
@@ -209,12 +208,11 @@ class Component(TokenElement):
             if name not in data:
                 continue
             idx = data[name]
-            import ipdb; ipdb.set_trace()
             if isinstance(idx, int):
                 data[name] =  doc[idx]
             else:
                 data[name] = [ doc[i] for i in idx ]
-        return typ(0 **data)
+        return typ(**data)
 
     def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary."""
@@ -227,7 +225,6 @@ class Component(TokenElement):
                 data[name] = tok.i
             else:
                 data[name] = [ t.i for t in tok ]
-        import ipdb; ipdb.set_trace()
         return {
             "@class": self.alias,
             **data,

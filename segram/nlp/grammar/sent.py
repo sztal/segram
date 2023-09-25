@@ -29,20 +29,19 @@ class SentNLP(GrammarNLP, Sent):
     @classmethod
     def from_sent(cls, sent: Span) -> Sent:
         """Construct from a sentence span object."""
-        cls.check_sent(sent)
-        sent = cls(sent.doc, sent.start, sent.end)
+        sent = cls(sent)
         nouns = []
         verbs = []
         preps = []
         descs = []
         for tok in sent.sent:
-            if (np := cls.types.Noun.from_tok(sent, tok)):
+            if (np := cls.types.Noun.from_tok(tok)):
                 nouns.append(np)
-            if (vp := cls.types.Verb.from_tok(sent, tok)):
+            if (vp := cls.types.Verb.from_tok(tok)):
                 verbs.append(vp)
-            if (pp := cls.types.Prep.from_tok(sent, tok)):
+            if (pp := cls.types.Prep.from_tok(tok)):
                 preps.append(pp)
-            if (dp := cls.types.Desc.from_tok(sent, tok)):
+            if (dp := cls.types.Desc.from_tok(tok)):
                 descs.append(dp)
         sent.verbs = tuple(verbs)
         sent.nouns = tuple(nouns)

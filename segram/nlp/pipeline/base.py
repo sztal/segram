@@ -111,8 +111,9 @@ class Segram(Pipe):
     def __call__(self, doc: Doc) -> Doc:
         alias = settings.spacy_alias
         meta = self.meta.copy()
+        cache = { "nlp": {}, "sents": {}, "phrases": {}, "components": {} }
         setattr(doc._, f"{alias}_meta", meta)
-        setattr(doc._, f"{alias}_cache", {})
+        setattr(doc._, f"{alias}_cache", cache)
         setattr(doc._, f"{alias}_model", self.get_model_name(self.nlp))
         if self.store_data:
             start = time()

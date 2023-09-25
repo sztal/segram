@@ -250,7 +250,7 @@ class DocElement(GrammarElement):
 @total_ordering
 class SentElement(GrammarElement):
     """Grammar element based on a sentence span."""
-    __slots__ = ("_start", "_end")
+    __slots__ = ("_sent",)
     alias: ClassVar[str] = "SentElem"
 
     def __init__(self, sent: Span) -> None:
@@ -276,6 +276,10 @@ class SentElement(GrammarElement):
     # Properties --------------------------------------------------------------
 
     @property
+    def doc(self) -> DocElement:
+        return self.sent.doc
+
+    @property
     def sent(self) -> Span:
         return self._sent
 
@@ -298,10 +302,6 @@ class SentElement(GrammarElement):
         the parent document.
         """
         return (self.start, self.end)
-
-    @property
-    def doc(self) -> DocElement:
-        return self.sent.doc.grammar
 
     @property
     def hashdata(self) -> tuple[Any, ...]:
@@ -338,6 +338,14 @@ class TokenElement(GrammarElement):
     # Properties --------------------------------------------------------------
 
     @property
+    def doc(self) -> DocElement:
+        return self.tok.doc
+
+    @property
+    def sent(self) -> SentElement:
+        return self.tok.sent.grammar
+
+    @property
     def tok(self) -> Token:
         return self._tok
 
@@ -345,14 +353,6 @@ class TokenElement(GrammarElement):
     def idx(self) -> int:
         """Token index within the parent document."""
         return self.tok.i
-
-    @property
-    def sent(self) -> SentElement:
-        return self.tok.sent.grammar
-
-    @property
-    def doc(self) -> DocElement:
-        return self.tok.doc.grammar
 
     # Methods -----------------------------------------------------------------
 
