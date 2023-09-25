@@ -65,12 +65,6 @@ class Sent(SentElement):
         cache[idx] = obj
         return obj
 
-    def __len__(self) -> int:
-        return len(self.sent)
-
-    def __getitem__(self, idx: int | slice) -> Component | tuple[Component, ...]:
-        return self.sent[idx]
-
     def __init_subclass__(cls):
         super().__init_subclass__()
         cls.init_class_attrs({ "__components__": "component_names" })

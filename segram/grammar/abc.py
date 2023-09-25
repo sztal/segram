@@ -6,7 +6,7 @@ syntax tree links and can be used to perform various tasks such as
 component and phrase detection.
 """
 from typing import Any, Self, Callable, ClassVar, Final
-from typing import MutableMapping, Container
+from typing import MutableMapping, Container, Sequence
 from abc import abstractmethod
 import re
 from functools import total_ordering
@@ -84,7 +84,7 @@ class Grammar(SegramWithDocABC, Container):
         raise NotImplementedError
 
 
-class GrammarElement(Grammar):
+class GrammarElement(Grammar, Sequence):
     """Abstract base class for grammar elements."""
     __slots__ = ()
     alias: ClassVar[str] = "GElem"
@@ -102,6 +102,12 @@ class GrammarElement(Grammar):
 
     def __bool__(self) -> bool:
         return self.idx is not None
+
+    def __getitem__(self, idx) -> Token | DataSequence[Token]:
+        return self.tokens[idx]
+
+    def __len__(self) -> int:
+        return len(self.tokens)
 
     @abstractmethod
     def __contains__(self, other: Any) -> bool:
