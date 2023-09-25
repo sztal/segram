@@ -198,11 +198,11 @@ class GrammarElement(Grammar):
 
 class DocElement(GrammarElement):
     """Document element class."""
-    __slots__ = ("_doc",)
+    __slots__ = ("doc",)
     alias: ClassVar[str] = "DocElem"
 
     def __init__(self, doc: Doc) -> None:
-        self._doc = doc
+        self.doc = doc
 
     def __contains__(self, other: Any) -> bool:
         tokens = self.tokens
@@ -215,11 +215,6 @@ class DocElement(GrammarElement):
         return super().__contains__(other)
 
     # Properties --------------------------------------------------------------
-
-    @property
-    def doc(self) -> Doc:
-        """NLP document as an instance of :class:`segram.nlp.tokens.Doc`."""
-        return self._doc
 
     @property
     def idx(self) -> int:
@@ -241,22 +236,17 @@ class DocElement(GrammarElement):
         """
         return self.doc.id
 
-    # Methods -----------------------------------------------------------------
-
-    def copy(self, **kwds: Any) -> Self:
-        return self.__class__(**{ "doc": self.doc, **self.data, **kwds })
-
 
 @total_ordering
 class SentElement(GrammarElement):
     """Grammar element based on a sentence span."""
-    __slots__ = ("_sent",)
+    __slots__ = ("sent",)
     alias: ClassVar[str] = "SentElem"
 
     def __init__(self, sent: Span) -> None:
         if sent.root.sent is not sent:
             raise ValueError("'sent' has to be a proper sentence span object")
-        self._sent = sent
+        self.sent = sent
 
     def __contains__(self, other: Any) -> bool:
         tokens = self.tokens
@@ -280,10 +270,6 @@ class SentElement(GrammarElement):
         return self.sent.doc
 
     @property
-    def sent(self) -> Span:
-        return self._sent
-
-    @property
     def root(self) -> Token:
         return self.sent.root
 
@@ -303,24 +289,15 @@ class SentElement(GrammarElement):
         """
         return (self.start, self.end)
 
-    @property
-    def hashdata(self) -> tuple[Any, ...]:
-        return (*super().hashdata, self.idx)
-
-    # Methods -----------------------------------------------------------------
-
-    def copy(self, **kwds: Any) -> Self:
-        return self.__class__(**{ "sent": self.sent, **self.data, **kwds })
-
 
 @total_ordering
 class TokenElement(GrammarElement):
     """Grammar element based on a token."""
-    __slots__ = ("_tok",)
+    __slots__ = ("tok",)
     alias: ClassVar[str] = "TokElem"
 
     def __init__(self, tok: Token) -> None:
-        self._tok = tok
+        self.tok = tok
 
     def __contains__(self, other: Any) -> bool:
         tokens = self.tokens
@@ -346,15 +323,6 @@ class TokenElement(GrammarElement):
         return self.tok.sent.grammar
 
     @property
-    def tok(self) -> Token:
-        return self._tok
-
-    @property
     def idx(self) -> int:
         """Token index within the parent document."""
         return self.tok.i
-
-    # Methods -----------------------------------------------------------------
-
-    def copy(self, **kwds: Any) -> Self:
-        return self.__class__(**{ "tok": self.tok, **self.data, **kwds })

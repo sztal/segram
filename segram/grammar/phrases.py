@@ -17,7 +17,7 @@ from ..datastruct import DataSequence, DataChain
 from ..utils.misc import cosine_similarity, best_matches
 
 
-controlled = labelled("part")
+part = labelled("part")
 PGType: TypeAlias = DataChain[Conjuncts["Phrase"]]
 PVSpecType: TypeAlias = dict[str, Union[
     str, Iterable[str],
@@ -64,7 +64,7 @@ class Phrase(TokenElement):
         obj = super().__new__(cls)
         obj.__init__(*args, **kwds)
         if (cur := obj.sent.pmap.get(obj.idx)):
-            cur.__init__(obj.sent, **obj.data)
+            cur.__init__(**obj.data)
             return cur
         obj.sent.pmap[obj.idx] = obj
         return obj
@@ -157,15 +157,14 @@ class Phrase(TokenElement):
         return self.sent.conjs.get(self.lead) \
             or Conjuncts([self])
 
+    @part
     @property
-    @controlled
     def verb(self) -> PGType:
         """Return ``self`` if VP or nothing otherwise."""
         return Conjuncts.get_chain((self,)) \
             if isinstance(self, VerbPhrase) else DataChain()
-
+    @part
     @property
-    @controlled
     def subj(self) -> PGType:
         """Subject phrases."""
         subjects = []
@@ -175,58 +174,57 @@ class Phrase(TokenElement):
             elif c.dep & Dep.agent:
                 subjects.extend(c.subj)
         return Conjuncts.get_chain(subjects)
-
+    @part
     @property
-    @controlled
     def dobj(self) -> PGType:
         """Direct object phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.dobj
         )
+    @part
     @property
-    @controlled
     def iobj(self) -> PGType:
         """Indirect object phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.iobj
         )
+    @part
     @property
-    @controlled
     def desc(self) -> PGType:
         """Description phrases."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & (Dep.desc | Dep.misc)
         )
+    @part
     @property
-    @controlled
     def cdesc(self) -> PGType:
         """Clausal descriptions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.cdesc
         )
+    @part
     @property
-    @controlled
     def adesc(self) -> PGType:
         """Adjectival complement descriptions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.adesc
         )
+    @part
     @property
-    @controlled
     def prep(self) -> PGType:
         """Prepositions."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.prep
         )
+    @part
     @property
-    @controlled
     def pobj(self) -> PGType:
         """Prepositional objects."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.pobj
         )
+    @part
     @property
-    @controlled
     def subcl(self) -> PGType:
         """Subclauses."""
         return Conjuncts.get_chain(
@@ -234,29 +232,29 @@ class Phrase(TokenElement):
             if (c.dep & Dep.subcl) \
             or (isinstance(c, VerbPhrase) and (c.dep & Dep.acl))
         )
+    @part
     @property
-    @controlled
     def relcl(self) -> PGType:
         """Relative clausses."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.relcl
         )
+    @part
     @property
-    @controlled
     def xcomp(self) -> PGType:
         """Open clausal complements."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.xcomp
         )
+    @part
     @property
-    @controlled
     def appos(self) -> PGType:
         """Appositional modifiers."""
         return Conjuncts.get_chain(
             c for c in self.children if c.dep & Dep.appos
         )
+    @part
     @property
-    @controlled
     def nmod(self) -> PGType:
         """Nominal modifiers."""
         return Conjuncts.get_chain(
@@ -739,8 +737,8 @@ class PhraseVectors:
             pdict = { k: DataSequence(v) for k, v in pdict.items() }
         else:
             for name in phrase.part_names:
-                if (part := getattr(phrase, name)):
-                    pdict[name] = part
+                if (value := getattr(phrase, name)):
+                    pdict[name] = value
         return pdict
 
     def _get_vectors(self, seq: DataSequence):

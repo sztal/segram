@@ -3,18 +3,19 @@ from typing import Any, ClassVar, Self, Mapping
 from .conjuncts import Conjuncts
 from .abc import SentElement
 from .components import Component
-from .components import Verb, Noun
-from .components import Prep, Desc
+from .components import Verb, Noun, Prep, Desc
 from .phrases import Phrase, VerbPhrase, NounPhrase, DescPhrase, PrepPhrase
 from .graph import PhraseGraph
 from ..settings import settings
 from ..nlp.tokens import Doc, Span, Token
 from ..symbols import Role
+from ..abc import labelled
 from ..utils.misc import best_matches
 from ..datastruct import DataChain, DataSequence
 
 
 PVType = DataChain[DataSequence[Phrase]]
+component = labelled("component")
 
 
 class Sent(SentElement):
@@ -25,24 +26,17 @@ class Sent(SentElement):
 
     Attributes
     ----------
-    start, end
-        Start and end indices.
-    verbs
-        Verb components.
-    nouns
-        Noun components.
-    descs
-        Descriptive components.
-    preps
-        Prepositional components.
+    cmap
+        Mapping from head token ids to components.
+    pmap
+        Mapping from head tokens ids to phrases.
     graph
         Component graph.
     conjuncts
         Mapping from lead components to conjunct groups.
     """
     # pylint: disable=too-many-public-methods
-    __components__ = ("verbs", "nouns", "descs", "preps")
-    __slots__ = (*__components__, "graph", "conjs", "cmap", "pmap")
+    __slots__ = ("graph", "conjs", "cmap", "pmap")
     alias = "Sent"
     component_names: ClassVar[tuple[str, ...]] = ()
 
@@ -50,24 +44,16 @@ class Sent(SentElement):
         self,
         sent: Span,
         *,
-        verbs: DataSequence[Verb] = (),
-        nouns: DataSequence[Noun] = (),
-        descs: DataSequence[Desc] = (),
-        preps: DataSequence[Prep] = (),
-        graph: PhraseGraph[Phrase, tuple[Phrase, ...]] | None = None,
-        conjs: Mapping[Component, Conjuncts] | None = None,
+        cmap: Mapping[int, Component] | None = None,
         pmap: Mapping[int, Phrase] | None = None,
-        cmap: Mapping[int, Component] | None = None
+        graph: PhraseGraph[Phrase, tuple[Phrase, ...]] | None = None,
+        conjs: Mapping[Component, Conjuncts] | None = None
     ) -> None:
         super().__init__(sent)
-        self.nouns = DataSequence(nouns)
-        self.verbs = DataSequence(verbs)
-        self.preps = DataSequence(preps)
-        self.descs = DataSequence(descs)
+        self.cmap = self._sort_map(cmap or {})
+        self.pmap = self._sort_map(pmap or {})
         self.graph = graph
         self.conjs = conjs or {}
-        self.cmap = cmap or {}
-        self.pmap = pmap or {}
 
     def __new__(cls, *args: Any, **kwds: Any) -> None:
         obj = super().__new__(cls)
@@ -75,7 +61,7 @@ class Sent(SentElement):
         cache = getattr(obj.sent.doc._, f"{settings.spacy_alias}_cache")["sents"]
         idx = obj.idx
         if (cur := cache.get(idx)):
-            cur.__init__(obj.sent, **obj.data)
+            cur.__init__(**obj.data)
             return cur
         cache[idx] = obj
         return obj
@@ -105,6 +91,26 @@ class Sent(SentElement):
     @property
     def sources(self) -> PVType:
         return Conjuncts.get_chain(self.graph.sources)
+
+    @component
+    @property
+    def verbs(self) -> DataSequence[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Verb))
+
+    @component
+    @property
+    def nouns(self) -> DataSequence[Noun]:
+        return self.components.filter(lambda c: isinstance(c, Noun))
+
+    @component
+    @property
+    def preps(self) -> DataSequence[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Prep))
+
+    @component
+    @property
+    def descs(self) -> DataSequence[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Desc))
 
     @property
     def vps(self) -> PVType:
@@ -171,48 +177,25 @@ class Sent(SentElement):
     @classmethod
     def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from a :class:`~segram.nlp.Doc` and a data dictionary."""
-        sent = cls(doc[data["start"]].sent)
-        sent = doc[data["start"]].sent
-        kwds = {
-            "nouns": tuple(
-                cls.types.Noun.from_data(doc, dct)
-                for dct in data.get("nouns", {}).values()
-            ),
-            "verbs": tuple(
-                cls.types.Verb.from_data(sent, dct)
-                for dct in data.get("verbs", {}).values()
-            ),
-            "preps": tuple(
-                cls.types.Prep.from_data(sent, dct)
-                for dct in data.get("preps", {}).values()
-            ),
-            "descs": tuple(
-                cls.types.Desc.from_data(sent, dct)
-                for dct in data.get("descs", {}).values()
-            ),
-        }
-        pmap = {}
-        for dct in data["phrases"]:
-            phrase = cls.types.Phrase.from_data(sent, dct)
-            pmap[phrase.idx] = phrase
-        pmap = dict(sorted(pmap.items(), key=lambda x: x[0]))
-        graph = PhraseGraph.from_data(sent, data["graph"])
-        conjs = {
+        sent = doc[data.pop("start"):data.pop("end")]
+        for idx, dct in data["cmap"].items():
+            data["cmap"][idx] = cls.types.Component.from_data(doc, dct)
+        for idx, dct in data["pmap"].items():
+            data["pmap"][idx] = cls.types.Phrase.from_data(doc, dct)
+        data["graph"] = PhraseGraph.from_data(sent, data["graph"])
+        data["conjs"] = {
             (conj := Conjuncts.from_data(sent, c)).lead: conj
             for c in data["conjs"]
         }
-        return cls(sent, pmap=pmap, graph=graph, conjs=conjs, **kwds)
+        return cls(sent, **data)
 
     def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary."""
         return dict(
             start=self.start,
             end=self.end,
-            nouns={ c.idx: c.to_data() for c in self.nouns },
-            verbs={ c.idx: c.to_data() for c in self.verbs },
-            preps={ c.idx: c.to_data() for c in self.preps },
-            descs={ c.idx: c.to_data() for c in self.descs },
-            phrases=[ p.to_data() for p in self.phrases ],
+            cmap={ idx: c.to_data() for idx, c in self.cmap.items() },
+            pmap={ idx: p.to_data() for idx, p in self.pmap.items() },
             graph=self.graph.to_data(),
             conjs=[ c.to_data() for c in self.conjs.values() ]
         )
@@ -276,3 +259,12 @@ class Sent(SentElement):
                 else:
                     for comp in vals:
                         print(f"{comp.idx}:", comp)
+
+    # Internals ---------------------------------------------------------------
+
+    @staticmethod
+    def _sort_map(mapping: Mapping) -> dict:
+        return mapping.__class__({
+            k: v for k, v
+            in sorted(mapping.items(), key=lambda x: x[1])
+        })

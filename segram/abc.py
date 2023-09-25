@@ -9,7 +9,11 @@ from .utils.meta import init_class_attrs, get_cname, get_ppath
 def labelled(label: str) -> Callable:
     """Assign ``label`` as attribute ``attr`` to a function."""
     def decorator(func: Callable) -> Callable:
-        setattr(func, "__group_label__", label)
+        if isinstance(func, property):
+            target = func.fget
+        else:
+            target = func
+        setattr(target, "__group_label__", label)
         return func
     return decorator
 

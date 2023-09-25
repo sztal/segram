@@ -30,23 +30,11 @@ class SentNLP(GrammarNLP, Sent):
     def from_sent(cls, sent: Span) -> Sent:
         """Construct from a sentence span object."""
         sent = cls(sent)
-        nouns = []
-        verbs = []
-        preps = []
-        descs = []
         for tok in sent.sent:
-            if (np := cls.types.Noun.from_tok(tok)):
-                nouns.append(np)
-            if (vp := cls.types.Verb.from_tok(tok)):
-                verbs.append(vp)
-            if (pp := cls.types.Prep.from_tok(tok)):
-                preps.append(pp)
-            if (dp := cls.types.Desc.from_tok(tok)):
-                descs.append(dp)
-        sent.verbs = tuple(verbs)
-        sent.nouns = tuple(nouns)
-        sent.descs = tuple(descs)
-        sent.preps = tuple(preps)
+            cls.types.Noun.from_tok(tok)
+            cls.types.Verb.from_tok(tok)
+            cls.types.Prep.from_tok(tok)
+            cls.types.Desc.from_tok(tok)
         sent.add_subs()
         sent.graph = PhraseGraph.from_links(sent.find_links())
         sent.conjs = { conj.lead: conj for conj in sorted(sent.find_conjs()) }
