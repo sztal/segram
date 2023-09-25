@@ -2,10 +2,12 @@ from __future__ import annotations
 from typing import Self, Any, Sequence, Callable
 from abc import abstractmethod
 import re
+from more_itertools import unique_everseen
 from .abc import Semantic
-from ..grammar import Conjuncts, Phrase, NounPhrase, VerbPhrase
+from ..grammar import Conjuncts, Sent, Phrase, NounPhrase, VerbPhrase
 from ..symbols import Dep
 from ..utils.matching import Matcher
+from ..datastruct import DataChain, DataSequence
 
 
 class Frame(Semantic, Sequence):
@@ -57,6 +59,9 @@ class Frame(Semantic, Sequence):
     def __ror__(self, other: Frame) -> Frame:
         return self | other
 
+    def __call__(self, phrase: Phrase) -> bool:
+        return self.match(phrase)
+
     # Properties --------------------------------------------------------------
 
     @property
@@ -64,11 +69,18 @@ class Frame(Semantic, Sequence):
         return self._story
 
     @property
-    def phrases(self) -> tuple[Phrase, ...]:
+    def phrases(self) -> DataChain[Phrase]:
         return Conjuncts.get_chain(
             p for p in self.story.phrases
             if self.match(p)
-        )
+        ).groupby(lambda p: p.sent.idx).groupby(lambda s: hash(s.doc))
+
+    @property
+    def sents(self) -> DataChain[Sent]:
+        return DataSequence(unique_everseen(
+            (p.sent for p in self.phrases),
+            key=lambda s: (hash(s.doc), s.idx)
+        )).groupby(lambda s: hash(s.doc))
 
     # Methods -----------------------------------------------------------------
 

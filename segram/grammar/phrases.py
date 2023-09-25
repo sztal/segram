@@ -5,6 +5,7 @@ from abc import abstractmethod
 from itertools import islice
 from more_itertools import unique_everseen
 import numpy as np
+from spacy.vocab import Vocab
 from spacy.vectors import Vectors
 from .abc import SentElement
 from .components import Component, Verb, Noun, Desc, Prep
@@ -561,8 +562,8 @@ class PhraseVectors:
     ) -> None:
         if not phrase.doc.has_vectors:
             raise ValueError("word vectors not available")
-        if what not in _what_vals:
-            raise ValueError(f"'what' has to be one of {_what_vals}")
+        if what not in _what_vals and not isinstance(what, Mapping):
+            raise ValueError(f"'what' has to be a mapping or one of {_what_vals}")
         if only and ignore:
             raise ValueError("'only' and 'ignore' cannot be used at the same time")
         weights = weights or {}
@@ -580,23 +581,27 @@ class PhraseVectors:
     # Properties --------------------------------------------------------------
 
     @property
+    def vocab(self) -> Vocab:
+        return self.phrase.doc.vocab
+
+    @property
     def vectors(self) -> Vectors:
-        return self.phrase.doc.vocab.vectors
+        return self.vocab.vectors
 
     @property
     def similarity(self) -> float:
         """Structured similarity between ``self.phrase`` and ``self.spec``."""
-        if isinstance(self.spec, Mapping):
+        if isinstance(self.spec, Phrase | Component):
+            if self.recursive:
+                return self._sim_recursive(self.phrase, self.spec)
+            return self._sim_phrase(self.phrase, self.spec)
+        if isinstance(self.spec, str | Iterable | Mapping):
             return self._sim_custom_spec(self.phrase, self.spec)
-        if not isinstance(self.spec, Phrase):
-            pcn = Phrase.cname()
-            raise ValueError(
-                f"specification must be a '{pcn}' instance "
-                f"or a 'dict', not '{self.spec.__class__.__name__}'"
-            )
-        if self.recursive:
-            return self._sim_recursive(self.phrase, self.spec)
-        return self._sim_phrase(self.phrase, self.spec)
+        pcn = Phrase.cname()
+        raise ValueError(
+            f"specification must be a '{pcn}' instance "
+            f"or a 'dict', not '{self.spec.__class__.__name__}'"
+        )
 
     # Internals ---------------------------------------------------------------
 
@@ -739,7 +744,7 @@ class PhraseVectors:
                     pdict[k] = getattr(phrase, v)
                 else:
                     pdict[k] = v(phrase)
-        if self.what == "components":
+        elif self.what == "components":
             for comp in phrase.components:
                 pdict.setdefault(comp.alias.lower(), []).append(comp)
             pdict = { k: DataSequence(v) for k, v in pdict.items() }
@@ -765,5 +770,12 @@ class PhraseVectors:
         toks = tuple(toks)
         if not toks:
             raise ValueError("cannot fetch word vectors; empty token list")
-        vectors = self.vectors
-        return sum(vectors[tok] for tok in toks) / len(toks)
+        return sum(self._get_single_vec(tok) for tok in toks) / len(toks)
+
+    def _get_single_vec(self, tok: str | int) -> np.ndarray[tuple[int], np.floating]:
+        try:
+            return self.vectors[tok]
+        except KeyError:
+            vlen = self.vocab.vectors_length
+            dtype = self.vectors.data.dtype
+            return np.zeros(vlen, dtype=dtype)

@@ -6,6 +6,7 @@ from .frames import Frame, Actants, Events
 from ..grammar import Sent, Phrase, Conjuncts
 from ..nlp import Corpus
 from ..nlp.tokens import Doc
+from ..datastruct import DataSequence
 
 
 class Story(Semantic, MutableMapping):
@@ -32,7 +33,8 @@ class Story(Semantic, MutableMapping):
         return self._frames[key]
 
     def __setitem__(self, key: str, value: Frame) -> None:
-        if isinstance(value, Callable):
+        if isinstance(value, Callable) \
+        and not isinstance(value, Frame):
             value = Frame.subclass(value)(self)
         self._frames[key] = value
 
@@ -48,8 +50,8 @@ class Story(Semantic, MutableMapping):
     # Properties --------------------------------------------------------------
 
     @property
-    def phrases(self) -> tuple[Phrase, ...]:
-        return self._phrases
+    def phrases(self) -> DataSequence[Phrase]:
+        return DataSequence(self._phrases)
     @phrases.setter
     def _(self, phrases: Iterable[Phrase]) -> None:
         self._phrases = Conjuncts.get_chain(phrases)
@@ -58,11 +60,14 @@ class Story(Semantic, MutableMapping):
 
     @property
     def frames(self) -> tuple[Frame, ...]:
-        return tuple(self._frames.values())
+        return self._frames
 
     @property
     def sents(self) -> Iterable[Sent]:
-        yield from unique_everseen(p.sent for p in self.phrases)
+        return DataSequence(unique_everseen(
+            (p.sent for p in self.phrases),
+            key=lambda s: (hash(s.doc), s.idx)
+        ))
 
     # Constructors ------------------------------------------------------------
 

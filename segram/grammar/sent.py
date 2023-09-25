@@ -154,7 +154,7 @@ class Sent(Sequence, DocElement):
 
     # Methods -----------------------------------------------------------------
 
-    def similarity(self, other: Self, *args: Any, **kwds: Any) -> float:
+    def similarity(self, spec: Self | dict , *args: Any, **kwds: Any) -> float:
         """Structured similarity to other sentence.
 
         It is computed as the average similarity between
@@ -162,16 +162,21 @@ class Sent(Sequence, DocElement):
 
         Parameters
         ----------
-        other
-            Other sentence.
+        spec
+            Match specification. It may be another sentence
+            or a match specification dictionary as used
+            in structured similarity for phrases.
         *args, **kwds
             Passed to :meth:`segram.grammar.Phrase.similarity.
         """
         sroots = self.roots
-        oroots = other.roots
-        return sum(score for score, *_ in best_matches(
-            sroots, oroots, lambda s, o: s.similarity(o, *args, **kwds)
-        )) / max(len(sroots), len(oroots))
+        if isinstance(spec, Sent):
+            oroots = spec.roots
+            return sum(score for score, *_ in best_matches(
+                sroots, oroots, lambda s, o: s.similarity(o, *args, **kwds)
+            )) / max(len(sroots), len(oroots))
+        return sum(p.similarity(spec, *args, **kwds) for p in sroots) / len(sroots)
+
 
     @classmethod
     def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:

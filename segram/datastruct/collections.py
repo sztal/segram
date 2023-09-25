@@ -2,8 +2,10 @@
 generic data filtering and transformation method.
 """
 from typing import Self, Any, Iterable, Collection, Sequence, Callable
+from types import MethodType
 from abc import abstractmethod
 from functools import total_ordering
+from itertools import groupby
 from ..abc import SegramABC
 
 
@@ -134,6 +136,47 @@ class DataCollectionABC(Collection, SegramABC):
             self.imap(func, *args, **kwds)
         ))
 
+    def sort(
+        self,
+        key: str | Callable,
+        *args: Any,
+        reverse: bool = False,
+        scores: bool = False,
+        **kwds: Any
+    ) -> Self:
+        """Sort elements.
+
+        It is typically best to first flatten the sequence
+        in case it contains nested sequences.
+
+        Parameters
+        ----------
+        by
+            Name of an attribute or a method defined on items.
+            Alternatively a callable.
+        scores
+            Should sorting scores be returned
+            together with the objects (so 2-tuples are returned).
+        *args, **kwds
+            Passed to the sorting callable.
+        """
+        keyfunc = self._get_keyfunc(key, *args, **kwds)
+        members = sorted(self.members, key=keyfunc, reverse=reverse)
+        if scores:
+            members = zip(sorted(self.map(keyfunc), reverse=reverse), members)
+        return self.copy(members=members)
+
+    def groupby(self, key: str | Callable, *args: Any, **kwds: Any) -> Self:
+        """Group by key attribute or function/method.
+
+        Importantly, the key function/values must be sortable.
+        """
+        members = []
+        keyfunc = self._get_keyfunc(key, *args, **kwds)
+        for _, group in self.sort(key, *args, **kwds).pipe(groupby, key=keyfunc):
+            members.append(DataSequence(group))
+        return DataChain(members)
+
     def get(self, attr: str) -> Self:
         """Extract attributes from members."""
         return self.map(lambda m: getattr(m, attr))
@@ -174,6 +217,20 @@ class DataCollectionABC(Collection, SegramABC):
                 return getattr(o, func)(*args, **kwds)
             return _func
         return func
+
+    @staticmethod
+    def _get_keyfunc(func: str | Callable, *args: Any, **kwds: Any) -> Callable:
+        def keyfunc(obj):
+            nonlocal func
+            key = func
+            if isinstance(key, str):
+                key = getattr(obj, key)
+            if isinstance(key, MethodType):
+                key = key(*args, **kwds)
+            elif isinstance(key, Callable):
+                key = key(obj, *args, **kwds)
+            return key
+        return keyfunc
 
 
 @total_ordering
