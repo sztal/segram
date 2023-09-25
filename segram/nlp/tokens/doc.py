@@ -1,4 +1,6 @@
 from typing import Any, Iterable, Self
+import json
+from murmurhash import hash_unicode
 from spacy.tokens import Doc as SpacyDoc, Token as SpacyToken
 from .abc import NLP
 from .token import Token
@@ -10,7 +12,11 @@ from ...utils.diff import iter_diffs, equal, IDiffType
 
 class Doc(NLP):
     """Enhanced document class."""
-    __slots__ = ()
+    __slots__ = ("_id",)
+
+    def __init__(self, *args: Any, **kwds: Any) -> None:
+        super().__init__(*args, **kwds)
+        self._id = None
 
     def __hash__(self) -> int:
         return super().__hash__()
@@ -48,7 +54,23 @@ class Doc(NLP):
     @property
     def id(self) -> int:
         """Hash id of the document tokenization."""
-        return hash(tuple(k, tuple(v)) for k, v in self.data.items())
+        if self._id is None:
+            string = json.dumps(
+                self.coredata, check_circular=False, indent=None,
+                separators=(",", ":"), sort_keys=True
+            )
+            self._id = hash_unicode(string)
+        return self._id
+
+    @property
+    def coredata(self) -> dict[str, Any]:
+        fields = (
+            "words", "spaces", "tags", "pos",
+            "morphs", "lemmas", "heads", "deps", "ents"
+        )
+        meta = getattr(self._, f"{settings.spacy_alias}_meta")
+        data = { k: v for k, v in self.data.items() if k in fields }
+        return { "meta": meta, "data": data }
 
     @property
     def noun_chunks(self) -> Iterable[Span]:

@@ -1,14 +1,11 @@
-from typing import Any, NamedTuple, Sequence, Iterable, Self
+from typing import Any, Sequence, Iterable, Self, Literal
 from collections import Counter
 from spacy.tokens import Doc as SpacyDoc
 from spacy.language import Language
-from .tokens import Doc
+from tqdm.auto import tqdm
+from .tokens import Doc, Token
 from .. import settings
-
-
-class TokenDistributions(NamedTuple):
-    text: Counter
-    lemma: Counter
+from ..datastruct import DataSequence
 
 
 class Corpus(Sequence):
@@ -16,13 +13,28 @@ class Corpus(Sequence):
 
     Attributes
     ----------
+    token_dist
+        Token distribution.
+    count
+        Count raw words, lowercased words or lemmas.
     resolve_coref
         If ``True`` then token coreferences are resolved when
         calculating token text and lemma frequency distributions.
     """
-    def __init__(self, *, resolve_coref: bool = True) -> None:
+    _count_vals = ("words", "lower", "lemmas")
+
+    def __init__(
+        self,
+        nlp: Language,
+        *,
+        count_method: Literal[*_count_vals] = "lemmas",
+        resolve_coref: bool = True
+    ) -> None:
+        self._check_count_method(count_method)
         self._dmap = {}
-        self.dist = TokenDistributions(Counter(), Counter())
+        self.nlp = nlp
+        self.token_dist = Counter()
+        self.count_method = count_method
         self.resolve_coref = resolve_coref
 
     def __getitem__(self, idx: int | slice) -> Doc | tuple[Doc, ...]:
@@ -38,31 +50,71 @@ class Corpus(Sequence):
         dn = doc.__class__.__name__
         raise NotImplementedError(f"'{cn}' cannot contain '{dn}' objects")
 
+    def __repr__(self) -> str:
+        cn = self.__class__.__name__
+        ndoc = len(self)
+        count = self.count_method
+        at = hex(id(self))
+        dword = "doc" if ndoc == 1 else "docs"
+        return f"<{cn} with {ndoc} {dword} and count method '{count}' at {at}>"
+
     # Properties --------------------------------------------------------------
 
     @property
-    def docs(self) -> tuple[Doc]:
-        return tuple(self._dmap.values())
+    def docs(self) -> DataSequence[Doc]:
+        return DataSequence(self._dmap.values())
 
     # Methods -----------------------------------------------------------------
 
-    def add_doc(self, doc: Doc) -> None:
-        """Add document to the corpus."""
+    def add_doc(self, doc: Doc | str) -> None:
+        """Add document to the corpus.
+
+        The method recognizes identical documents
+        and do not add the same ones more than once.
+        The identity check is based on :meth:`segram.nlp.Doc.id`.
+
+        See also
+        --------
+        segram.nlp.Doc.id : persistent document identifier.
+        segram.nlp.Doc.coredata : data used to generate the identifier.
+        """
+        if isinstance(doc, str):
+            doc = self.nlp(doc)
         if isinstance(doc, SpacyDoc):
             doc = getattr(doc._, settings.spacy_alias)
         if doc not in self:
-            self._dmap[hash(doc)] = doc
-            if self.resolve_coref:
-                self.dist.text.update(t.coref.text for t in doc)
-                self.dist.lemma.update(t.coref.lemma for t in doc)
-            else:
-                self.dist.text.update(t.text for t in doc)
-                self.dist.lemma.update(t.lemma for t in doc)
+            self._dmap[doc.id] = doc
+            self.token_dist += self._count_toks(doc)
 
-    def add_docs(self, docs: Iterable[Doc]) -> None:
-        """Add documents to the corpus."""
-        for doc in docs:
+    def add_docs(
+        self,
+        docs: Iterable[Doc | str],
+        *,
+        progress: bool = False,
+        **kwds: Any
+    ) -> None:
+        """Add documents to the corpus.
+
+        ``**kwds`` are passed to :func:`tqdm.tqdm` with
+        ``progress`` used to switch the progress bar
+        (i.e. it is used as ``disable=not progress``).
+        """
+        for doc in tqdm(docs, disable=not progress, **kwds):
             self.add_doc(doc)
+
+    def count_tokens(self, what: Literal[_count_vals]) -> None:
+        """(Re)count tokens.
+
+        ``what`` specifies what kind of tokens should be counted.
+        Recount is done only when necessary, i.e. when the call
+        changes the previous count_method method.
+        """
+        self._check_count_method(what)
+        if what != self.count_method:
+            self.count_method = what
+            self.token_dist = Counter()
+            for doc in self:
+                self.token_dist += self._count_toks(doc)
 
     @classmethod
     def from_texts(
@@ -93,3 +145,21 @@ class Corpus(Sequence):
             for d in nlp.pipe(texts, **pipe_kws)
         )
         return obj
+
+    # Internals ---------------------------------------------------------------
+
+    def _count_toks(self, toks: Iterable[Token]) -> Counter:
+        toks = DataSequence(toks)
+        if self.resolve_coref:
+            toks = toks.get("coref")
+        if self.count_method == "lemma":
+            toks = toks.get("lemma")
+        else:
+            toks = toks.get("text")
+            if self.count_method == "lower":
+                toks.map(str.lower)
+        return Counter(toks)
+
+    def _check_count_method(self, what: str) -> None:
+        if what not in self._count_vals:
+            raise ValueError(f"'count' has to be one of {self._count_vals}")

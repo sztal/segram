@@ -3,8 +3,7 @@ from more_itertools import unique_everseen
 from .abc import Semantic
 from .frames import Frame, Actants, Events
 from ..grammar import Sent, Phrase, Conjuncts
-from ..nlp import Corpus
-from ..nlp.tokens import Doc
+from ..nlp import Corpus, Doc
 from ..datastruct import DataSequence
 
 
@@ -16,14 +15,14 @@ class Story(Semantic, MutableMapping):
     phrases
         Tuple of phrases the story operates on.
     """
-    __slots__ = ("_phrases", "frames")
+    __slots__ = ("corpus", "_phrases", "frames")
 
     def __init__(
         self,
-        phrases: Iterable[Phrase] = (),
+        corpus: Corpus | None = None,
         **kwds: Frame
     ) -> None:
-        self._phrases = Conjuncts.get_chain(phrases)
+        self.corpus = corpus
         self.frames = {
             "actants": Actants(self),
             "events": Events(self),

@@ -6,3 +6,4 @@ the package concerned with processing the output produced by
 a backend.
 """
 from .corpus import Corpus
+from .tokens import Token, Span, Doc
