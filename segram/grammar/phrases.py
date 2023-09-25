@@ -88,6 +88,7 @@ class Phrase(TokenElement):
     @property
     def head(self) -> Component:
         """Head component of the phrase."""
+        return self.sent.cmap[self.idx]
 
     @property
     def lead(self) -> Self:
@@ -450,7 +451,7 @@ class Phrase(TokenElement):
         """Serialize to a data dictionary."""
         return {
             "@class": self.alias,
-            "head": self.head.idx,
+            "head": self.tok.i,
             "dep": self.dep.name,
             "sconj": self.sconj.i if self.sconj else None,
             "lead": self._lead
