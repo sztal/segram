@@ -66,7 +66,7 @@ def best_matches(
 def sort_map(mapping: Mapping) -> Mapping:
     return mapping.__class__({
         k: v for k, v
-        in sorted(mapping.items(), key=lambda x: x[1])
+        in sorted(mapping.items(), key=lambda x: x[0])
     })
 
 def stringify(obj: Any, **kwds: Any) -> str:

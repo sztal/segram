@@ -3,7 +3,6 @@ from spacy import displacy
 from spacy.tokens import Span as SpacySpan
 from .abc import NLP
 from .token import Token
-from ... import settings
 from ...utils.diff import iter_diffs, equal, IDiffType
 
 
@@ -86,34 +85,10 @@ class Span(NLP):
         """Grammar sentence object associated with the NLP sentence."""
         if (obj := self.doc.grammar.smap.get((self.start, self.end))):
             return obj
-        return self.make_grammar(use_data=None)
+        typ = self.doc.get_grammar_type()
+        return typ.types.Sent.from_sent(self)
 
     # Methods -----------------------------------------------------------------
-
-    def make_grammar(self, *, use_data: bool | None = None) -> "Sent":
-        """Make and cache grammar sentence object.
-
-        Parameters
-        ----------
-        use_data
-            Should precomputed data stored in the underlying
-            document object be used instead of parsing of the
-            sentence. If ``None`` then the data is used if it
-            is available.
-        """
-        typ = self.doc.get_grammar_type()
-        alias = settings.spacy_alias
-        if use_data is None:
-            attr = f"{alias}_grammar_data"
-            data = getattr(self.doc._, attr, None)
-            use_data = bool(data)
-        if use_data:
-            data = data[(self.start, self.end)]
-            obj = typ.types.Sent.from_data(self.doc, data)
-        else:
-            obj = typ.types.Sent.from_sent(self)
-        self.doc.cache[obj.idx] = obj
-        return obj
 
     def char_span(self, *args: Any, **kwds: Any) -> SpacySpan | None:
         out = self.span.char_span(*args, **kwds)

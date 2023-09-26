@@ -6,7 +6,6 @@ all main semantic grammar transformations and related auxiliary methods.
 from typing import Any, Sequence, ClassVar, Mapping
 from types import MappingProxyType
 from importlib import import_module
-from time import time
 import spacy
 from spacy.tokens import Doc
 from spacy.language import Language
@@ -48,7 +47,6 @@ class Segram(Pipe):
         grammar: str,
         preprocess: Sequence[str],
         alias: str = __title__,
-        lazy_data: bool = True,
         vectors: str | Language | None = None
     ) -> None:
         """Initialization method.
@@ -69,9 +67,6 @@ class Segram(Pipe):
             model. Must be provided by the name of a model or the model
             object itself, so the it is possible to keep track of the model
             name.
-        lazy_data
-            Should grammar data be generated lazily only when needed
-            for the first time.
         """
         if not alias:
             raise ValueError(
@@ -88,7 +83,6 @@ class Segram(Pipe):
         settings.spacy_alias = alias
         self.nlp = nlp
         self.name = name
-        self.lazy_data = lazy_data
         self.extensions = self.import_module(grammar, nlp.lang)
         self.grammar = f"{grammar}.{nlp.lang}"
         if isinstance(vectors, str):
@@ -115,17 +109,6 @@ class Segram(Pipe):
         meta = self.meta.copy()
         setattr(doc._, f"{alias}_meta", meta)
         setattr(doc._, f"{alias}_cache", {})
-        setattr(doc._, f"{alias}_model", self.get_model_name(self.nlp))
-        if not self.lazy_data:
-            start = time()
-            data = {
-                (sent.start, sent.end): \
-                    sent.make_grammar(use_data=False).to_data()
-                for sent in getattr(doc._, alias).sents
-            }
-            setattr(doc._, f"{alias}_grammar_data", data)
-            elapsed = time()-start
-            meta["segram_computation_time"] = elapsed
         return doc
 
     # Properties --------------------------------------------------------------

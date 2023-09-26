@@ -10,3 +10,4 @@ from .phrases import RulebasedEnglishNounPhrase
 from .phrases import RulebasedEnglishDescPhrase
 from .phrases import RulebasedEnglishPrepPhrase
 from .sent import RulebasedEnglishSent
+from .doc import RulebasedEnglishDoc

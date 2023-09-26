@@ -6,3 +6,4 @@ from .phrases import EnglishPhrase
 from .phrases import EnglishVerbPhrase, EnglishNounPhrase
 from .phrases import EnglishDescPhrase, EnglishPrepPhrase
 from .sent import EnglishSent
+from .doc import EnglishDoc

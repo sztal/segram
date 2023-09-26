@@ -136,7 +136,8 @@ class Doc(NLP):
         return self.sns(self.tok.copy())
 
     def get_grammar_type(self):
-        key = getattr(self._, f"{settings.spacy_alias}_meta")[f"{settings.spacy_alias}_grammar"]
+        alias = settings.spacy_alias
+        key = getattr(self._, f"{alias}_meta")[f"{alias}_grammar"]
         return grammars.get(key)
 
 

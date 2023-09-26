@@ -31,6 +31,7 @@ class GrammarNamespace(Namespace):
     DP: type["DescPhrase"]
     PP: type["PrepPhrase"]
     Sent: type["Sent"]
+    Doc: type["Doc"]
 
 
 class Grammar(SegramWithDocABC, Container):

@@ -8,7 +8,6 @@ def nlp():
     spacy.prefer_gpu()
     model = spacy.load("en_core_web_trf")
     model.add_pipe("segram", config={
-        "lazy_data": True,
         "vectors": None
     })
     return model
