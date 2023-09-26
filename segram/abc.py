@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from .utils.docstrings import inherit_docstring
 from .utils.diff import iter_diffs, IDiffType
 from .utils.meta import init_class_attrs, get_cname, get_ppath
+from .utils.misc import stringify
 
 
 def labelled(label: str) -> Callable:
@@ -125,9 +126,7 @@ class SegramABC(ABC):
         with keyword arguments passed in ``**kwds``.
         Otherwise the plain ``__repr__()`` is used.
         """
-        if (to_str := getattr(obj, "to_str", None)):
-            return to_str(**kwds)
-        return repr(obj)
+        return stringify(obj, **kwds)
 
     def equal(self, other: Any, *, strict: bool = True) -> bool:
         """Are ``self`` and ``other`` equal.

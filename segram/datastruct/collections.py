@@ -1,67 +1,20 @@
 """Enhanced :mod:`collections.abc` classes implementing
 generic data filtering and transformation method.
 """
-from typing import Self, Any, Iterable, Sequence, Callable
-from typing import ClassVar, Mapping, MutableSequence
+from typing import Self, Any, Callable, Sequence, Iterable
 from types import MethodType
-from abc import ABC, abstractmethod
-from copy import copy
+from abc import abstractmethod
 from functools import total_ordering
 from itertools import groupby, product
-from ..utils.meta import init_class_attrs
 
 
-class DataABC(ABC):
-    """Abstract base class for data collections."""
-    __slots__ = ("__data__",)
-    slot_names: ClassVar[tuple[str, ...]] = ()
-
-    def __init__(self, data: Iterable = ()) -> None:
-        self.__data__ = data
-
-    def __repr__(self) -> str:
-        return repr(self.__data__)
-
-    def __init_subclass__(cls, interface: type | None = None) -> None:
-        init_class_attrs(cls, {
-            "__slots__": "slot_names"
-        }, check_slots=True)
-
-    # Methods -----------------------------------------------------------------
-
-    def copy(self, **kwds: Any) -> Self:
-        return self.__class__({ "data": copy(self.__data__), **kwds })
-
-    # Internals ---------------------------------------------------------------
-
-    @staticmethod
-    def _handle_string_func(func: str | Callable) -> Callable:
-        if isinstance(func, str):
-            def _func(o, *args, **kwds):
-                return getattr(o, func)(*args, **kwds)
-            return _func
-        return func
-
-    @staticmethod
-    def _get_keyfunc(func: str | Callable, *args: Any, **kwds: Any) -> Callable:
-        def keyfunc(obj):
-            nonlocal func
-            key = func
-            if isinstance(key, str):
-                key = getattr(obj, key)
-            if isinstance(key, MethodType):
-                key = key(*args, **kwds)
-            elif isinstance(key, Callable):
-                key = key(obj, *args, **kwds)
-            return key
-        return keyfunc
-
-
-class DataIterable(Iterable, DataABC):
+class DataIterableABC(Iterable):
     """Abstract base class for data iterables."""
+    __slots__ = ()
 
+    @abstractmethod
     def __iter__(self) -> Iterable:
-        yield from self.__data__
+        pass
 
     # Properties --------------------------------------------------------------
 
@@ -85,7 +38,7 @@ class DataIterable(Iterable, DataABC):
             func = self._handle_string_func(func)
         def _iter():
             for obj in self:
-                if isinstance(obj, DataIterable):
+                if isinstance(obj, DataIterableABC):
                     if (subs := obj.filter(func, *args, **kwds)) \
                     or not _drop_empty:
                         yield subs
@@ -98,7 +51,7 @@ class DataIterable(Iterable, DataABC):
         func = self._handle_string_func(func)
         def _iter():
             for obj in self:
-                if isinstance(obj, DataIterable):
+                if isinstance(obj, DataIterableABC):
                     yield obj.map(func, *args, **kwds)
                 else:
                     yield func(obj, *args, **kwds)
@@ -125,34 +78,71 @@ class DataIterable(Iterable, DataABC):
         return all(self)
 
     def iter_flat(self) -> Iterable:
-        for obj in self.__data__:
-            if isinstance(obj, Mapping) \
-            or not isinstance(obj, DataIterable | tuple | list):
-                yield obj
-            elif isinstance(obj, DataIterable):
-                yield from obj.iter_flat()
-            else:
+        for obj in self:
+            if isinstance(obj, DataIterableABC | tuple | list):
                 yield from obj
+            else:
+                yield obj
+
+    # Internals ---------------------------------------------------------------
+
+    @staticmethod
+    def _handle_string_func(func: str | Callable) -> Callable:
+        if isinstance(func, str):
+            def _func(o, *args, **kwds):
+                return getattr(o, func)(*args, **kwds)
+            return _func
+        return func
+
+    @staticmethod
+    def _get_keyfunc(func: str | Callable, *args: Any, **kwds: Any) -> Callable:
+        def keyfunc(obj):
+            nonlocal func
+            key = func
+            if isinstance(key, str):
+                key = getattr(obj, key)
+            if isinstance(key, MethodType):
+                key = key(*args, **kwds)
+            elif isinstance(key, Callable):
+                key = key(obj, *args, **kwds)
+            return key
+        return keyfunc
+
+
+class DataIterable(DataIterableABC):
+    """Data iterable class."""
+    __slots__ = ("__data__",)
+
+    def __init__(self, data: Iterable, /) -> None:
+        self.__data__ = data
+
+    def __iter__(self) -> Iterable:
+        yield from self.__data__
+
 
 @total_ordering
-class DataSequence(Sequence, DataIterable):
+class DataSequenceABC(Sequence, DataIterableABC):
     """Data sequence class."""
 
-    def __getitem__(self, idx: int | slice) -> Any | Self:
-        if isinstance(idx, int):
-            return self.__data__[idx]
-        return self.__class__(self.__data__[idx])
+    @abstractmethod
+    def __repr__(self) -> str:
+        pass
 
+    @abstractmethod
+    def __getitem__(self, idx: int | slice) -> Any | Self:
+        pass
+
+    @abstractmethod
     def __len__(self) -> int:
-        return len(self.__data__)
+        pass
 
     @abstractmethod
     def __eq__(self, other: Any) -> bool:
-        """Equality comparison."""
+        pass
 
     @abstractmethod
     def __lt__(self, other: Any) -> bool:
-        """Lower than comparison."""
+        pass
 
     def pairwise(self) -> Iterable[tuple[Any, Any]]:
         """Iterate over all pairs of data items."""
@@ -188,7 +178,7 @@ class DataSequence(Sequence, DataIterable):
             keyfunc = self._get_keyfunc(key, *args, **kwds)
         else:
             keyfunc = None
-        data = sorted(self.__data__, key=keyfunc, reverse=reverse)
+        data = sorted(self, key=keyfunc, reverse=reverse)
         if keyfunc and show_keys:
             data = zip(sorted(self.map(keyfunc), reverse=reverse), data)
         return self.__class__(data)
@@ -219,57 +209,36 @@ class DataSequence(Sequence, DataIterable):
         return DataChain(groups)
 
 
-class DataTuple(DataSequence):
+class DataTuple(tuple, DataSequenceABC):
     """Data tuple class."""
-    def __init__(self, data: Iterable = ()) -> None:
-        super().__init__(tuple(data))
-
-    def __hash__(self) -> int:
-        return hash(self.__data__)
-
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, DataTuple | tuple):
-            return self.__data__ == tuple(other)
-        return False
-
-    def __lt__(self, other: Any) -> bool:
-        if not isinstance(other, DataTuple | tuple):
-            return NotImplemented
-        return self.__data__ < tuple(other)
 
 
-class DataList(MutableSequence, DataTuple):
+class DataList(list, DataSequenceABC):
     """Data list class."""
+
+
+class DataChain(DataSequenceABC):
+    """Chain of data tuples class."""
+    __slots__ = ("__data__",)
+
     def __init__(self, data: Iterable = ()) -> None:
-        super().__init__(list(data))
+        self.__data__ = DataTuple(
+            x if isinstance(x, DataSequenceABC) else DataTuple(x)
+            for x in data
+        )
+
+    def __repr__(self) -> str:
+        return repr(self.__data__)
 
     def __eq__(self, other: Any) -> bool:
-        if isinstance(other, DataList | list):
-            return self.__data__ == list(other)
+        if isinstance(other, DataChain):
+            return self.__data__ == other.__data__
         return False
 
     def __lt__(self, other: Any) -> bool:
-        if not isinstance(other, DataList | list):
-            return NotImplemented
-        return self.__data__ < list(other)
-
-    def __setitem__(self, idx: int | slice, value: Any) -> None:
-        self.__data__[idx] = value
-
-    def __delitem__(self, idx: int | slice) -> None:
-        del self.__data__[idx]
-
-    def insert(self, index: int, value: Any) -> None:
-        self.__data__.insert(index, value)
-
-
-class DataChain(DataTuple):
-    """Chain of data tuples class."""
-    def __init__(self, data: Iterable = ()) -> None:
-        super().__init__(tuple(
-            x if isinstance(x, DataSequence) else DataTuple
-            for x in data
-        ))
+        if isinstance(other, DataChain):
+            return self.__data__ < other.__data__
+        return NotImplemented
 
     def __iter__(self) -> Iterable[Any]:
         yield from self.iter_flat()
@@ -286,8 +255,17 @@ class DataChain(DataTuple):
 
     @property
     def groups(self) -> DataTuple:
-        return DataTuple(self.__data__)
+        return self.__data__
 
     @property
     def flat(self) -> DataTuple:
         return DataTuple(self.iter_flat())
+
+    # Methods -----------------------------------------------------------------
+
+    def iter_flat(self) -> Iterable:
+        for obj in self.__data__:
+            if isinstance(obj, DataIterableABC | tuple | list):
+                yield from obj
+            else:
+                yield obj

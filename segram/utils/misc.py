@@ -68,3 +68,14 @@ def sort_map(mapping: Mapping) -> Mapping:
         k: v for k, v
         in sorted(mapping.items(), key=lambda x: x[1])
     })
+
+def stringify(obj: Any, **kwds: Any) -> str:
+    """Convert ``obj`` to string.
+
+    If ``obj`` exposes ``to_str()`` then it is used
+    with keyword arguments passed in ``**kwds``.
+    Otherwise the plain ``__repr__()`` is used.
+    """
+    if (to_str := getattr(obj, "to_str", None)):
+        return to_str(**kwds)
+    return repr(obj)

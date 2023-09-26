@@ -1,10 +1,10 @@
 from typing import Any, Iterable, Self
 from ..nlp.tokens import Token
 from ..datastruct import DataTuple, DataChain
-from ..abc import SegramABC
+from ..utils.misc import stringify
 
 
-class Conjuncts(DataTuple, SegramABC):
+class Conjuncts(DataTuple):
     """Group of conjoined phrases.
 
     Attributes
@@ -19,7 +19,6 @@ class Conjuncts(DataTuple, SegramABC):
         Preconjunction token.
     """
     __cconjs__ = ("cconj", "preconj")
-    __slots__ = ("_lead", *__cconjs__,)
 
     def __init__(
         self,
@@ -36,11 +35,14 @@ class Conjuncts(DataTuple, SegramABC):
     def __repr__(self) -> str:
         return self.to_str(color=True)
 
+    def __hash__(self) -> int:
+        return hash(self.hashdata)
+
     # Properties --------------------------------------------------------------
 
     @property
     def members(self) -> tuple["Phrase", ...]:
-        return self.__data__
+        return tuple(self)
 
     @property
     def lead(self) -> Any:
@@ -52,11 +54,16 @@ class Conjuncts(DataTuple, SegramABC):
 
     @property
     def hashdata(self) -> tuple[Any, ...]:
-        return (self.members, self.lead, tuple(self.cconjs))
+        return (tuple(self), self._lead, tuple(self.cconjs))
 
     @property
     def data(self) -> dict[str, any]:
-        return { "members": self.members, "lead": self.lead, **super().data }
+        return {
+            "members": self.members,
+            "lead": self.lead,
+            "cconj": self.cconj,
+            "preconj": self.preconj
+        }
 
     # Methods -----------------------------------------------------------------
 
@@ -114,12 +121,12 @@ class Conjuncts(DataTuple, SegramABC):
     def to_str(self, *, color: bool = False, **kwds: Any) -> str:
         coords = \
             "|".join(
-                self.stringify(c, color=color, **kwds)
+                stringify(c, color=color, **kwds)
                 for c in self.cconjs if c
             ).strip()
         if coords:
             coords = f"[{coords}]"
-        members = ", ".join(self.stringify(m, color=color, **kwds) for m in self.members)
+        members = ", ".join(stringify(m, color=color, **kwds) for m in self.members)
         return f"{coords}({members})"
 
     def is_comparable_with(self, other: Any) -> bool:
@@ -145,7 +152,6 @@ class Conjuncts(DataTuple, SegramABC):
         return DataChain(tuple(cls.find_groups(phrases)))
 
     def copy(self, **kwds: Any) -> Self:
-        """Make a copy."""
         return self.__class__(**{ **self.data, **kwds })
 
 
