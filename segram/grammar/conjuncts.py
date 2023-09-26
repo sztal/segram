@@ -1,9 +1,10 @@
 from typing import Any, Iterable, Self
 from ..nlp.tokens import Token
-from ..datastruct import DataSequence, DataChain
+from ..datastruct import DataTuple, DataChain
+from ..abc import SegramABC
 
 
-class Conjuncts(DataSequence):
+class Conjuncts(DataTuple, SegramABC):
     """Group of conjoined phrases.
 
     Attributes
@@ -38,6 +39,10 @@ class Conjuncts(DataSequence):
     # Properties --------------------------------------------------------------
 
     @property
+    def members(self) -> tuple["Phrase", ...]:
+        return self.__data__
+
+    @property
     def lead(self) -> Any:
         return self.members[self._lead]
 
@@ -47,7 +52,7 @@ class Conjuncts(DataSequence):
 
     @property
     def hashdata(self) -> tuple[Any, ...]:
-        return (*super().hashdata, self.lead, tuple(self.cconjs))
+        return (self.members, self.lead, tuple(self.cconjs))
 
     # Methods -----------------------------------------------------------------
 
@@ -135,6 +140,10 @@ class Conjuncts(DataSequence):
         """Get chain of conjuncts groups in ``phrases``."""
         return DataChain(tuple(cls.find_groups(phrases)))
 
+    def copy(self, **kwds: Any) -> Self:
+        """Make a copy."""
+        return self.__class__(**{ **self.to_data(), **kwds })
+
 
 # class PhraseGroup(DataChain):
 #     """Phrase group class.
@@ -145,8 +154,8 @@ class Conjuncts(DataSequence):
 #     """
 #     __slots__ = ()
 
-#     def __init__(self, members: Iterable[DataSequence] = ()) -> None:
-#         members = DataSequence(
+#     def __init__(self, members: Iterable[DataTuple] = ()) -> None:
+#         members = DataTuple(
 #             Conjuncts(m) if not isinstance(m, Conjuncts) else m
 #             for m in members
 #         )

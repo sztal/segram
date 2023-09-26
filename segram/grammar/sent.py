@@ -10,10 +10,10 @@ from ..nlp.tokens import Doc, Span, Token
 from ..symbols import Role
 from ..abc import labelled
 from ..utils.misc import best_matches, sort_map
-from ..datastruct import DataChain, DataSequence
+from ..datastruct import DataChain, DataTuple
 
 
-PVType = DataChain[DataSequence[Phrase]]
+PVType = DataChain[DataTuple[Phrase]]
 component = labelled("component")
 
 
@@ -90,22 +90,22 @@ class Sent(SentElement):
 
     @component
     @property
-    def verbs(self) -> DataSequence[Verb]:
+    def verbs(self) -> DataTuple[Verb]:
         return self.components.filter(lambda c: isinstance(c, Verb))
 
     @component
     @property
-    def nouns(self) -> DataSequence[Noun]:
+    def nouns(self) -> DataTuple[Noun]:
         return self.components.filter(lambda c: isinstance(c, Noun))
 
     @component
     @property
-    def preps(self) -> DataSequence[Verb]:
+    def preps(self) -> DataTuple[Verb]:
         return self.components.filter(lambda c: isinstance(c, Prep))
 
     @component
     @property
-    def descs(self) -> DataSequence[Verb]:
+    def descs(self) -> DataTuple[Verb]:
         return self.components.filter(lambda c: isinstance(c, Desc))
 
     @property
@@ -129,12 +129,12 @@ class Sent(SentElement):
             .get_chain(p for p in self.phrases if isinstance(p, PrepPhrase))
 
     @property
-    def tokens(self) -> DataSequence[Token]:
-        return DataSequence(tuple(self.sent))
+    def tokens(self) -> DataTuple[Token]:
+        return DataTuple(tuple(self.sent))
 
     @property
-    def components(self) -> DataSequence[Component]:
-        return DataSequence(self.cmap.values())
+    def components(self) -> DataTuple[Component]:
+        return DataTuple(self.cmap.values())
 
     @property
     def phrases(self) -> PVType:

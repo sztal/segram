@@ -5,7 +5,7 @@ from more_itertools import unique_everseen
 from ..grammar import Conjuncts, Sent, Phrase, NounPhrase, VerbPhrase
 from ..symbols import Dep
 from ..utils.matching import Matcher
-from ..datastruct import DataChain, DataSequence
+from ..datastruct import DataChain, DataTuple
 
 
 class Frame(Sequence):
@@ -76,7 +76,7 @@ class Frame(Sequence):
 
     @property
     def sents(self) -> DataChain[Sent]:
-        return DataSequence(unique_everseen(
+        return DataTuple(unique_everseen(
             (p.sent for p in self.phrases),
             key=lambda s: (hash(s.doc), s.idx)
         )).groupby(lambda s: hash(s.doc))

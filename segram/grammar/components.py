@@ -9,7 +9,7 @@ from .conjuncts import Conjuncts
 from ..nlp.tokens import Token
 from ..symbols import POS, Role, Tense, Modal, Mood, Symbol
 from ..utils.misc import cosine_similarity
-from ..datastruct import DataSequence
+from ..datastruct import DataTuple
 from ..nlp.tokens import Doc
 
 
@@ -82,7 +82,7 @@ class Component(TokenElement):
         self.exclam = exclam
         self.intj = intj
         self.neg = neg
-        self.sub = DataSequence(sub)
+        self.sub = DataTuple(sub)
 
     def __new__(cls, *args: Any, **kwds: Any) -> None:
         obj = super().__new__(cls)

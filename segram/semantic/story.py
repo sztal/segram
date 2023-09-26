@@ -1,11 +1,10 @@
 from typing import Self, Any, Iterable, MutableMapping, Callable
-from more_itertools import unique_everseen
 from spacy.language import Language
 from .frames import Frame, Actants, Events
 from ..grammar import Sent, Phrase, Conjuncts
 from ..nlp import Corpus
 from ..grammar import Doc, Sent, Phrase
-from ..datastruct import DataSequence, DataChain
+from ..datastruct import DataTuple, DataChain
 
 
 class Story(MutableMapping):
@@ -51,13 +50,13 @@ class Story(MutableMapping):
     # Properties --------------------------------------------------------------
 
     @property
-    def docs(self) -> DataSequence[Doc]:
+    def docs(self) -> DataTuple[Doc]:
         """Enhanced grammar documents in the story."""
 
     @property
-    def sents(self) -> DataChain[DataSequence[Sent]]:
+    def sents(self) -> DataChain[DataTuple[Sent]]:
         """Enhanced grammar sentences in the story."""
-        return DataChain(DataSequence(doc.sents) for doc in self.corpus)
+        return DataChain(DataTuple(doc.sents) for doc in self.corpus)
 
     # Methods -----------------------------------------------------------------
 

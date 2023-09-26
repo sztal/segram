@@ -7,7 +7,7 @@ from .components import Component
 from ..nlp.tokens import Doc as DocNLP
 from .. import settings
 from ..utils.misc import sort_map
-from ..datastruct import DataSequence, DataChain
+from ..datastruct import DataTuple, DataChain
 
 
 class Doc(DocElement):
@@ -40,23 +40,23 @@ class Doc(DocElement):
     # Properties --------------------------------------------------------------
 
     @property
-    def sents(self) -> DataSequence[Sent]:
+    def sents(self) -> DataTuple[Sent]:
         """Sentences in the document."""
-        return DataSequence(s.grammar for s in self.doc.sents)
+        return DataTuple(s.grammar for s in self.doc.sents)
 
     @property
-    def phrases(self) -> DataChain[DataSequence[Phrase]]:
+    def phrases(self) -> DataChain[DataTuple[Phrase]]:
         """Phrase in the document grouped by sentences and conjunct groups."""
         return DataChain(s.phrases for s in self.sents)
 
     @property
-    def components(self) -> DataChain[DataChain[DataSequence[Component]]]:
+    def components(self) -> DataChain[DataChain[DataTuple[Component]]]:
         """Unique components by sentences."""
         return DataChain(s.components for s in self.sents)
 
     @property
-    def tokens(self) -> DataSequence[Token]:
-        return DataSequence(self.doc)
+    def tokens(self) -> DataTuple[Token]:
+        return DataTuple(self.doc)
 
     # Methods -----------------------------------------------------------------
 

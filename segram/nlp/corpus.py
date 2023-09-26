@@ -5,7 +5,7 @@ from spacy.language import Language
 from tqdm.auto import tqdm
 from .tokens import Doc, Token
 from .. import settings
-from ..datastruct import DataSequence
+from ..datastruct import DataTuple
 
 
 class Corpus(Sequence):
@@ -61,8 +61,8 @@ class Corpus(Sequence):
     # Properties --------------------------------------------------------------
 
     @property
-    def docs(self) -> DataSequence[Doc]:
-        return DataSequence(self._dmap.values())
+    def docs(self) -> DataTuple[Doc]:
+        return DataTuple(self._dmap.values())
 
     # Methods -----------------------------------------------------------------
 
@@ -152,7 +152,7 @@ class Corpus(Sequence):
     # Internals ---------------------------------------------------------------
 
     def _count_toks(self, toks: Iterable[Token]) -> Counter:
-        toks = DataSequence(toks)
+        toks = DataTuple(toks)
         if self.resolve_coref:
             toks = toks.get("coref")
         if self.count_method == "lemma":

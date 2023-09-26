@@ -1,2 +1,2 @@
-from .collections import DataSequence, DataChain
+from .collections import DataTuple, DataChain
 from .namespace import Namespace

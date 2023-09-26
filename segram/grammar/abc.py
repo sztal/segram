@@ -15,7 +15,7 @@ import numpy as np
 from ..nlp.tokens import Doc, Span, Token
 from ..utils.registries import grammars
 from ..abc import SegramWithDocABC
-from ..datastruct import Namespace, DataSequence
+from ..datastruct import Namespace, DataTuple
 
 
 class GrammarNamespace(Namespace):
@@ -103,7 +103,7 @@ class GrammarElement(Grammar, Sequence):
     def __bool__(self) -> bool:
         return self.idx is not None
 
-    def __getitem__(self, idx) -> Token | DataSequence[Token]:
+    def __getitem__(self, idx) -> Token | DataTuple[Token]:
         return self.tokens[idx]
 
     def __len__(self) -> int:
@@ -124,7 +124,7 @@ class GrammarElement(Grammar, Sequence):
 
     @property
     @abstractmethod
-    def tokens(self) -> DataSequence[Token]:
+    def tokens(self) -> DataTuple[Token]:
         """Tokens sequence of the element."""
 
     @property

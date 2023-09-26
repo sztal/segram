@@ -13,7 +13,7 @@ from .conjuncts import Conjuncts
 from ..nlp.tokens import Doc, Token
 from ..symbols import Role, Dep
 from ..abc import labelled
-from ..datastruct import DataSequence, DataChain
+from ..datastruct import DataTuple, DataChain
 from ..utils.misc import cosine_similarity, best_matches
 
 
@@ -24,7 +24,7 @@ PVSpecType: TypeAlias = dict[str, Union[
     Callable[[Union["Phrase", Component, Token]], float]
 ]]
 _what_type: TypeAlias = \
-    str | Callable[["Phrase"], DataSequence[Union["Phrase", Component]]]
+    str | Callable[["Phrase"], DataTuple[Union["Phrase", Component]]]
 _what_vals = ("phrases", "components")
 
 
@@ -257,7 +257,7 @@ class Phrase(TokenElement):
         return tuple(n for n in self.part_names if getattr(self, n))
 
     @property
-    def components(self) -> DataChain[DataSequence[Component]]:
+    def components(self) -> DataChain[DataTuple[Component]]:
         members = [Conjuncts([self.head]), *self.subdag.get("head").members]
         return DataChain(members)
 
@@ -298,7 +298,7 @@ class Phrase(TokenElement):
                 yield from parent.iter_supdag(skip=0)
         yield from islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None)
 
-    def dfs(self, subdag: bool = True) -> DataSequence[DataSequence[Self]]:
+    def dfs(self, subdag: bool = True) -> DataTuple[DataTuple[Self]]:
         """Depth-first search.
 
         Parameters
@@ -315,8 +315,8 @@ class Phrase(TokenElement):
                     new_chain.append(p)
                     yield from _dfs(p, chain=new_chain)
             else:
-                yield DataSequence(chain)
-        return DataSequence(_dfs(self))
+                yield DataTuple(chain)
+        return DataTuple(_dfs(self))
 
     def similarity(
         self,
@@ -350,7 +350,7 @@ class Phrase(TokenElement):
             Alternatively, custom parts may be defined by providing a dictionary
             mapping part names to either phrase attribute names or arbitrary
             callables accepting a single phrase and producing an instance of
-            :class:`segram.datastruct.DataSequence` populated with phrase
+            :class:`segram.datastruct.DataTuple` populated with phrase
             or component objects.
         weights
             Dictionary mapping phrase part or component names or custom names
@@ -714,7 +714,7 @@ class PhraseVectors:
             return name in self.only
         return True
 
-    def _get_parts(self, phrase: Phrase) -> dict[str, DataSequence[Phrase | Component]]:
+    def _get_parts(self, phrase: Phrase) -> dict[str, DataTuple[Phrase | Component]]:
         pdict = {}
         if isinstance(self.what, Mapping):
             for k, v in self.what.items():
@@ -725,14 +725,14 @@ class PhraseVectors:
         elif self.what == "components":
             for comp in phrase.components:
                 pdict.setdefault(comp.alias.lower(), []).append(comp)
-            pdict = { k: DataSequence(v) for k, v in pdict.items() }
+            pdict = { k: DataTuple(v) for k, v in pdict.items() }
         else:
             for name in phrase.part_names:
                 if (value := getattr(phrase, name)):
                     pdict[name] = value
         return pdict
 
-    def _get_vectors(self, seq: DataSequence):
+    def _get_vectors(self, seq: DataTuple):
         if self.what == "phrases" and self.comp_vectors:
             seq = seq.get("components").flat
         if (vec := seq.flat.get("vector")):
