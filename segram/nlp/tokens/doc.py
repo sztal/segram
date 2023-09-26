@@ -98,7 +98,10 @@ class Doc(NLP):
 
     @property
     def grammar(self) -> "Doc":
-        return getattr(self._, f"{settings.spacy_alias}_doc")
+        if (doc := getattr(self._, f"{settings.spacy_alias}_doc")):
+            return doc
+        typ = self.get_grammar_type()
+        return typ.types.Doc(self)
 
     # Methods -----------------------------------------------------------------
 
@@ -139,13 +142,13 @@ class Doc(NLP):
         res = Doc.from_docs(*args, **kwds)
         return res if res is None else cls.sns(res)
 
-    def copy(self) -> SpacyDoc:
-        return self.sns(self.tok.copy())
-
     def get_grammar_type(self):
         alias = settings.spacy_alias
         key = getattr(self._, f"{alias}_meta")[f"{alias}_doc"]
         return grammars.get(key)
+
+    def copy(self) -> Self:
+        return self.from_data(self.to_data())
 
 
 # Register comparison functions for testing -----------------------------------

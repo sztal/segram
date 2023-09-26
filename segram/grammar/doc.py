@@ -1,5 +1,7 @@
+# pylint: disable=no-name-in-module
 from typing import Any, Self, Mapping
 from spacy.tokens import Doc as SpacyDoc, Token
+from spacy.vocab import Vocab
 from .abc import DocElement
 from .sent import Sent
 from .phrases import Phrase
@@ -7,7 +9,7 @@ from .components import Component
 from ..nlp.tokens import Doc as DocNLP
 from .. import settings
 from ..utils.misc import sort_map
-from ..datastruct import DataTuple, DataChain
+from ..datastruct import DataIterable, DataTuple, DataChain
 
 
 class Doc(DocElement):
@@ -45,21 +47,30 @@ class Doc(DocElement):
     @property
     def sents(self) -> DataTuple[Sent]:
         """Sentences in the document."""
-        return DataTuple(self.smap.values())
+        return DataIterable(self.smap.values())
 
     @property
     def phrases(self) -> DataChain[DataTuple[Phrase]]:
         """Phrase in the document grouped by sentences and conjunct groups."""
-        return DataChain(s.phrases for s in self.sents)
+        return DataIterable(s.phrase for s in self.sents).flat
 
     @property
     def components(self) -> DataChain[DataChain[DataTuple[Component]]]:
         """Unique components by sentences."""
-        return DataChain(s.components for s in self.sents)
+        return DataIterable(s.components for s in self.sents).flat
 
     @property
     def tokens(self) -> DataTuple[Token]:
         return DataTuple(self.doc)
+
+    @property
+    def has_vectors(self) -> bool:
+        """Check if document is equiped with word vectors."""
+        return self.doc.has_vectors
+
+    @property
+    def vocab(self) -> Vocab:
+        return self.doc.vocab
 
     # Methods -----------------------------------------------------------------
 
@@ -79,10 +90,14 @@ class Doc(DocElement):
             Should grammar data be serialized too.
         """
         if grammar:
-            key = f"{settings.spacy_alias}_grammar_data"
+            key = f"{settings.spacy_alias}_data"
             smap = { idx: s.to_data() for idx, s in self.smap.items() }
             setattr(self.doc._, key, smap)
         return self.doc.to_data()
+
+    def copy(self) -> Self:
+        # pylint: disable=arguments-differ
+        return self.from_data(self.to_data())
 
     @classmethod
     def from_data(cls, data: dict[str, Any]) -> Self:
@@ -91,7 +106,7 @@ class Doc(DocElement):
         """
         doc = DocNLP.from_data(data)
         grammar = cls.from_doc(doc, smap={})
-        smap = getattr(doc._, f"{settings.spacy_alias}_grammar_data")
+        smap = getattr(doc._, f"{settings.spacy_alias}_data")
         for idx, dct in smap.items():
             grammar.smap[idx] = grammar.types.Sent.from_data(doc, dct)
         return grammar

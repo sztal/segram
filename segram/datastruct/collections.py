@@ -5,7 +5,8 @@ from typing import Self, Any, Callable, Sequence, Iterable
 from types import MethodType
 from abc import abstractmethod
 from functools import total_ordering
-from itertools import groupby, product
+from itertools import groupby, product, islice
+from more_itertools import unique_everseen
 
 
 class DataIterableABC(Iterable):
@@ -15,6 +16,14 @@ class DataIterableABC(Iterable):
     @abstractmethod
     def __iter__(self) -> Iterable:
         pass
+
+    def __getitem__(self, idx: int | slice) -> Any | Self:
+        if isinstance(idx, int):
+            return next(islice(self, idx, idx+1))
+        start = idx.start
+        stop = idx.stop
+        step = idx.step
+        return self.__class__(islice(self, start, stop, step))
 
     # Properties --------------------------------------------------------------
 
@@ -78,6 +87,10 @@ class DataIterableABC(Iterable):
     def get(self, attr: str) -> Self:
         """Extract attributes from data items."""
         return self.map(lambda m: getattr(m, attr))
+
+    def unique(self, key: str | Callable[[Any, ...], Any] | None = None) -> Self:
+        """Return unique values (only first unique occurences are returned)."""
+        return self.__class__(self.pipe(unique_everseen, key=key))
 
     def any(self) -> bool:
         return any(self)

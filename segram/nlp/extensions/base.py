@@ -39,7 +39,7 @@ class SpacyExtensions:
             "meta": { "default": None },
             "cache": { "default": None },
             "doc": { "default": None },
-            "grammar_data": { "default": None },
+            "data": { "default": None },
             "model": { "default": None }
         }
     }

@@ -5,7 +5,7 @@ from spacy.language import Language
 from tqdm.auto import tqdm
 from .tokens import Doc, Token
 from .. import settings
-from ..datastruct import DataTuple
+from ..datastruct import DataIterable, DataTuple
 
 
 class Corpus(Sequence):
@@ -56,13 +56,13 @@ class Corpus(Sequence):
         count = self.count_method
         at = hex(id(self))
         dword = "doc" if ndoc == 1 else "docs"
-        return f"<{cn} with {ndoc} {dword} and count method '{count}' at {at}>"
+        return f"<{cn} with {ndoc} {dword} and 'count_method=\"{count}\"' at {at}>"
 
     # Properties --------------------------------------------------------------
 
     @property
-    def docs(self) -> DataTuple[Doc]:
-        return DataTuple(self._dmap.values())
+    def docs(self) -> DataIterable[Doc]:
+        return DataIterable(self._dmap.values())
 
     # Methods -----------------------------------------------------------------
 
@@ -116,6 +116,22 @@ class Corpus(Sequence):
             for doc in self:
                 self.token_dist += self._count_toks(doc)
 
+    def copy(self) -> Self:
+        """Make a copy.
+
+        Language model object is passed but not copied.
+        Document objects are copied.
+        """
+        # pylint: disable=protected-access
+        kwds = {
+            "count_method": self.count_method,
+            "resolve_coref": self.resolve_coref
+        }
+        obj = self.__class__(self.nlp, **kwds)
+        obj._dmap = { idx: doc.copy() for idx, doc in self._dmap.items() }
+        obj.token_dist = self.token_dist.copy()
+        return obj
+
     @classmethod
     def from_texts(
         cls,
@@ -140,7 +156,7 @@ class Corpus(Sequence):
             Passed :meth:`__init__`.
             Vocabulary is taken from the language model.
         """
-        obj = cls(**kwds)
+        obj = cls(nlp, **kwds)
         pipe_kws = pipe_kws or {}
         tqdm_kws = tqdm_kws or {}
         obj.add_docs((
