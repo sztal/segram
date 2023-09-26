@@ -5,7 +5,7 @@ from copy import deepcopy
 import json
 from murmurhash import hash_unicode
 from segram import settings
-from segram.grammar import Sent
+from segram.grammar import Sent, Doc as GrammarDoc
 from segram.nlp.tokens import Doc, Span
 from segram.datastruct import Namespace
 from segram.utils.meta import get_cname
@@ -66,7 +66,7 @@ class TestSet:
     def __len__(self) -> int:
         return len(self.cmap)
 
-    def __getitem__(self, key: int | str) -> Self:
+    def __getitem__(self, key: int | str) -> "DocTestCase":
         key = self.hash_key(key)
         data = self.cmap[key]
         if "expected" not in data:
@@ -81,7 +81,7 @@ class TestSet:
     def __delitem__(self, key: int | str) -> None:
         del self.cmap[self.hash_key(key)]
 
-    def __iter__(self) -> Iterable[Doc]:
+    def __iter__(self) -> Iterable[GrammarDoc]:
         for key in self.cmap:
             yield self[key]
 
@@ -120,12 +120,12 @@ class TestSet:
         resource = JSONResource.from_package(package, filename)
         return cls(nlp, resource, **kwds)
 
-    def make_doc(self, text: str) -> Doc:
+    def make_doc(self, text: str) -> GrammarDoc:
         """Make document object."""
         doc = self.nlp(text)
         if self.callback:
             doc = self.callback(doc)
-        return doc
+        return GrammarDoc.from_doc(doc)
 
     def add(
         self,
@@ -133,7 +133,7 @@ class TestSet:
         index: int | None = None,
         *,
         expected: Iterable[dict[str, Any]] = ()
-    ) -> Doc:
+    ) -> "DocTestCase":
         """Add new test case.
 
         Parameters
@@ -264,7 +264,7 @@ class DocTestCase:
         self,
         tests: TestSet,
         key: int,
-        doc: Doc,
+        doc: GrammarDoc,
         *,
         bad: Iterable[int] | None = None
     ) -> None:
@@ -274,7 +274,7 @@ class DocTestCase:
         self.bad = set(bad or ())
 
     def __repr__(self) -> str:
-        return str(self.doc)
+        return f"{self.__class__.__name__}({self.doc})"
 
     def __len__(self) -> int:
         return len(self.expected)
@@ -359,8 +359,7 @@ class SentTestCase:
     def __init__(self, parent: DocTestCase, i: int, sent: Span) -> None:
         self.parent = parent
         self.i = i
-        self.sent = sent
-        self.results = self.sent.make_grammar(use_data=None)
+        self.results = sent
 
     def __repr__(self) -> str:
         msg = settings.printer.get()
@@ -395,7 +394,11 @@ class SentTestCase:
 
     @property
     def doc(self) -> Doc:
-        return self.sent.doc
+        return self.parent.doc
+
+    @property
+    def sent(self) -> Span:
+        return self.results.sent
 
     @property
     def tests(self) -> TestSet:
@@ -451,16 +454,15 @@ class SentTestCase:
 
     def serialize(self) -> Sent:
         """Get diff for serialized doc."""
-        serialized = self.results.from_data(self.doc, self.results.to_data())
+        serialized = self.results.from_data(self.doc.doc, self.results.to_data())
         return GrammarDiff(self.results, serialized, strict=False)
 
     def simple_conversion(self) -> Sent:
         """Conversion to generic :mod:`segram` NLP document
         and generic language class without NLP backend is correct.
         """
-        doc = self.doc.__class__.from_data(self.doc.data)
-        grammar = self.results.grammars.get(doc.lang)
-        other = grammar.types.Sent.from_data(doc, self.results.to_data())
+        doc = self.doc.__class__.from_data(self.doc.to_data())
+        other = doc.smap[self.results.idx]
         return GrammarDiff(self.results, other, strict=False)
 
     def rprint(self) -> None:

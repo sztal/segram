@@ -8,12 +8,3 @@ class DocNLP(GrammarNLP, Doc):
     with NLP backend methods.
     """
     __slots__ = ()
-
-    # Methods -----------------------------------------------------------------
-
-    @classmethod
-    def from_doc(cls, doc: _Doc) -> Doc:
-        """Construct from a document object."""
-        doc = cls(doc)
-        doc.sents   # pylint: disable=pointless-statement
-        return doc

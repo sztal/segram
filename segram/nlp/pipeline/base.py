@@ -94,7 +94,7 @@ class Segram(Pipe):
         self.meta = {
             "name":               self.name,
             __title__+"_version": __version__,
-            __title__+"_grammar": self.grammar,
+            __title__+"_doc": self.grammar,
             "spacy_alias":        alias,
             "spacy_version":      spacy.__version__,
             "model":              self.get_model_info(nlp),

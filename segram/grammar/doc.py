@@ -33,7 +33,7 @@ class Doc(DocElement):
         alias = settings.spacy_alias
         if isinstance(doc, SpacyDoc):
             doc = getattr(doc._, alias)
-        setattr(doc._, f"{alias}_grammar", self)
+        setattr(doc._, f"{alias}_doc", self)
         super().__init__(doc)
         if smap is None:
             self.smap = {}  # Little trick to make 's.grammar' work

@@ -1,7 +1,9 @@
 from typing import Any, Iterable, Self
 import json
 from murmurhash import hash_unicode
-from spacy.tokens import Doc as SpacyDoc, Token as SpacyToken
+from spacy.tokens import Doc as SpacyDoc
+from spacy.tokens import Span as SpacySpan
+from spacy.tokens import Token as SpacyToken
 from .abc import NLP
 from .token import Token
 from .span import Span
@@ -36,10 +38,14 @@ class Doc(NLP):
     def __getitem__(self, idx: int | slice) -> Token | Span:
         return self.sns(self.tok[idx])
 
-    def __contains__(self, other: Token | SpacyToken) -> bool:
-        if isinstance(other, Token):
+    def __contains__(self, other: Token | SpacyToken | Span | SpacySpan) -> bool:
+        if isinstance(other, SpacyToken | SpacySpan):
+            return other in self.tok
+        if isinstance(other, Token | Span):
             return other.tok in self.tok
-        return other in self.tok
+        ocn = other.__class__.__name__
+        scn = self.__class__.__name__
+        raise TypeError(f"'{scn}' cannot contain '{ocn}' objects")
 
     # Properties --------------------------------------------------------------
 
@@ -92,7 +98,7 @@ class Doc(NLP):
 
     @property
     def grammar(self) -> "Doc":
-        return getattr(self._, f"{settings.spacy_alias}_grammar")
+        return getattr(self._, f"{settings.spacy_alias}_doc")
 
     # Methods -----------------------------------------------------------------
 
@@ -101,8 +107,7 @@ class Doc(NLP):
         without any language model data.
         """
         user_data = self.tok.user_data.copy()
-        cachekey = ("._.", f"{settings.spacy_alias}_cache", None, None)
-        user_data[cachekey].clear()
+        alias = settings.spacy_alias
         data = {
             "vocab": self.vocab,
             "words": [ t.text for t in self ],
@@ -116,6 +121,8 @@ class Doc(NLP):
             "deps": [ t.dep_ for t in self.tok ],
             "ents": [ f"{t.ent_tag}" for t in self ]
         }
+        user_data[("._.", f"{alias}_cache", None, None)] = {}
+        user_data[("._.", f"{alias}_doc", None, None)] = None
         return data
 
     @classmethod
@@ -137,7 +144,7 @@ class Doc(NLP):
 
     def get_grammar_type(self):
         alias = settings.spacy_alias
-        key = getattr(self._, f"{alias}_meta")[f"{alias}_grammar"]
+        key = getattr(self._, f"{alias}_meta")[f"{alias}_doc"]
         return grammars.get(key)
 
 
