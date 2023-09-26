@@ -129,11 +129,6 @@ class GrammarElement(Grammar, Sequence):
         """Tokens sequence of the element."""
 
     @property
-    def hashdata(self) -> tuple[Any, ...]:
-        """Data tuple used for hashing."""
-        return (*super().hashdata, self.idx)
-
-    @property
     def text(self) -> str:
         """Raw text of element."""
         return self.to_str()
@@ -154,6 +149,9 @@ class GrammarElement(Grammar, Sequence):
     def to_str(self, **kwds: Any) -> str:
         """Represent as a string."""
         raise NotImplementedError
+
+    def get_hashdata(self) -> tuple[Any, ...]:
+        return (*super().get_hashdata(), self.idx)
 
     def match(
         self,
@@ -204,6 +202,7 @@ class DocElement(GrammarElement):
     alias: ClassVar[str] = "DocElem"
 
     def __init__(self, doc: Doc) -> None:
+        super().__init__()
         self.doc = doc
 
     def __contains__(self, other: Any) -> bool:
@@ -253,6 +252,7 @@ class SentElement(GrammarElement):
     alias: ClassVar[str] = "SentElem"
 
     def __init__(self, sent: Span) -> None:
+        super().__init__()
         if sent.root.sent is not sent:
             raise ValueError("'sent' has to be a proper sentence span object")
         self.sent = sent
@@ -316,6 +316,7 @@ class TokenElement(GrammarElement):
     alias: ClassVar[str] = "TokElem"
 
     def __init__(self, tok: Token) -> None:
+        super().__init__()
         self.tok = tok
         self._sent = None
         self._doc = None

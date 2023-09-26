@@ -9,7 +9,7 @@ from spacy.vocab import Vocab
 from spacy.vectors import Vectors
 from .abc import TokenElement
 from .components import Component, Verb, Noun, Desc, Prep
-from .conjuncts import Conjuncts
+from .conjuncts import PhraseGroup, Conjuncts
 from ..nlp.tokens import Doc, Token
 from ..symbols import Role, Dep
 from ..abc import labelled
@@ -18,7 +18,7 @@ from ..utils.misc import cosine_similarity, best_matches
 
 
 part = labelled("part")
-PGType: TypeAlias = DataChain[Conjuncts["Phrase"]]
+PGType: TypeAlias = PhraseGroup["Phrase"]
 PVSpecType: TypeAlias = dict[str, Union[
     str, Iterable[str],
     Callable[[Union["Phrase", Component, Token]], float]
@@ -109,22 +109,22 @@ class Phrase(TokenElement):
     @property
     def children(self) -> PGType:
         """Child phrases."""
-        return Conjuncts.get_chain(self.sent.graph[self])
+        return PhraseGroup(self.sent.graph[self])
 
     @property
     def parents(self) -> PGType:
         """Parent phrases."""
-        return Conjuncts.get_chain(self.sent.graph.rev[self])
+        return PhraseGroup(self.sent.graph.rev[self])
 
     @property
     def subdag(self) -> PGType:
         """Phrasal proper subdag."""
-        return Conjuncts.get_chain(self.iter_subdag(skip=1))
+        return PhraseGroup(self.iter_subdag(skip=1))
 
     @property
     def supdag(self) -> PGType:
         """Phrasal proper superdag."""
-        return Conjuncts.get_chain(self.iter_supdag(skip=1))
+        return PhraseGroup(self.iter_supdag(skip=1))
 
     @property
     def depth(self) -> int:
@@ -152,7 +152,7 @@ class Phrase(TokenElement):
     @property
     def verb(self) -> PGType:
         """Return ``self`` if VP or nothing otherwise."""
-        return Conjuncts.get_chain((self,)) \
+        return PhraseGroup((self,)) \
             if isinstance(self, VerbPhrase) else DataChain()
     @part
     @property
@@ -164,61 +164,61 @@ class Phrase(TokenElement):
                 subjects.append(c)
             elif c.dep & Dep.agent:
                 subjects.extend(c.subj)
-        return Conjuncts.get_chain(subjects)
+        return PhraseGroup(subjects)
     @part
     @property
     def dobj(self) -> PGType:
         """Direct object phrases."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.dobj
         )
     @part
     @property
     def iobj(self) -> PGType:
         """Indirect object phrases."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.iobj
         )
     @part
     @property
     def desc(self) -> PGType:
         """Description phrases."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & (Dep.desc | Dep.misc)
         )
     @part
     @property
     def cdesc(self) -> PGType:
         """Clausal descriptions."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.cdesc
         )
     @part
     @property
     def adesc(self) -> PGType:
         """Adjectival complement descriptions."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.adesc
         )
     @part
     @property
     def prep(self) -> PGType:
         """Prepositions."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.prep
         )
     @part
     @property
     def pobj(self) -> PGType:
         """Prepositional objects."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.pobj
         )
     @part
     @property
     def subcl(self) -> PGType:
         """Subclauses."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children
             if (c.dep & Dep.subcl) \
             or (isinstance(c, VerbPhrase) and (c.dep & Dep.acl))
@@ -227,28 +227,28 @@ class Phrase(TokenElement):
     @property
     def relcl(self) -> PGType:
         """Relative clausses."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.relcl
         )
     @part
     @property
     def xcomp(self) -> PGType:
         """Open clausal complements."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.xcomp
         )
     @part
     @property
     def appos(self) -> PGType:
         """Appositional modifiers."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.appos
         )
     @part
     @property
     def nmod(self) -> PGType:
         """Nominal modifiers."""
-        return Conjuncts.get_chain(
+        return PhraseGroup(
             c for c in self.children if c.dep & Dep.nmod
         )
 

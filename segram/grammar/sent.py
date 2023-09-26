@@ -1,5 +1,5 @@
 from typing import Any, ClassVar, Self, Mapping
-from .conjuncts import Conjuncts
+from .conjuncts import PhraseGroup, Conjuncts
 from .abc import SentElement
 from .components import Component
 from .components import Verb, Noun, Prep, Desc
@@ -86,7 +86,7 @@ class Sent(SentElement):
 
     @property
     def sources(self) -> PVType:
-        return Conjuncts.get_chain(self.graph.sources)
+        return PhraseGroup(self.graph.sources)
 
     @component
     @property
@@ -138,7 +138,7 @@ class Sent(SentElement):
 
     @property
     def phrases(self) -> PVType:
-        return Conjuncts.get_chain(self.pmap.values())
+        return PhraseGroup(self.pmap.values())
 
     @property
     def coverage(self) -> float:

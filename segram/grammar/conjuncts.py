@@ -4,6 +4,15 @@ from ..datastruct import DataTuple, DataChain
 from ..utils.misc import stringify
 
 
+class PhraseGroup(DataTuple):
+    """Group of phrases."""
+
+    @property
+    def conjs(self) -> DataChain:
+        """Phrases groups as conjuncts."""
+        return Conjuncts.get_chain(self)
+
+
 class Conjuncts(DataTuple):
     """Group of conjoined phrases.
 
@@ -158,7 +167,6 @@ class Conjuncts(DataTuple):
         kwds = { **self.data, **kwds }
         members = kwds.pop("members", ())
         return self.__class__(members, **kwds)
-
 
 # class PhraseGroup(DataChain):
 #     """Phrase group class.

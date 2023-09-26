@@ -20,10 +20,12 @@ def labelled(label: str) -> Callable:
 
 class SegramABC(ABC):
     """Abstract base class for specialized :mod:`segram` classes."""
-    __slots__ = ()
-    __dont_compare__ = ()
+    __slots__ = ("_hashdata",)
     slot_names: ClassVar[tuple[str, ...]] = ()
     differ: type["Differ"]
+
+    def __init__(self) -> None:
+        self._hashdata = None
 
     def __hash__(self) -> int:
         return hash(self.hashdata)
@@ -34,9 +36,6 @@ class SegramABC(ABC):
         cls.init_class_attrs({
             "__slots__": "slot_names",
         }, check_slots=True)
-        cls.init_class_attrs({
-            "__dont_compare__": "dont_compare"
-        }, check_slots=False)
         if len(cls.slot_names) != len(set(cls.slot_names)):
             raise TypeError(f"'__slots__' are not unique: {cls.slot_names}")
         # Handle labelled methods
@@ -60,7 +59,9 @@ class SegramABC(ABC):
     @property
     def hashdata(self) -> tuple[Any, ...]:
         """Tuple with hashable objects used for calculating instance hash."""
-        raise NotImplementedError(f"'{self.cname()}' is not hashable")
+        if self._hashdata is None:
+            self._hashdata = self.get_hashdata()
+        return self._hashdata
 
     @property
     def data(self) -> dict[str, Any]:
@@ -71,6 +72,10 @@ class SegramABC(ABC):
         }
 
     # Methods -----------------------------------------------------------------
+
+    def get_hashdata(self) -> None:
+        """Get data used for generating object hash."""
+        raise NotImplementedError(f"'{self.cname()}' is not hashable")
 
     @classmethod
     def cname(cls, obj: Any | None = None) -> str:
@@ -189,6 +194,7 @@ class SegramWithDocABC(SegramABC):
         """Language code of the document."""
         return self.doc.lang
 
-    @property
-    def hashdata(self) -> tuple[Any, ...]:
-        return (self.ppath(), id(self.doc))
+    # Methods -----------------------------------------------------------------
+
+    def get_hashdata(self) -> tuple[Any, ...]:
+        return (hash(self.ppath()), id(self.doc))
