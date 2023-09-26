@@ -99,21 +99,10 @@ class GrammarElement(Grammar, Sequence):
     def __eq__(self, other: Self) -> bool:
         if self.is_comparable_with(other):
             return self.idx == other.idx
-        return NotImplemented
+        return False
 
     def __bool__(self) -> bool:
         return self.idx is not None
-
-    def __getitem__(self, idx) -> Token | DataTuple[Token]:
-        return self.tokens[idx]
-
-    def __len__(self) -> int:
-        return len(self.tokens)
-
-    @abstractmethod
-    def __contains__(self, other: Any) -> bool:
-        ocn = other.__class__.__name__
-        raise TypeError(f"'{self.cname()}' cannot contain '{ocn}'")
 
     # Properties --------------------------------------------------------------
 
@@ -124,9 +113,9 @@ class GrammarElement(Grammar, Sequence):
         raise NotImplementedError
 
     @property
-    @abstractmethod
     def tokens(self) -> DataTuple[Token]:
         """Tokens sequence of the element."""
+        return DataTuple(self)
 
     @property
     def text(self) -> str:
@@ -196,7 +185,7 @@ class GrammarElement(Grammar, Sequence):
         return is_match
 
 
-class DocElement(GrammarElement):
+class DocElement(GrammarElement, Sequence):
     """Document element class."""
     __slots__ = ("doc",)
     alias: ClassVar[str] = "DocElem"
@@ -205,15 +194,11 @@ class DocElement(GrammarElement):
         super().__init__()
         self.doc = doc
 
-    def __contains__(self, other: Any) -> bool:
-        tokens = self.tokens
-        if isinstance(other, SentElement | TokenElement):
-            return all(tok in tokens for tok in other.tokens)
-        if isinstance(other, Span):
-            return all(tok in tokens for tok in other)
-        if isinstance(other, Token):
-            return other in tokens
-        return super().__contains__(other)
+    def __getitem__(self, idx: int | slice) -> Token | Span:
+        return self.doc[idx]
+
+    def __len__(self) -> int:
+        return len(self.doc)
 
     # Properties --------------------------------------------------------------
 
@@ -258,20 +243,16 @@ class SentElement(GrammarElement):
         self.sent = sent
         self._doc = None
 
-    def __contains__(self, other: Any) -> bool:
-        tokens = self.tokens
-        if isinstance(other, TokenElement):
-            return all(tok in tokens for tok in other.tokens)
-        if isinstance(other, Span):
-            return all(tok in tokens for tok in other)
-        if isinstance(other, Token):
-            return other in tokens
-        return super().__contains__(other)
-
     def __lt__(self, other: Self) -> bool:
         if self.is_comparable_with(other):
             return self.idx < other.idx
         return NotImplemented
+
+    def __getitem__(self, idx: int | slice) -> Token | Span:
+        return self.sent[idx]
+
+    def __len__(self) -> int:
+        return len(self.sent)
 
     # Properties --------------------------------------------------------------
 
@@ -321,18 +302,16 @@ class TokenElement(GrammarElement):
         self._sent = None
         self._doc = None
 
-    def __contains__(self, other: Any) -> bool:
-        tokens = self.tokens
-        if isinstance(other, Span):
-            return all(tok in tokens for tok in other.tokens)
-        if isinstance(other, Token):
-            return other in tokens
-        return super().__contains__(other)
-
     def __lt__(self, other: Self) -> bool:
         if self.is_comparable_with(other):
             return self.idx < other.idx
         return NotImplemented
+
+    def __getitem__(self, idx: int | slice) -> Token | tuple[Token, ...]:
+        return self.tokens[idx]
+
+    def __len__(self) -> int:
+        return len(self.tokens)
 
     # Properties --------------------------------------------------------------
 
@@ -352,6 +331,11 @@ class TokenElement(GrammarElement):
     def idx(self) -> int:
         """Token index within the parent document."""
         return self.tok.i
+
+    @property
+    @abstractmethod
+    def tokens(self) -> tuple[Token, ...]:
+        pass
 
     # Methods -----------------------------------------------------------------
 
