@@ -24,8 +24,6 @@ class SpacyExtensions:
     attributes
         Specification of extension attributes to register.
     """
-    __extension_types__: ClassVar[tuple[str, ...]] = \
-        ("method", "getter", "getter_cached")
     __spacy_token_types__: ClassVar[Mapping[str, type]] = MappingProxyType({
         "token": SpacyToken,
         "span": SpacySpan,

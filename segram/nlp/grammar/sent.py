@@ -29,6 +29,7 @@ class SentNLP(GrammarNLP, Sent):
     @classmethod
     def from_sent(cls, sent: Span) -> Sent:
         """Construct from a sentence span object."""
+        # pylint: disable=protected-access
         sent = cls(sent)
         for tok in sent.sent:
             cls.types.Noun.from_tok(tok)
@@ -37,7 +38,7 @@ class SentNLP(GrammarNLP, Sent):
             cls.types.Desc.from_tok(tok)
         sent.add_subs()
         sent.graph = PhraseGraph.from_links(sent.find_links())
-        sent.conjs = { conj.lead: conj for conj in sorted(sent.find_conjs()) }
+        sent.conjs = { conj._lead: conj for conj in sorted(sent.find_conjs()) }
         sent.make_mutable_children()
         sent.destroy_conjunct_links()
         sent.propagate_children_conjuncts()

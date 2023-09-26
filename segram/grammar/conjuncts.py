@@ -137,21 +137,22 @@ class Conjuncts(DataTuple):
     @classmethod
     def find_groups(cls, phrases: Iterable["Phrase"]) -> Iterable[Self]:
         """Find conjuncts groups in ``phrases``."""
+        # pylint: disable=protected-access
         groups = {}
         for phrase in phrases:
-            groups.setdefault(phrase.group.lead, []).append(phrase)
-        for lead, group in groups.items():
+            groups.setdefault(phrase.group.lead.idx, []).append(phrase)
+        for lead_idx, group in groups.items():
             if not group:
                 continue
             if len(group) == 1:
                 yield Conjuncts(group)
             else:
-                yield lead.sent.conjs[lead].copy(members=group)
+                yield group[0].sent.conjs[lead_idx].copy(members=group)
 
     @classmethod
     def get_chain(cls, phrases: Iterable["Phrase"]) -> DataChain:
         """Get chain of conjuncts groups in ``phrases``."""
-        return DataChain(tuple(cls.find_groups(phrases)))
+        return DataChain(cls.find_groups(phrases))
 
     def copy(self, **kwds: Any) -> Self:
         kwds = { **self.data, **kwds }

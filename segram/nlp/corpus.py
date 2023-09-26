@@ -56,7 +56,7 @@ class Corpus(Sequence):
         count = self.count_method
         at = hex(id(self))
         dword = "doc" if ndoc == 1 else "docs"
-        return f"<{cn} with {ndoc} {dword} and 'count_method=\"{count}\"' at {at}>"
+        return f"<{cn} with {ndoc} {dword} and count_method=\"{count}\" at {at}>"
 
     # Properties --------------------------------------------------------------
 

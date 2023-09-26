@@ -249,13 +249,14 @@ class DocElement(GrammarElement):
 @total_ordering
 class SentElement(GrammarElement):
     """Grammar element based on a sentence span."""
-    __slots__ = ("sent",)
+    __slots__ = ("sent", "_doc")
     alias: ClassVar[str] = "SentElem"
 
     def __init__(self, sent: Span) -> None:
         if sent.root.sent is not sent:
             raise ValueError("'sent' has to be a proper sentence span object")
         self.sent = sent
+        self._doc = None
 
     def __contains__(self, other: Any) -> bool:
         tokens = self.tokens
@@ -276,7 +277,9 @@ class SentElement(GrammarElement):
 
     @property
     def doc(self) -> DocElement:
-        return self.sent.doc.grammar
+        if not self._doc:
+            self._doc = self.sent.doc.grammar
+        return self._doc
 
     @property
     def root(self) -> Token:
@@ -309,11 +312,13 @@ class SentElement(GrammarElement):
 @total_ordering
 class TokenElement(GrammarElement):
     """Grammar element based on a token."""
-    __slots__ = ("tok",)
+    __slots__ = ("tok", "_sent", "_doc")
     alias: ClassVar[str] = "TokElem"
 
     def __init__(self, tok: Token) -> None:
         self.tok = tok
+        self._sent = None
+        self._doc = None
 
     def __contains__(self, other: Any) -> bool:
         tokens = self.tokens
@@ -332,11 +337,15 @@ class TokenElement(GrammarElement):
 
     @property
     def doc(self) -> DocElement:
-        return self.tok.doc.grammar
+        if not self._doc:
+            self._doc = self.tok.doc.grammar
+        return self._doc
 
     @property
     def sent(self) -> SentElement:
-        return self.tok.sent.grammar
+        if not self._sent:
+            self._sent = self.tok.sent.grammar
+        return self._sent
 
     @property
     def idx(self) -> int:

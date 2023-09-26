@@ -9,7 +9,7 @@ from .components import Component
 from ..nlp.tokens import Doc as DocNLP
 from .. import settings
 from ..utils.misc import sort_map
-from ..datastruct import DataIterable, DataTuple, DataChain
+from ..datastruct import DataIterable, DataTuple
 
 
 class Doc(DocElement):
@@ -47,15 +47,15 @@ class Doc(DocElement):
     @property
     def sents(self) -> DataTuple[Sent]:
         """Sentences in the document."""
-        return DataIterable(self.smap.values())
+        return DataTuple(self.smap.values())
 
     @property
-    def phrases(self) -> DataChain[DataTuple[Phrase]]:
+    def phrases(self) -> DataIterable[Phrase]:
         """Phrase in the document grouped by sentences and conjunct groups."""
         return DataIterable(s.phrase for s in self.sents).flat
 
     @property
-    def components(self) -> DataChain[DataChain[DataTuple[Component]]]:
+    def components(self) -> DataIterable[Component]:
         """Unique components by sentences."""
         return DataIterable(s.components for s in self.sents).flat
 
@@ -114,5 +114,7 @@ class Doc(DocElement):
     @classmethod
     def from_doc(cls, doc: DocNLP, *args: Any, **kwds: Any) -> Self:
         """Construct from NLP document object."""
+        if isinstance(doc, SpacyDoc):
+            doc = getattr(doc._, settings.spacy_alias)
         typ = doc.get_grammar_type()
         return typ.types.Doc(doc, *args, **kwds)

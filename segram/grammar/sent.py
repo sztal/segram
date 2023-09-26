@@ -46,7 +46,7 @@ class Sent(SentElement):
         cmap: Mapping[int, Component] | None = None,
         pmap: Mapping[int, Phrase] | None = None,
         graph: PhraseGraph[Phrase, tuple[Phrase, ...]] | None = None,
-        conjs: Mapping[Component, Conjuncts] | None = None
+        conjs: Mapping[int, Conjuncts] | None = None
     ) -> None:
         super().__init__(sent)
         self.cmap = sort_map(cmap or {})
@@ -173,6 +173,7 @@ class Sent(SentElement):
     @classmethod
     def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from a :class:`~segram.nlp.Doc` and a data dictionary."""
+        # pylint: disable=protected-access
         data = data.copy()
         sent = doc[data.pop("start"):data.pop("end")]
         data["cmap"] = {
@@ -185,7 +186,7 @@ class Sent(SentElement):
         }
         data["graph"] = PhraseGraph.from_data(sent, data["graph"])
         data["conjs"] = {
-            (conj := Conjuncts.from_data(sent, c)).lead: conj
+            (conj := Conjuncts.from_data(sent, c))._lead: conj
             for c in data["conjs"]
         }
         return cls(sent, **data)
