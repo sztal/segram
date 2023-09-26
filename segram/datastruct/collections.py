@@ -22,6 +22,14 @@ class DataIterableABC(Iterable):
     def flat(self) -> Self:
         return self.__class__(self.iter_flat())
 
+    @property
+    def list(self) -> "DataList":
+        return self.pipe(DataList)
+
+    @property
+    def tuple(self) -> "DataTuple":
+        return self.pipe(DataTuple)
+
     # Methods -----------------------------------------------------------------
 
     def filter(
