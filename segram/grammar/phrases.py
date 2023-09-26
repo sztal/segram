@@ -13,7 +13,7 @@ from .conjuncts import Conjuncts
 from ..nlp.tokens import Doc, Token
 from ..symbols import Role, Dep
 from ..abc import labelled
-from ..datastruct import DataTuple, DataChain
+from ..datastruct import DataIterable, DataTuple, DataChain
 from ..utils.misc import cosine_similarity, best_matches
 
 
@@ -258,8 +258,7 @@ class Phrase(TokenElement):
 
     @property
     def components(self) -> DataChain[DataTuple[Component]]:
-        members = [Conjuncts([self.head]), *self.subdag.get("head").members]
-        return DataChain(members)
+        return self.iter_subdag().get("head")
 
     # Methods -----------------------------------------------------------------
 
@@ -284,7 +283,7 @@ class Phrase(TokenElement):
             yield self
             for child in self.children:
                 yield from child.iter_subdag(skip=0)
-        yield from islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None)
+        return DataIterable(islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None))
 
     def iter_supdag(self, *, skip: int = 0) -> Iterable[Self]:
         """Iterate over phrasal supertree and omit ``skip`` first items.
@@ -296,7 +295,7 @@ class Phrase(TokenElement):
             yield self
             for parent in self.parents:
                 yield from parent.iter_supdag(skip=0)
-        yield from islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None)
+        return DataIterable(islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None))
 
     def dfs(self, subdag: bool = True) -> DataTuple[DataTuple[Self]]:
         """Depth-first search.
@@ -316,7 +315,7 @@ class Phrase(TokenElement):
                     yield from _dfs(p, chain=new_chain)
             else:
                 yield DataTuple(chain)
-        return DataTuple(_dfs(self))
+        return DataIterable(_dfs(self))
 
     def similarity(
         self,

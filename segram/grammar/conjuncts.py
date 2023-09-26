@@ -23,11 +23,13 @@ class Conjuncts(DataTuple):
     def __init__(
         self,
         members: Iterable["Phrase"] = (),
+        *,
         lead: int = 0,
         cconj: Token | None = None,
         preconj: Token | None = None
     ) -> None:
-        super().__init__(tuple(members))
+        # pylint: disable=unused-argument
+        super().__init__()
         self._lead = lead
         self.cconj = cconj
         self.preconj = preconj
@@ -94,7 +96,7 @@ class Conjuncts(DataTuple):
             cconj = doc[cconj]
         if pconj is not None:
             pconj = doc[pconj]
-        return cls(members, lead, cconj, pconj)
+        return cls(members, lead=lead, cconj=cconj, preconj=pconj)
 
     def to_data(self) -> dict[str, int | list[int] | None]:
         """Dump to data dictionary.
@@ -152,7 +154,9 @@ class Conjuncts(DataTuple):
         return DataChain(tuple(cls.find_groups(phrases)))
 
     def copy(self, **kwds: Any) -> Self:
-        return self.__class__(**{ **self.data, **kwds })
+        kwds = { **self.data, **kwds }
+        members = kwds.pop("members", ())
+        return self.__class__(members, **kwds)
 
 
 # class PhraseGroup(DataChain):
