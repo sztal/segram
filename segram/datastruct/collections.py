@@ -267,7 +267,7 @@ class DataChain(DataTuple):
     """Chain of data tuples class."""
     def __init__(self, data: Iterable = ()) -> None:
         super().__init__(tuple(
-            x if isinstance(x, DataChain) else DataTuple(x)
+            x if isinstance(x, DataSequence) else DataTuple
             for x in data
         ))
 
@@ -275,7 +275,9 @@ class DataChain(DataTuple):
         yield from self.iter_flat()
 
     def __getitem__(self, idx: int | slice) -> Any:
-        return DataTuple(tuple(self.flat[idx]))
+        if isinstance(idx, slice):
+            return DataTuple(self.flat[idx])
+        return self.flat[idx]
 
     def __len__(self) -> int:
         return sum(1 for _ in self.flat)

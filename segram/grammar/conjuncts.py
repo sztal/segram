@@ -54,6 +54,10 @@ class Conjuncts(DataTuple, SegramABC):
     def hashdata(self) -> tuple[Any, ...]:
         return (self.members, self.lead, tuple(self.cconjs))
 
+    @property
+    def data(self) -> dict[str, any]:
+        return { "members": self.members, "lead": self.lead, **super().data }
+
     # Methods -----------------------------------------------------------------
 
     @classmethod
@@ -142,7 +146,7 @@ class Conjuncts(DataTuple, SegramABC):
 
     def copy(self, **kwds: Any) -> Self:
         """Make a copy."""
-        return self.__class__(**{ **self.to_data(), **kwds })
+        return self.__class__(**{ **self.data, **kwds })
 
 
 # class PhraseGroup(DataChain):
