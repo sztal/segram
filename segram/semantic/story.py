@@ -1,4 +1,7 @@
 from typing import Self, Any, Callable
+from types import ModuleType
+import os
+import pickle
 from spacy.language import Language
 from .frames import Frame, Actants, Events
 from ..grammar import Doc, Sent, Phrase
@@ -70,3 +73,46 @@ class Story:
         """
         corpus = Corpus.from_texts(nlp, *texts, **kwds)
         return cls(corpus)
+
+    def to_data(self) -> dict[str, Any]:
+        """Dump to data dictionary."""
+        return {
+            "corpus": self.corpus.to_data(),
+            "frames": self.frames.copy()
+        }
+
+    @classmethod
+    def from_data(cls, data: dict[str, Any]) -> Self:
+        """Construct from data dictionary."""
+        data = data.copy()
+        data["corpus"] = Corpus.from_data(data["corpus"])
+        return cls(**data)
+
+    def to_disk(
+        self,
+        path: str | bytes | os.PathLike,
+        compression: ModuleType | type | None = None
+    ) -> None:
+        """Save to disk.
+
+        Anything exposing :func:`open` function/method
+        can be passed as ``compression`` argument.
+        """
+        _open = compression.open if compression else open
+        with _open(path, "wb") as fh:
+            pickle.dump(self.to_data(), fh)
+
+    @classmethod
+    def from_disk(
+        cls,
+        path: str | bytes | os.PathLike,
+        compression: ModuleType | type | None = None
+    ) -> Self:
+        """Construct from disk.
+
+        Anything exposing :func:`open` function/method
+        can be passed as ``compression`` argument.
+        """
+        _open = compression.open if compression else open
+        with _open(path, "rb") as fh:
+            return cls.from_data(pickle.load(fh))
