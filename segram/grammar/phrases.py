@@ -583,7 +583,6 @@ class PhraseVectors:
     # Internals ---------------------------------------------------------------
 
     def _sim_recursive(self, phrase: Phrase, other: Phrase) -> float:
-        import ipdb; ipdb.set_trace()
         sim = 0
         total_weight = 0
         if self._is_name_ok((name := "head")):
