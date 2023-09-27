@@ -1,7 +1,10 @@
+# pylint: disable=no-name-in-module
 from typing import Any, Sequence, Iterable, Self, Literal
 from collections import Counter
-from spacy.tokens import Doc as SpacyDoc
+from importlib import import_module
+from spacy.tokens import Doc as SpacyDoc, DocBin
 from spacy.language import Language
+from spacy.vocab import Vocab
 from tqdm.auto import tqdm
 from .tokens import Doc, Token
 from .. import settings
@@ -22,16 +25,22 @@ class Corpus(Sequence):
         calculating token text and lemma frequency distributions.
     """
     _count_vals = ("words", "lower", "lemmas")
+    _attrs = (
+        "HEAD", "TAG", "POS", "DEP", "LEMMA",
+        "MORPH", "ENT_IOB", "ENT_TYPE", "ENT_KB_ID"
+    )
 
     def __init__(
         self,
-        nlp: Language,
+        vocab: Vocab,
+        nlp: Language | None = None,
         *,
         count_method: Literal[*_count_vals] = "lemmas",
         resolve_coref: bool = True
     ) -> None:
         self._check_count_method(count_method)
         self._dmap = {}
+        self.vocab = vocab
         self.nlp = nlp
         self.token_dist = Counter()
         self.count_method = count_method
@@ -77,8 +86,19 @@ class Corpus(Sequence):
         --------
         segram.nlp.Doc.id : persistent document identifier.
         segram.nlp.Doc.coredata : data used to generate the identifier.
+
+        Raises
+        ------
+        AttributeError
+            If a language model is not defined under the attribute
+            ``self.nlp``.
         """
         if isinstance(doc, str):
+            if not self.nlp:
+                raise AttributeError(
+                    "corpus has been initialized without language model, ",
+                    "so documents passed as strings cannot be parsed."
+                )
             doc = self.nlp(doc)
         if isinstance(doc, SpacyDoc):
             doc = getattr(doc._, settings.spacy_alias)
@@ -132,6 +152,31 @@ class Corpus(Sequence):
         obj.token_dist = self.token_dist.copy()
         return obj
 
+    def get_docbin(
+        self,
+        attrs: Iterable[str] = _attrs,
+        user_data: bool = True
+    ) -> DocBin:
+        """Get documents packed as :class:`spacy.tokens.DocBin`.
+
+        Parameters
+        ----------
+        attrs
+            Token attributes to serialize.
+        user_data
+            Should user data be stored.
+            Setting to ``True`` requires clearing the cached grammar
+            objects linked to all tokens, spans and docs to allow for
+            serialization. This does not affect any functionalities
+            of existing documents, but temporarily affects performance
+            as the cache must be first reconstructed during further use.
+        """
+        if user_data:
+            for doc in self.docs:
+                Doc.clear_user_data(doc.tok.user_data)
+        dbin = DocBin(attrs, store_user_data=user_data, docs=self.docs.get("tok"))
+        return dbin
+
     @classmethod
     def from_texts(
         cls,
@@ -156,7 +201,7 @@ class Corpus(Sequence):
             Passed :meth:`__init__`.
             Vocabulary is taken from the language model.
         """
-        obj = cls(nlp, **kwds)
+        obj = cls(nlp.vocab, nlp, **kwds)
         pipe_kws = pipe_kws or {}
         tqdm_kws = tqdm_kws or {}
         obj.add_docs((
@@ -164,6 +209,41 @@ class Corpus(Sequence):
             for d in nlp.pipe(texts, **pipe_kws)
         ), progress=progress, **tqdm_kws)
         return obj
+
+    def to_data(self, nlp: bool = False) -> dict[str, Any]:
+        """Dump to data dictionary."""
+        data = {
+            "vocab": self.vocab.to_bytes(),
+            "token_dist": dict(self.token_dist),
+            "count_method": self.count_method,
+            "resolve_coref": self.resolve_coref
+        }
+        if nlp and self.nlp:
+            data["nlp"] = {
+                "module": self.nlp.__class__.__module__,
+                "name": self.nlp.__class__.__name__,
+                "data": self.nlp.to_bytes()
+            }
+        if self._dmap:
+            data["docs"] = self.get_docbin().to_bytes()
+        return data
+
+    @classmethod
+    def from_data(cls, data: dict[str, Any]) -> Self:
+        """Construct from data dictionary."""
+        # pylint: disable=no-value-for-parameter
+        vocab = Vocab().from_bytes(data["vocab"])
+        data["vocab"] = vocab
+        if (dct := data.get("nlp")):
+            nlp = getattr(import_module(dct["module"]), dct["name"])()
+            data["nlp"] = nlp.from_bytes(dct["data"])
+        if (docs := data.pop("docs", ())):
+            docs = DocBin().from_bytes(docs).get_docs(vocab)
+        token_dist = Counter(data.pop("token_dist"))
+        corpus = cls(**data)
+        corpus.add_docs(docs)
+        corpus.token_dist = token_dist
+        return corpus
 
     # Internals ---------------------------------------------------------------
 

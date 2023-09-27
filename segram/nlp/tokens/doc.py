@@ -101,18 +101,25 @@ class Doc(NLP):
 
     # Methods -----------------------------------------------------------------
 
+    @staticmethod
+    def clear_user_data(user_data: dict):
+        """Clear user data from cached :mod:`segram` objects."""
+        alias = settings.spacy_alias
+        _alias = "_"+alias
+        for k, v in user_data.items():
+            user_data[k] = v if _alias not in k else None
+        user_data[("._.", f"{alias}_doc", None, None)] = None
+        return user_data
+
+
     def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary sufficient to recreate simple document
         without any language model data.
         """
-        user_data = self.tok.user_data.copy()
-        alias = settings.spacy_alias
-        _alias = "_"+alias
         data = {
             "vocab": self.vocab,
             "words": [ t.text for t in self ],
             "spaces": [ t.whitespace for t in self ],
-            "user_data": user_data,
             "tags": [ t.tag_ for t in self.tok ],
             "pos": [ t.pos_ for t in self.tok ],
             "morphs": [ str(t.morph) for t in self.tok ],
@@ -121,11 +128,7 @@ class Doc(NLP):
             "deps": [ t.dep_ for t in self.tok ],
             "ents": [ f"{t.ent_tag}" for t in self ]
         }
-        user_data = {
-            k: v if _alias not in k else None
-            for k, v in self.tok.user_data.items()
-        }
-        user_data[("._.", f"{alias}_doc", None, None)] = None
+        data["user_data"] = self.clear_user_data(self.tok.user_data.copy())
         return data
 
     @classmethod
