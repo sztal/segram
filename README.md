@@ -68,7 +68,7 @@ in the `spacy` core in the future, these constraints should be relaxed.
 > currently not supported, i.e. using `spacy.prefer_gpu()` will
 > result in errors during coreference resolution
 > (see the corresponding
-> [Github issue](https://github.com/explosion/spaCy/issues/13023))
+> [Github issue](https://github.com/explosion/spaCy/issues/13023)).
 
 ## Supported models and languages
 
@@ -107,9 +107,68 @@ pip install git+ssh://git@github.com/sztal/segram.git
 
 #### With coreference resolution
 
+## Basic usage
+
+```python
+import spacy
+nlp = spacy.load("en_core_web_trf")
+nlp.add_pipe("segram", config={
+    "vectors": "en_core_web_lg"
+})
+nlp.add_pipe("segram_coref")
+
+doc = nlp("Merchants travelled a long way to buy spices.")
+doc._.segram
+```
+
 ## Development
 
 ### Setting up environment
+
+The [Github repository](https://github.com/sztal/segram)
+provides [conda](https://docs.conda.io/en/latest/) environment files
+for setting up development/testing environment. This installs also
+testing dependencies such as [pytest](https://docs.pytest.org/en/7.4.x/),
+which is used for running unit tests.
+
+```bash
+git clone git@github.com:sztal/segram.git
+cd segram
+conda env create -f environment.yml # default env name is 'segram'
+conda activate segram
+python -m spacy download en_core_web_trf
+python -m spacy download en_core_web_lg
+pip install --editable .
+```
+
+### Setting up environment (with coref)
+
+```bash
+git clone git@github.com:sztal/segram.git
+cd segram
+conda env create -f environment-coref.yml # default env name is 'segram'
+# In this case the versions of all language models are fixed
+# so they are installed automatically with the rest of the dependencies
+conda activate segram
+pip install --editable .
+```
+
+### Testing
+
+Currently, `segram` is only moderately tested with a unit coverage rate
+of about 70%. This will be improved in the future releases.
+
+```
+pytest          # run unit tests
+coverage run    # run unit tests and gather coverage statistics
+coverage report # show coverage report
+```
+
+### Makefile
+
+`Makefile` defines many commands useful during development
+(see the content of the file). However, Windows users may need
+to modify it a bit to make it work.
 
 ## Overview
 

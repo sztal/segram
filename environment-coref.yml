@@ -6,6 +6,7 @@ dependencies:
   - python>=3.11
   - spacy>=3.4,<3.5
   - more-itertools>=8.0
+  - pip
   - pip:
     - spacy-experimental==0.6.1
     - en_core_web_trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.4.1/en_core_web_trf-3.4.1-py3-none-any.whl
@@ -17,5 +18,4 @@ dependencies:
   - ipywidgets
   - pylint>=2.14
   - pytest>=7.2
-  - pip
-
+  - coverage

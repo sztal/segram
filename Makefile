@@ -54,7 +54,7 @@ test-all:
 cov-run:
 	coverage run
 cov-report:
-	coverage report -m
+	coverage report
 	coverage html
 	xdg-open htmlcov/index.html
 	# open htmlcov/index.html

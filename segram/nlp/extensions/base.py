@@ -63,6 +63,8 @@ class SpacyExtensions:
                     name = f"{alias}_{attr}"
                 tok_types[typ].set_extension(name, **kwds)
         # Register SNS getters and keys
+        tok_types["doc"].set_extension(alias, getter=self.grammar)
+        alias += "_sns"
         for attr, spacy in tok_types.items():
             segram = getattr(self, attr)
             spacy.set_extension("_"+alias, default=None)
@@ -75,9 +77,13 @@ class SpacyExtensions:
         tok: SpacyDoc | SpacySpan | SpacyToken,
         typ: type[Token]
     ) -> Token:
-        alias = "_"+settings.spacy_alias
+        alias = "_"+settings.spacy_alias+"_sns"
         if (obj := getattr(tok._, alias)):
             return obj
         obj = typ(tok)
         setattr(tok._, alias, obj)
         return obj
+
+    @staticmethod
+    def grammar(doc: SpacyDoc) -> "Doc":
+        return getattr(doc._, settings.spacy_alias+"_sns").grammar

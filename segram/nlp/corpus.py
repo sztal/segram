@@ -101,7 +101,7 @@ class Corpus(Sequence):
                 )
             doc = self.nlp(doc)
         if isinstance(doc, SpacyDoc):
-            doc = getattr(doc._, settings.spacy_alias)
+            doc = getattr(doc._, settings.spacy_alias+"_sns")
         if doc not in self:
             self._dmap[doc.id] = doc
             self.token_dist += self._count_toks(doc)
@@ -204,10 +204,7 @@ class Corpus(Sequence):
         obj = cls(nlp.vocab, nlp, **kwds)
         pipe_kws = pipe_kws or {}
         tqdm_kws = tqdm_kws or {}
-        obj.add_docs((
-            getattr(d._, settings.spacy_alias)
-            for d in nlp.pipe(texts, **pipe_kws)
-        ), progress=progress, **tqdm_kws)
+        obj.add_docs(nlp.pipe(texts, **pipe_kws), progress=progress, **tqdm_kws)
         return obj
 
     def to_data(self, nlp: bool = False) -> dict[str, Any]:

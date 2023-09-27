@@ -34,8 +34,8 @@ class Doc(DocElement):
     ) -> None:
         alias = settings.spacy_alias
         if isinstance(doc, SpacyDoc):
-            doc = getattr(doc._, alias)
-        setattr(doc._, f"{alias}_doc", self)
+            doc = getattr(doc._, alias+"_sns")
+        setattr(doc._, alias+"_doc", self)
         super().__init__(doc)
         if smap is None:
             self.smap = {}  # Little trick to make 's.grammar' work
@@ -115,6 +115,6 @@ class Doc(DocElement):
     def from_doc(cls, doc: DocNLP, *args: Any, **kwds: Any) -> Self:
         """Construct from NLP document object."""
         if isinstance(doc, SpacyDoc):
-            doc = getattr(doc._, settings.spacy_alias)
+            doc = getattr(doc._, settings.spacy_alias+"_sns")
         typ = doc.get_grammar_type()
         return typ.types.Doc(doc, *args, **kwds)

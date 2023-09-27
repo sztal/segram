@@ -12,5 +12,5 @@ dependencies:
   - ipywidgets
   - pylint>=2.14
   - pytest>=7.2
-  - pip
+  - coverage
 

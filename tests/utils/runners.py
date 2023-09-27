@@ -229,7 +229,7 @@ class SpacyTestRunner(PyTestRunner):
 
     @staticmethod
     def callback(doc: SpacyDoc) -> Doc:
-        return getattr(doc._, settings.spacy_alias)
+        return getattr(doc._, settings.spacy_alias+"_sns")
 
     def validate_metadata(self, nlp: Language, tests: TestSet) -> None:
         """Check if model metadata matche test requirements.

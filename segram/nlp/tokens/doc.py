@@ -134,7 +134,7 @@ class Doc(NLP):
     @classmethod
     def from_data(cls, data: dict[str, Any]) -> Self:
         """Construct from data dictionary produced by :meth:`to_data`."""
-        return getattr(SpacyDoc(**data)._, settings.spacy_alias)
+        return getattr(SpacyDoc(**data)._, settings.spacy_alias+"_sns")
 
     def char_span(self, *args: Any, **kwds: Any) -> Span | None:
         res = self.tok.char_span(*args, **kwds)

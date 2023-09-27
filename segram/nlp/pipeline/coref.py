@@ -78,7 +78,7 @@ class Coref:
         in ``_ref`` custom attribute on tokens.
         """
         # pylint: disable=protected-access
-        alias = settings.spacy_alias
+        alias = settings.spacy_alias+"_sns"
         proper = []
         pronouns = []
         for i in cluster:
