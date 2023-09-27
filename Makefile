@@ -46,17 +46,20 @@ lint:
 	py.test --pylint -m pylint
 
 test:
-	python setup.py test
+	python -m pytest
 
 test-all:
 	tox
 
-coverage:
-	coverage run --source segram setup.py test
+cov-run:
+	coverage run
+cov-report:
 	coverage report -m
 	coverage html
 	xdg-open htmlcov/index.html
 	# open htmlcov/index.html
+
+coverage: cov-run cov-report
 
 docs:
 	rm -f docs/segram.rst

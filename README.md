@@ -14,26 +14,104 @@ in Python and based on the excellent [spacy](https://spacy.io/)
 package, which is used to solve core NLP tasks such as tokenization,
 lemmatization, dependency parsing and coreference resolution.
 
+## Main use cases and features
+
+* Automated grammatical analysis in terms of phrases/clauses focused
+  on detecting actions as well as subjects and objects of those actions.
+* Flexible filtering and matching with queries expressible
+  in terms of properties of subjects, verbs, objects, prepositions and
+  descriptions applicable at the levels of individual phrases and entire
+  sentences.
+* Semantic-oriented organization of analyses in terms of stories
+  and frames.
+* Data serialization framework allowing for reconstructing all `segram`
+  data after an initial parsing without access to any `spacy` language
+  model.
+* Structured vector similarity model based on weighted averages of
+  cosine similarities between different components of phrases/sentences.
+* Structured vector similarity model for comparing documents in terms
+  of sequentially shifting semantics.
+* Hypergraphical representation of grammatical structure of sentences.
+
+
+
 ## Core requirements
 
 | Package                  | Version            |
 | ------------------------ | ------------------ |
 | `python`                 | `>=3.11`           |
-| `spacy`                  | `>=3.4,<=3.5`      |
+| `spacy`                  | `>=3.4`            |
+
+The required Python version will not change in the future releases
+for the foreseeable future, so before the package becomes fully
+mature the dependency on `python>=3.11` will not be too demanding.
+
+### Core requirements (coreference resolution)
+
+`Segram` comes with a coreference resolution component based on the
+experimental model provided in the package `spacy-experimental`.
+However, both at the level of `segram` and `spacy` this is currently
+an experimental feature, which comes with a significant price tag attached.
+Namely, the acceptable `spacy` version is significantly limited
+(see the table below). However, as `spacy-experimental` gets integrated
+in the `spacy` core in the future, these constraints should be relaxed.
+
+
+| Package                  | Version            |
+| ------------------------ | ------------------ |
+| `spacy`                  | `>=3.4,<3,5`       |
 | `spacy-experimental`     | `0.6.1`            |
 | `en_coreference_web_trf` | `3.4.0a2`          |
-
-The constraints on the versions of `spacy` and `spacy-experimental`
-are imposed by the fact that currently `segram` depends on one specific
-version of coreference resolution component offered by `spacy`,
-which is `en_coreference_web_trf(3.4.0a2)` model. However, these
-requirements will be relaxed as the experimental coref component
-gets integrated into the core of `spacy`.
 
 > **Warning**
 > Due to a bug in `spacy-experimental=0.6.1` GPU acceleration is
 > currently not supported, i.e. using `spacy.prefer_gpu()` will
-> result in errors during coreference resolution.
+> result in errors during coreference resolution
+> (see the corresponding
+> [Github issue](https://github.com/explosion/spaCy/issues/13023))
+
+## Supported models and languages
+
+Currently, only English is supported and `segram` was tested on models:
+
+* `en_core_web_trf>=3.4.1` (transformer-based model for the general NLP)
+* `en_core_web_lgl>=3.4.1` (used for context-free word vectors)
+* `en_coreference_web_trf==3.4.0a2` (for coreference resolution)
+
+
+## Installation
+
+
+### PyPI
+
+```bash
+pip install segram
+python -m download en_core_web_trf
+python -m download en_core_web_lg  # skip if word vectors are not needed
+```
+
+#### With coreference resolution
+
+```bash
+pip install segram[coref]
+python -m download en_core_web_trf
+python -m download en_core_web_lg  # skip if word vectors are not needed
+pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.4.1/en_core_web_lg-3.4.1-py3-none-any.whl
+```
+
+### Github (development version)
+
+```bash
+pip install git+ssh://git@github.com/sztal/segram.git
+```
+
+#### With coreference resolution
+
+## Development
+
+### Setting up environment
+
+## Overview
 
 This is a very ealy prototype of an implementation of a conceptual
 framework for automated analysis of natural language text data
