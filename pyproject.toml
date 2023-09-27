@@ -29,11 +29,8 @@ segram = "segram.nlp.pipeline.factories:create_base"
 include-package-data = true
 package-dir = { segram = "segram" }
 
-[tool.setuptools.packages.find]
-where = ["segram"]
-
 [tool.setuptools.package-data]
-nlp = ["*.json", ".json.gz"]
+segram = ["nlp/**/*.json", "nlp/**/*.json.gz"]
 
 [tool.pytest.ini_options]
 minversion = "7.2"

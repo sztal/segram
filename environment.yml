@@ -5,10 +5,10 @@ channels:
 dependencies:
   - python>=3.11
   - spacy>=3.4,<=3.5
-  - cupy
   - more-itertools>=8.0
   - ipython
   - ipdb
+  - ipywidgets
   - pylint>=2.14
   - pytest>=7.2
   - pip
