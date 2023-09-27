@@ -9,12 +9,15 @@ version = "0.0.0"
 authors = [{name = "Szymon Talaga", email = "stalaga@protonmail.com"}]
 readme = "README.md"
 dependencies = [
-    "spacy>=3.4,<=3.5",
-    "spacy-experimental==0.6.1",
+    "spacy>=3.4",
     "more-itertools>=8.0"
 ]
 
 [project.optional-dependencies]
+coref = [
+    "spacy>=3.4,<=3.5",
+    "spacy-experimental==0.6.1"
+]
 test = [
     "ipython",
     "ipdb",

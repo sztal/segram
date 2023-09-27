@@ -1,21 +1,39 @@
-=============================
-Segram
-=============================
+# Segram: _a framework for semantic grammar and narrative analysis_
 
-.. warning::
+> **Note**
+> This project is still in an early stage of development,
+> so one should expect significant changes in the future,
+> including backward incompatible ones. That said, the general
+> concepts and design principles should remain the same or be extended,
+> not changed or limited. Thus, the package is suitable for experimental
+> usage.
 
-    This is a very early prototype and several important features
-    are not yet implemented, so the package still does not provide
-    several planned functionalities. This applies especially to same
-    some of the main user-facing functions, so the current user
-    experience is far from optimal. We are actively working on it
-    and will be delivering very signficant improvements and fixes
-    systematically.
+**Segram** is a software implementation of a framework for automated
+semantics-oriented grammatical analysis of text data. It is implemented
+in Python and based on the excellent [spacy](https://spacy.io/)
+package, which is used to solve core NLP tasks such as tokenization,
+lemmatization, dependency parsing and coreference resolution.
 
-.. warning::
+## Core requirements
 
-    Currently the package documentation is also largely non-existent.
-    This will also be fixed soon.
+| Package                  | Version            |
+| ------------------------ | ------------------ |
+| `python`                 | `>=3.11`           |
+| `spacy`                  | `>=3.4,<=3.5`      |
+| `spacy-experimental`     | `0.6.1`            |
+| `en_coreference_web_trf` | `3.4.0a2`          |
+
+The constraints on the versions of `spacy` and `spacy-experimental`
+are imposed by the fact that currently `segram` depends on one specific
+version of coreference resolution component offered by `spacy`,
+which is `en_coreference_web_trf(3.4.0a2)` model. However, these
+requirements will be relaxed as the experimental coref component
+gets integrated into the core of `spacy`.
+
+> **Warning**
+> Due to a bug in `spacy-experimental=0.6.1` GPU acceleration is
+> currently not supported, i.e. using `spacy.prefer_gpu()` will
+> result in errors during coreference resolution.
 
 This is a very ealy prototype of an implementation of a conceptual
 framework for automated analysis of natural language text data
