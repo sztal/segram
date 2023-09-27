@@ -33,11 +33,9 @@ class SpacyExtensions:
             "corefs": { "default": None },
         },
         "doc": {
-            "meta": { "default": None },
-            "cache": { "default": None },
-            "doc": { "default": None },
-            "data": { "default": None },
-            "model": { "default": None }
+            "meta": { "default": None },   # Segram metadata dictionary
+            "doc": { "default": None },    # Segram grammar document pointer
+            "data": { "default": None },   # Serialized Segram grammar data
         }
     }
 

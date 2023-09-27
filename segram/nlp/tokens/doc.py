@@ -93,10 +93,6 @@ class Doc(NLP):
         return self.to_data()
 
     @property
-    def cache(self) -> dict[str, dict[int | tuple[int, int], Any]]:
-        return getattr(self._, f"{settings.spacy_alias}_cache")
-
-    @property
     def grammar(self) -> "Doc":
         if (doc := getattr(self._, f"{settings.spacy_alias}_doc")):
             return doc
@@ -111,6 +107,7 @@ class Doc(NLP):
         """
         user_data = self.tok.user_data.copy()
         alias = settings.spacy_alias
+        _alias = "_"+alias
         data = {
             "vocab": self.vocab,
             "words": [ t.text for t in self ],
@@ -124,7 +121,10 @@ class Doc(NLP):
             "deps": [ t.dep_ for t in self.tok ],
             "ents": [ f"{t.ent_tag}" for t in self ]
         }
-        user_data[("._.", f"{alias}_cache", None, None)] = {}
+        user_data = {
+            k: v if _alias not in k else None
+            for k, v in self.tok.user_data.items()
+        }
         user_data[("._.", f"{alias}_doc", None, None)] = None
         return data
 

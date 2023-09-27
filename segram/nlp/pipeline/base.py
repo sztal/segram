@@ -108,7 +108,6 @@ class Segram(Pipe):
         alias = settings.spacy_alias
         meta = self.meta.copy()
         setattr(doc._, f"{alias}_meta", meta)
-        setattr(doc._, f"{alias}_cache", {})
         return doc
 
     # Properties --------------------------------------------------------------
