@@ -129,8 +129,7 @@ class GrammarElement(Grammar, Sequence):
     @property
     def vector(self) -> np.ndarray[tuple[int], np.floating]:
         """Average token word vector."""
-        toks = self.tokens
-        return sum(tok.vector for tok in toks) / len(toks)
+        return sum(tok.coref.vector for tok in self) / len(self)
 
     # Methods -----------------------------------------------------------------
 
