@@ -322,7 +322,7 @@ class Phrase(TokenElement):
         spec: Self | str | Iterable[str] | PVSpecType,
         what: Literal[*_what_vals] | dict[str, _what_type] = _what_vals[0],
         *,
-        recursive: bool = False,
+        recursive: bool = True,
         comp_vectors: bool = True,
         **kwds: Any
     ) -> float:
@@ -358,8 +358,10 @@ class Phrase(TokenElement):
             They are used for reweighting importance of different parts
             during scoring.
         recursive
-            Should a more accurate but sometimes somewhat slower
-            recursive scoring algorithm be used.
+            Should a more accurate recurisve algorithm be used
+            instead of a structured average vector approach.
+            The former may be sometimes a bit slower than than the latter
+            in the case of phrases with complex nested syntactic structures.
         comp_vectors
             If ``True`` then word vectors are based only on component
             head tokens instead of all tokens belonging to a given
