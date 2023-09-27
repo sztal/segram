@@ -4,7 +4,6 @@ from typing import ClassVar, Mapping
 from types import MappingProxyType
 from functools import partial
 from spacy.tokens import Doc as SpacyDoc, Span as SpacySpan, Token as SpacyToken
-from ..tokens.abc import NLP
 from ..tokens import Doc, Span, Token
 from ... import settings
 
@@ -66,26 +65,21 @@ class SpacyExtensions:
                     name = f"{alias}_{attr}"
                 tok_types[typ].set_extension(name, **kwds)
         # Register SNS getters and keys
-        SpacyDoc.set_extension(alias, getter=partial(self.sns_getter, typ=self.doc))
-        SpacySpan.set_extension(alias, getter=partial(self.sns_getter, typ=self.span))
-        SpacyToken.set_extension(alias, getter=partial(self.sns_getter, typ=self.token))
+        for attr, spacy in tok_types.items():
+            segram = getattr(self, attr)
+            spacy.set_extension("_"+alias, default=None)
+            spacy.set_extension(alias, getter=partial(self.sns_get, typ=segram))
 
     # Doc extension attributes ------------------------------------------------
 
     @staticmethod
-    def sns_getter(
-        tok: Doc | Span | Token,
-        typ: type[Doc] | type[Span] | type[Token]
-    ) -> NLP:
-        cache = getattr(tok.doc._, f"{settings.spacy_alias}_cache")
-        if isinstance(tok, SpacyToken):
-            key = tok.i
-        elif isinstance(tok, SpacySpan):
-            key = (tok.start, tok.end)
-        else:
-            key = -1
-        sns = cache.get(key)
-        if sns is None:
-            sns = typ(tok)
-            cache[key] = sns
-        return sns
+    def sns_get(
+        tok: SpacyDoc | SpacySpan | SpacyToken,
+        typ: type[Token]
+    ) -> Token:
+        alias = "_"+settings.spacy_alias
+        if (obj := getattr(tok._, alias)):
+            return obj
+        obj = typ(tok)
+        setattr(tok._, alias, obj)
+        return obj
