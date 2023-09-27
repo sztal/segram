@@ -69,6 +69,16 @@ class Phrase(TokenElement):
         obj.sent.pmap[obj.idx] = obj
         return obj
 
+    def __iter__(self) -> Iterable[Token]:
+        for sub in self.iter_subdag():
+            yield from sub.head
+
+    def __len__(self) -> int:
+        return sum(1 for _ in self)
+
+    def __getitem__(self, idx: int | slice) -> tuple[Token, ...]:
+        return tuple(self)[idx]
+
     # Properties --------------------------------------------------------------
 
     @property
@@ -93,7 +103,7 @@ class Phrase(TokenElement):
 
     @property
     def tokens(self) -> tuple[Token, ...]:
-        return tuple(t for t, _ in self.iter_token_roles())
+        return tuple(self)
 
     @property
     def neg(self) -> Token | None:
@@ -322,7 +332,7 @@ class Phrase(TokenElement):
         spec: Self | str | Iterable[str] | PVSpecType,
         what: Literal[*_what_vals] | dict[str, _what_type] = _what_vals[0],
         *,
-        recursive: bool = True,
+        recursive: bool = False,
         comp_vectors: bool = True,
         **kwds: Any
     ) -> float:
@@ -360,8 +370,8 @@ class Phrase(TokenElement):
         recursive
             Should a more accurate recurisve algorithm be used
             instead of a structured average vector approach.
-            The former may be sometimes a bit slower than than the latter
-            in the case of phrases with complex nested syntactic structures.
+            The former may be somewhat slower than than the latter,
+            especially in the case of phrases with complex syntactic structures.
         comp_vectors
             If ``True`` then word vectors are based only on component
             head tokens instead of all tokens belonging to a given
@@ -726,7 +736,7 @@ class PhraseVectors:
         elif self.what == "components":
             for comp in phrase.components:
                 pdict.setdefault(comp.alias.lower(), []).append(comp)
-            pdict = { k: DataTuple(v) for k, v in pdict.items() }
+            pdict = { k: tuple(v) for k, v in pdict.items() }
         else:
             for name in phrase.part_names:
                 if (value := getattr(phrase, name)):
@@ -735,9 +745,9 @@ class PhraseVectors:
 
     def _get_vectors(self, seq: DataTuple):
         if self.what == "phrases" and self.comp_vectors:
-            seq = seq.get("components").flat
-        if (vec := seq.flat.get("vector")):
-            return vec.pipe(lambda x: sum(x) / len(x))
+            seq = [ c for p in seq for c in p.components ]
+        if (vec := [ x.vector for x in seq ]):
+            return sum(vec) / len(vec)
         return vec
 
     def _get_text_vector(

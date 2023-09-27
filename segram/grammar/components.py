@@ -75,7 +75,7 @@ class Component(TokenElement):
         neg: Token | None = None
     ) -> None:
         super().__init__(tok)
-        self._tid = None
+        self._tid = ()
         role = role or self.__role__
         self.role = Role.from_name(role) if isinstance(role, str) else role
         self.qmark = qmark
@@ -95,8 +95,13 @@ class Component(TokenElement):
         obj.sent.pmap[obj.idx] = obj.phrase
         return obj
 
+    def __getitem__(self, idx: int | slice) -> Token | tuple[Token, ...]:
+        if isinstance(idx, int):
+            return self.doc[self.tid[idx]]
+        return tuple(self.doc[i] for i in self.tid)
+
     def __len__(self) -> int:
-        return len(self.tid)
+        return len(self._tid)
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
@@ -162,7 +167,7 @@ class Component(TokenElement):
 
     @property
     def tid(self) -> tuple[int, ...]:
-        if self._tid is None:
+        if not self._tid:
             self._tid = self.get_tid()
         return self._tid
 
