@@ -7,7 +7,7 @@ name = "segram"
 requires-python = ">=3.11"
 version = "0.0.0"
 authors = [{name = "Szymon Talaga", email = "stalaga@protonmail.com"}]
-readme = "README.rst"
+readme = "README.md"
 dependencies = [
     "spacy>=3.4,<=3.5",
     "spacy-experimental==0.6.1",
