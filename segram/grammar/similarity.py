@@ -1,8 +1,15 @@
 # pylint: disable=no-name-in-module
-from typing import Literal, Iterable, Mapping
+from typing import Any, Literal, Iterable, Mapping
+from abc import ABC, abstractmethod
+from importlib import import_module
 import numpy as np
-from . import Component, Phrase, Sent, Doc
-from .abc import GrammarSimilarity
+from spacy.vocab import Vocab
+from spacy.vectors import Vectors
+from .components import Component
+from .phrases import Phrase
+from .sent import Sent
+from .doc import Doc
+from ..abc import init_class_attrs, inherit_docstring
 from ..datastruct import DataTuple
 from ..utils.misc import best_matches, cosine_similarity
 
@@ -12,13 +19,58 @@ FloatVec = np.ndarray[tuple[int], np.floating]
 _sim_methods = ("components", "phrases", "both", "recursive", "average")
 
 
+class GrammarSimilarity(ABC):
+    """Abstract base class for structured similarity scorers."""
+    __slots__ = ("element", "spec", "np")
+    slot_names: tuple[str, ...] = ()
+
+    def __init__(self, element: "GrammarElement", spec: Any) -> None:
+        self.element = element
+        if not self.vocab.has_vectors:
+            raise RuntimeError("word vectors not available")
+        self.spec = spec
+        self.np = import_module(self.vocab.vectors.data.__class__.__module__)
+
+    def __init_subclass__(cls, register_with: type["GrammarElement"]) -> None:
+        init_class_attrs(cls, {
+            "__slots__": "slot_names"
+        }, check_slots=True)
+        inherit_docstring(cls)
+        register_with.Similarity = cls
+        register_with.similarity.__doc__ += "\n".join(
+            s for s in cls.get_similarity.__doc__.split("\n")[2:-1]
+        )
+
+    # Properties --------------------------------------------------------------
+
+    @property
+    def vocab(self) -> Vocab:
+        return self.element.doc.vocab
+
+    @property
+    def vectors(self) -> Vectors:
+        return self.vocab.vectors
+
+    @property
+    def similarity(self) -> float:
+        sim = self.get_similarity(self.element, self.spec)
+        return max(-1, min(sim, 1))
+
+    # Methods -----------------------------------------------------------------
+
+    @abstractmethod
+    def get_similarity(self, element: "GrammarElement", spec: Any) -> float:
+        """Get structured similarity between ``self.element`` and ``self.spec``."""
+
+
+
 class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
     """Structured similarity between phrases and sentences."""
     __slots__ = ("method", "weights", "decay_rate", "only", "ignore")
 
     def __init__(
         self,
-        phrase: Phrase,
+        element: Phrase,
         spec: Phrase | str | Iterable[str] | SpecType,
         method: Literal[*_sim_methods] = _sim_methods[0],
         *,
@@ -27,8 +79,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
         only: str | Iterable[str] = (),
         ignore: str | Iterable[str] = ()
     ) -> None:
-        if not phrase.doc.has_vectors:
-            raise RuntimeError("word vectors not available")
+        super().__init__(element, spec)
         if method not in _sim_methods:
             raise ValueError(f"'method' has to be one of {_sim_methods}")
         if only and ignore:
@@ -38,8 +89,6 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             raise ValueError("weights must be non-negative")
         if decay_rate <= 0:
             raise ValueError("'decay_rate' must be positive")
-        self.phrase = phrase
-        self.spec = spec
         self.method = method
         self.weights = weights
         self.decay_rate = decay_rate
@@ -54,7 +103,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
 
     # Methods -----------------------------------------------------------------
 
-    def get_similarity(self, phrase: Phrase, spec: SpecType) -> float:
+    def get_similarity(self, element: Phrase, spec: SpecType) -> float:
         r"""Structured similarity between ``self.phrase`` and ``self.spec``.
 
         All methods defined here are designed to ensure that:
@@ -146,6 +195,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
         RuntimeError
             If word vectors are not available.
         """
+        phrase = element
         if isinstance(spec, Doc):
             spec = self._make_sent(Doc)
         if isinstance(spec, Sent):
@@ -338,9 +388,10 @@ class SentSimilarity(PhraseSimilarity, register_with=Sent):
     def phrase(self) -> None:
         raise AttributeError(f"'{self.__class__.__name__}' object has not attribute 'phrase'")
 
-    def get_similarity(self, sent: Sent, spec: SpecType) -> float:
+    def get_similarity(self, element: Sent, spec: SpecType) -> float:
         """Structured similarity between ``self.phrase`` and ``self.spec``."""
         # pylint: disable=arguments-renamed
+        sent = element
         if isinstance(spec, Doc):
             spec = self._make_sent(spec)
         if isinstance(spec, Sent):

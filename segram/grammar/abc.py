@@ -8,17 +8,14 @@ component and phrase detection.
 # pylint: disable=no-name-in-module
 from typing import Any, Self, Callable, ClassVar, Final
 from typing import MutableMapping, Container, Sequence
-from abc import ABC, abstractmethod
-from importlib import import_module
+from abc import abstractmethod
 import re
 from functools import total_ordering
 from catalogue import Registry
 import numpy as np
-from spacy.vocab import Vocab
-from spacy.vectors import Vectors
 from ..nlp.tokens import Doc, Span, Token
 from ..utils.registries import grammars
-from ..abc import SegramWithDocABC, init_class_attrs, inherit_docstring
+from ..abc import SegramWithDocABC
 from ..datastruct import Namespace, DataTuple
 from ..utils.misc import cosine_similarity
 
@@ -364,46 +361,3 @@ class TokenElement(GrammarElement):
     @abstractmethod
     def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from document and data dictionary."""
-
-
-class GrammarSimilarityA(ABC):
-    """Abstract base class for structured similarity scorers."""
-    __slots__ = ("element", "spec", "np")
-    slot_names: tuple[str, ...] = ()
-
-    def __init__(self, element: GrammarElement, spec: Any) -> None:
-        self.element = element
-        self.spec = spec
-        self.np = import_module(self.vocab.vectors.data.__class__.__module__)
-
-
-    def __init_subclass__(cls, register_with: type[GrammarElement]) -> None:
-        init_class_attrs(cls, {
-            "__slots__": "slot_names"
-        }, check_slots=True)
-        inherit_docstring(cls)
-        register_with.Similarity = cls
-        register_with.similarity.__doc__ += "\n".join(
-            s for s in cls.get_similarity.__doc__.split("\n")[2:-1]
-        )
-
-    # Properties --------------------------------------------------------------
-
-    @property
-    def vocab(self) -> Vocab:
-        return self.element.doc.vocab
-
-    @property
-    def vectors(self) -> Vectors:
-        return self.vocab.vectors
-
-    @property
-    def similarity(self) -> float:
-        sim = self.get_similarity(self.element, self.spec)
-        return max(-1, min(sim, 1))
-
-    # Methods -----------------------------------------------------------------
-
-    @abstractmethod
-    def get_similarity(self, element: GrammarElement, spec: Any) -> float:
-        """Get structured similarity between ``self.element`` and ``self.spec``."""

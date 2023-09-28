@@ -6,4 +6,4 @@ from .sent import Sent
 from .doc import Doc
 from .graph import PhraseGraph
 from .conjuncts import Conjuncts
-# from .similarity import PhraseSimilarity, SentSimilarity, DocSimilarity
+from .similarity import PhraseSimilarity, SentSimilarity, DocSimilarity
