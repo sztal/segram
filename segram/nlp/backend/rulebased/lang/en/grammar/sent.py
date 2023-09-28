@@ -57,8 +57,7 @@ class RulebasedEnglishSent(
             lead = next((i for i, p in enumerate(comps) if p.head == p.head.lead), 0)
             conjs = Conjuncts(phrases, lead=lead, cconj=cconj, preconj=pconj)
             for conj in conjs:
-                if conj is not conjs.lead:
-                    conj._lead = conjs.lead.idx # pylint: disable=protected-access
+                conj._lead = conjs.lead.idx # pylint: disable=protected-access
                 conj.dep |= conjs.lead.dep
             yield conjs
 

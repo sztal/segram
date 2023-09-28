@@ -146,7 +146,7 @@ class Phrase(TokenElement):
     @property
     def conjuncts(self) -> Conjuncts:
         """Conjoined phrases."""
-        if (conjs := self.sent.conjs.get(self.lead)):
+        if (conjs := self.sent.conjs.get(self._lead)):
             return conjs.copy(members=[
                 m for m in conjs.members if m is not self
             ])
