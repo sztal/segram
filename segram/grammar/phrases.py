@@ -2,6 +2,7 @@
 from typing import Any, Union, Callable, ClassVar, Self, Iterable, Mapping
 from typing import Literal, TypeAlias
 from abc import abstractmethod
+from importlib import import_module
 from itertools import islice
 from more_itertools import unique_everseen
 import numpy as np
@@ -566,7 +567,7 @@ class PhraseVectors:
         self.only = only
         self.ignore = ignore
         self.comp_vectors = comp_vectors
-        self.np = self.phrase.doc.doc.get_numpy()
+        self.np = import_module(self.vocab.vectors.data.__class__.__module__)
 
     # Properties --------------------------------------------------------------
 

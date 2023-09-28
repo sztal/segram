@@ -39,7 +39,6 @@ class SpacyExtensions:
             "meta": { "default": None },   # Segram metadata dictionary
             "doc": { "default": None },    # Segram grammar document pointer
             "data": { "default": None },   # Serialized Segram grammar data
-            "numpy": { "default": None },  # Numpy/Cupy pointer
         }
     }
 

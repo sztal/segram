@@ -111,7 +111,6 @@ class Corpus(Sequence):
         if isinstance(doc, SpacyDoc):
             doc = getattr(doc._, alias+"_sns")
         if doc not in self:
-            Segram.set_numpy(doc, alias, self.meta)
             self._dmap[doc.id] = doc
             self.token_dist += self._count_toks(doc)
 

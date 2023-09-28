@@ -5,7 +5,6 @@ all main semantic grammar transformations and related auxiliary methods.
 """
 from typing import Any, Sequence
 from importlib import import_module
-import numpy as np
 import spacy
 from spacy.tokens import Doc
 from spacy.language import Language
@@ -88,7 +87,6 @@ class Segram(Pipe):
             __title__+"_version": __version__,
             __title__+"_grammar": f"{grammar}.{nlp.lang}",
             "spacy_version":      spacy.__version__,
-            "spacy_gpu":          not isinstance(self.nlp.vocab.vectors.data, np.ndarray),
             "model":              self.get_model_info(nlp),
             "vectors":            self.get_model_info(vectors) if vectors else None
         }
@@ -97,7 +95,6 @@ class Segram(Pipe):
 
     def __call__(self, doc: Doc) -> Doc:
         self.set_docattrs(doc, self.alias, self.meta)
-        self.set_numpy(doc, self.alias, self.meta)
         return doc
 
     # Properties --------------------------------------------------------------
@@ -120,15 +117,6 @@ class Segram(Pipe):
         meta = meta.copy()
         setattr(doc._, __title__+"_alias", alias)
         setattr(doc._, f"{alias}_meta", meta)
-
-    @staticmethod
-    def set_numpy(doc: Doc, alias: str, meta: dict[str, Any]) -> None:
-        """Set :mod:`numpy`/:mod:`cupy` module to be used by document."""
-        if meta["spacy_gpu"]:
-            numpy = import_module("cupy")
-        else:
-            numpy = np
-        setattr(doc._, f"{alias}_numpy", numpy)
 
     @staticmethod
     def import_extensions(

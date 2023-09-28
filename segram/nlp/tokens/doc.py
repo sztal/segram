@@ -1,5 +1,4 @@
 from typing import Any, Iterable, Self
-from types import ModuleType
 import json
 from murmurhash import hash_unicode
 from spacy.tokens import Doc as SpacyDoc
@@ -110,7 +109,6 @@ class Doc(NLP):
         for k, v in user_data.items():
             user_data[k] = v if _alias not in k else None
         user_data[("._.", f"{alias}_doc", None, None)] = None
-        user_data[("._.", f"{alias}_numpy", None, None)] = None
         return user_data
 
 
@@ -155,10 +153,6 @@ class Doc(NLP):
 
     def copy(self) -> Self:
         return self.from_data(self.to_data())
-
-    def get_numpy(self) -> ModuleType:
-        """Get :mod:`numpy` or :mod:`cupy` depending on whether GPU is used."""
-        return getattr(self._, f"{self.alias}_numpy")
 
 # Register comparison functions for testing -----------------------------------
 
