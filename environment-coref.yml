@@ -8,7 +8,7 @@ dependencies:
   - more-itertools>=8.0
   - pip
   - pip:
-    - spacy-experimental==0.6.1
+    - spacy-experimental==0.6.3
     - en_core_web_trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.4.1/en_core_web_trf-3.4.1-py3-none-any.whl
     - en_coreference_web_trf @ https://github.com/explosion/spacy-experimental/releases/download/v0.6.1/en_coreference_web_trf-3.4.0a2-py3-none-any.whl
     - en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.4.1/en_core_web_lg-3.4.1-py3-none-any.whl

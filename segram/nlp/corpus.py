@@ -1,5 +1,8 @@
 # pylint: disable=no-name-in-module
 from typing import Any, Sequence, Iterable, Self, Literal
+from types import ModuleType
+import os
+import pickle
 from collections import Counter
 from importlib import import_module
 from spacy.tokens import Doc as SpacyDoc, DocBin
@@ -7,7 +10,6 @@ from spacy.language import Language
 from spacy.vocab import Vocab
 from tqdm.auto import tqdm
 from .tokens import Doc, Token
-from .. import settings
 from ..datastruct import DataIterable, DataTuple
 
 
@@ -101,7 +103,7 @@ class Corpus(Sequence):
                 )
             doc = self.nlp(doc)
         if isinstance(doc, SpacyDoc):
-            doc = getattr(doc._, settings.spacy_alias+"_sns")
+            doc = getattr(doc._, doc.alias+"_sns")
         if doc not in self:
             self._dmap[doc.id] = doc
             self.token_dist += self._count_toks(doc)
@@ -241,6 +243,35 @@ class Corpus(Sequence):
         corpus.add_docs(docs)
         corpus.token_dist = token_dist
         return corpus
+
+    def to_disk(
+        self,
+        path: str | bytes | os.PathLike,
+        compression: ModuleType | type | None = None
+    ) -> None:
+        """Save to disk.
+
+        Anything exposing :func:`open` function/method
+        can be passed as ``compression`` argument.
+        """
+        _open = compression.open if compression else open
+        with _open(path, "wb") as fh:
+            pickle.dump(self.to_data(), fh)
+
+    @classmethod
+    def from_disk(
+        cls,
+        path: str | bytes | os.PathLike,
+        compression: ModuleType | type | None = None
+    ) -> Self:
+        """Construct from disk.
+
+        Anything exposing :func:`open` function/method
+        can be passed as ``compression`` argument.
+        """
+        _open = compression.open if compression else open
+        with _open(path, "rb") as fh:
+            return cls.from_data(pickle.load(fh))
 
     # Internals ---------------------------------------------------------------
 

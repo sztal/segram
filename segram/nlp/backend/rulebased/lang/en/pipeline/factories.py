@@ -4,13 +4,13 @@ from spacy.lang.en import English
 from .merger import EnglishMerger as Merger
 from .lemmatizer import EnglishLemmatizer as Lemmatizer
 from ......pipeline.coref import Coref
-from ....... import settings
+from ....... import __title__
 
 
 # Lemmatizer factory ----------------------------------------------------------
 
 @English.factory(
-    name=f"{settings.spacy_alias}_lemmatizer",
+    name=f"{__title__}_lemmatizer",
     requires=("token.pos",),
     assigns=("token.lemma",),
     default_config={
@@ -33,7 +33,7 @@ def create_en_lemmatizer(
 # Merger factory --------------------------------------------------------------
 
 @English.factory(
-    name=f"{settings.spacy_alias}_merger",
+    name=f"{__title__}_merger",
     requires=("token.pos", "token.dep"),
     assigns=("token._.multitoken",),
     retokenizes=True,
@@ -57,9 +57,9 @@ def create_en_merger(
 # Coref factory ---------------------------------------------------------------
 
 @English.factory(
-    name=f"{settings.spacy_alias}_coref",
+    name=f"{__title__}_coref",
     requires=("token.pos",),
-    assigns=(f"token._.{settings.spacy_alias}_corefs",),
+    assigns=(f"token._.{__title__}_corefs",),
     default_config={
         "model": "en_coreference_web_trf",
         "components": ["sentencizer", "transformer", "coref"]

@@ -7,7 +7,7 @@ import pytest
 from IPython import embed
 from spacy.tokens import Doc as SpacyDoc
 from spacy.language import Language
-from segram import settings
+from segram import __title__
 from segram.nlp.tokens import Doc
 from segram.utils.resources import JSONResource
 from segram.utils.versioning import is_correct_version
@@ -229,7 +229,7 @@ class SpacyTestRunner(PyTestRunner):
 
     @staticmethod
     def callback(doc: SpacyDoc) -> Doc:
-        return getattr(doc._, settings.spacy_alias+"_sns")
+        return getattr(doc._, doc._.segram_alias+"_sns")
 
     def validate_metadata(self, nlp: Language, tests: TestSet) -> None:
         """Check if model metadata matche test requirements.
@@ -239,7 +239,7 @@ class SpacyTestRunner(PyTestRunner):
         TypeError
             If metadata do not agree.
         """
-        meta = dict(nlp.pipeline)[settings.spacy_alias].meta
+        meta = dict(nlp.pipeline)[__title__].meta
         tests = self.tests.meta
 
         for package in ("spacy", "segram"):

@@ -16,7 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 coref = [
     "spacy>=3.4,<3.5",
-    "spacy-experimental==0.6.1"
+    "spacy-experimental==0.6.3"
 ]
 
 [project.entry-points.spacy_factories]

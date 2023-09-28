@@ -6,12 +6,13 @@ all main semantic grammar transformations and related auxiliary methods.
 from typing import Any, Sequence, ClassVar, Mapping
 from types import MappingProxyType
 from importlib import import_module
+import numpy as np
 import spacy
 from spacy.tokens import Doc
 from spacy.language import Language
 from spacy.pipeline.pipe import Pipe
 from ..extensions import SpacyExtensions
-from ... import __title__, __version__, settings
+from ... import __title__, __version__
 from ...utils.meta import get_cname
 from ...utils.registries import models as models_registry
 
@@ -73,14 +74,7 @@ class Segram(Pipe):
                 f"'{get_cname(self)}' must define non-empty 'alias' "
                 "for naming and prefixing Spacy extension attributes"
             )
-        if (sa := settings.spacy_alias) is not None and sa != alias:
-            raise ValueError(
-                f"'{get_cname(self)}' tries to overwrite "
-                f"existing `segram` alias '{sa}' with '{alias}'."
-                "All segram pipeline components running in the same "
-                "process must use the same alias."
-            )
-        settings.spacy_alias = alias
+        self.alias = alias
         self.nlp = nlp
         self.name = name
         self.extensions = self.import_module(grammar, nlp.lang)
@@ -91,12 +85,19 @@ class Segram(Pipe):
             vcn = vectors.__class__.__name__
             raise ValueError(f"'vectors' must be provided as a language model or a name, not '{vcn}'")
         models_registry.register(self.get_model_name(nlp), func=nlp)
+        gpu = not isinstance(self.nlp.vocab.vectors.data, np.ndarray)
+        numpy = np
+        if gpu:
+            numpy = import_module("cupy")
+        self.numpy = numpy
         self.meta = {
             "name":               self.name,
+            __title__+"_alias":   alias,
             __title__+"_version": __version__,
             __title__+"_doc": self.grammar,
             "spacy_alias":        alias,
             "spacy_version":      spacy.__version__,
+            "spacy_gpu":          gpu,
             "model":              self.get_model_info(nlp),
             "vectors":            self.get_model_info(vectors) if vectors else None
         }
@@ -105,9 +106,10 @@ class Segram(Pipe):
             self.init_extensions()
 
     def __call__(self, doc: Doc) -> Doc:
-        alias = settings.spacy_alias
         meta = self.meta.copy()
-        setattr(doc._, f"{alias}_meta", meta)
+        setattr(doc._, __title__+"_alias", self.alias)
+        setattr(doc._, f"{self.alias}_meta", meta)
+        setattr(doc._, f"{self.alias}_numpy", self.numpy)
         return doc
 
     # Properties --------------------------------------------------------------
@@ -138,7 +140,7 @@ class Segram(Pipe):
         """
         path = f"{__title__}.nlp.backend.{grammar}.lang.{lang}"
         module = import_module(path)
-        kwds = {}
+        kwds = { "alias": self.alias }
         for tok_type in ("Doc", "Span", "Token"):
             try:
                 kwds[tok_type.lower()] = getattr(module, tok_type)
@@ -169,20 +171,19 @@ class Segram(Pipe):
             Passed to :meth:`~spacy.language.Language.add_pipe`.
         """
         components = tuple(
-            f"{settings.spacy_alias}_{c}" for c in components
-            if not c.startswith(settings.spacy_alias+"_")
+            f"{self.alias}_{c}" for c in components
+            if not c.startswith(self.alias+"_")
         )
         pipes = [ self.normalize_pipe_name(pipe) for pipe in components ]
         for pipe in pipes:
             if pipe not in self.nlp.pipe_names:
                 self.nlp.add_pipe(pipe, **kwds)
 
-    @staticmethod
-    def normalize_pipe_name(pipe: str) -> str:
+    def normalize_pipe_name(self, pipe: str) -> str:
         """Normalize pipeline component name."""
         if "." in pipe:
             _, pipe = pipe.split(".")
-        prefix = settings.spacy_alias+"_"
+        prefix = self.alias+"_"
         if not pipe.startswith(prefix):
             pipe = prefix + pipe
         return pipe

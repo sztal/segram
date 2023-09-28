@@ -5,7 +5,7 @@ from types import MappingProxyType
 from functools import partial
 from spacy.tokens import Doc as SpacyDoc, Span as SpacySpan, Token as SpacyToken
 from ..tokens import Doc, Span, Token
-from ... import settings
+from ... import __title__
 
 
 class SpacyExtensions:
@@ -22,6 +22,8 @@ class SpacyExtensions:
         Enhanced token type.
     attributes
         Specification of extension attributes to register.
+    alias
+        :mod:`segram` alias.
     """
     __spacy_token_types__: ClassVar[Mapping[str, type]] = MappingProxyType({
         "token": SpacyToken,
@@ -36,6 +38,8 @@ class SpacyExtensions:
             "meta": { "default": None },   # Segram metadata dictionary
             "doc": { "default": None },    # Segram grammar document pointer
             "data": { "default": None },   # Serialized Segram grammar data
+            "numpy": { "default": None },  # Numpy/Cupy pointer
+            __title__+"_alias": { "default": None } # 'segram' alias
         }
     }
 
@@ -43,17 +47,19 @@ class SpacyExtensions:
         self,
         doc: type[Doc],
         span: type[Span],
-        token: type[Token]
+        token: type[Token],
+        alias: str
     ) -> None:
         self.doc = doc
         self.span = span
         self.token = token
+        self.alias = alias
 
     # Methods -----------------------------------------------------------------
 
     def register(self) -> None:
         """Initialize extensions."""
-        alias = settings.spacy_alias
+        alias = self.alias
         tok_types = self.__class__.__spacy_token_types__
         for typ, attrs in self.__attributes__.items():
             for attr, kwds in attrs.items():
@@ -78,7 +84,7 @@ class SpacyExtensions:
         tok: SpacyDoc | SpacySpan | SpacyToken,
         typ: type[Token]
     ) -> Token:
-        alias = "_"+settings.spacy_alias+"_sns"
+        alias = "_"+tok.alias+"_sns"
         if (obj := getattr(tok._, alias)):
             return obj
         obj = typ(tok)
@@ -87,4 +93,4 @@ class SpacyExtensions:
 
     @staticmethod
     def grammar(tok: SpacyDoc | SpacySpan) -> Union["Doc", "Span"]:
-        return getattr(tok._, settings.spacy_alias+"_sns").grammar
+        return getattr(tok._, tok.alias+"_sns").grammar

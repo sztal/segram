@@ -8,7 +8,7 @@ from .sent import Sent
 from .phrases import Phrase
 from .components import Component
 from ..nlp.tokens import Doc as DocNLP
-from .. import settings
+from .. import __title__
 from ..utils.misc import sort_map
 from ..datastruct import DataIterable, DataTuple
 
@@ -33,7 +33,7 @@ class Doc(DocElement):
         doc: DocNLP | SpacyDoc,
         smap: Mapping[tuple[int, int], Sent] | None = None
     ) -> None:
-        alias = settings.spacy_alias
+        alias = getattr(doc._, __title__+"_alias")
         if isinstance(doc, SpacyDoc):
             doc = getattr(doc._, alias+"_sns")
         setattr(doc._, alias+"_doc", self)
@@ -95,7 +95,7 @@ class Doc(DocElement):
             Should grammar data be serialized too.
         """
         if grammar:
-            key = f"{settings.spacy_alias}_data"
+            key = f"{self.doc.alias}_data"
             smap = { idx: s.to_data() for idx, s in self.smap.items() }
             setattr(self.doc._, key, smap)
         return self.doc.to_data()
@@ -111,7 +111,7 @@ class Doc(DocElement):
         """
         doc = DocNLP.from_data(data)
         grammar = cls.from_doc(doc, smap={})
-        smap = getattr(doc._, f"{settings.spacy_alias}_data")
+        smap = getattr(doc._, f"{doc.alias}_data")
         for idx, dct in smap.items():
             grammar.smap[idx] = grammar.types.Sent.from_data(doc, dct)
         return grammar
@@ -120,6 +120,6 @@ class Doc(DocElement):
     def from_doc(cls, doc: DocNLP, *args: Any, **kwds: Any) -> Self:
         """Construct from NLP document object."""
         if isinstance(doc, SpacyDoc):
-            doc = getattr(doc._, settings.spacy_alias+"_sns")
+            doc = getattr(doc._, doc.alias+"_sns")
         typ = doc.get_grammar_type()
         return typ.types.Doc(doc, *args, **kwds)

@@ -7,9 +7,9 @@ import numpy as np
 from spacy.vocab import Vocab
 from spacy.tokens import Doc, Span, Token
 from spacy.tokens.underscore import Underscore
-from ... import settings
 from ...utils.meta import init_class_attrs
 from ...utils.misc import cosine_similarity
+from ... import __title__
 
 
 class NLP(ABC):
@@ -61,6 +61,10 @@ class NLP(ABC):
         return self.sns(self.tok.doc)
 
     @property
+    def alias(self) -> str:
+        return getattr(self.tok.doc._, __title__+"_alias")
+
+    @property
     def lang(self) -> str:
         return self.doc.lang
 
@@ -97,7 +101,7 @@ class NLP(ABC):
     @classmethod
     def sns(cls, tok: Doc | Span | Token) -> Self:
         """Get :mod:`segram` namespace from :mod:`spacy` token."""
-        return getattr(tok._, settings.spacy_alias+"_sns")
+        return getattr(tok._, tok.alias+"_sns")
 
     def similarity(self, other: Doc | Span | Token) -> float:
         return cosine_similarity(self.vector, other.vector)

@@ -1,4 +1,5 @@
 from typing import Any, Iterable, Self
+from types import ModuleType
 import json
 from murmurhash import hash_unicode
 from spacy.tokens import Doc as SpacyDoc
@@ -74,7 +75,7 @@ class Doc(NLP):
             "words", "spaces", "tags", "pos",
             "morphs", "lemmas", "heads", "deps", "ents"
         )
-        meta = getattr(self._, f"{settings.spacy_alias}_meta")
+        meta = getattr(self._, f"{self.alias}_meta").copy()
         data = { k: v for k, v in self.data.items() if k in fields }
         return { "meta": meta, "data": data }
 
@@ -94,7 +95,7 @@ class Doc(NLP):
 
     @property
     def grammar(self) -> "Doc":
-        if (doc := getattr(self._, f"{settings.spacy_alias}_doc")):
+        if (doc := getattr(self._, f"{self.alias}_doc")):
             return doc
         typ = self.get_grammar_type()
         return typ.types.Doc(self)
@@ -105,10 +106,11 @@ class Doc(NLP):
     def clear_user_data(user_data: dict):
         """Clear user data from cached :mod:`segram` objects."""
         alias = settings.spacy_alias
-        _alias = "_"+alias
+        _alias = "_"+alias+"_sns"
         for k, v in user_data.items():
             user_data[k] = v if _alias not in k else None
         user_data[("._.", f"{alias}_doc", None, None)] = None
+        user_data[("._.", f"{alias}_numpy", None, None)] = None
         return user_data
 
 
@@ -146,13 +148,16 @@ class Doc(NLP):
         return res if res is None else cls.sns(res)
 
     def get_grammar_type(self):
-        alias = settings.spacy_alias
+        alias = self.alias
         key = getattr(self._, f"{alias}_meta")[f"{alias}_doc"]
         return grammars.get(key)
 
     def copy(self) -> Self:
         return self.from_data(self.to_data())
 
+    def get_numpy(self) -> ModuleType:
+        """Get :mod:`numpy` or :mod:`cupy` depending on whether GPU is used."""
+        return getattr(self._, f"{self.alias}_numpy")
 
 # Register comparison functions for testing -----------------------------------
 

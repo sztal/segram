@@ -11,10 +11,8 @@ from .utils.colors import printer_settings
 
 
 class SegramSettings(Settings):
-    spacy_alias: str | None
     printer: Settings
 
 settings = SegramSettings(
     printer=printer_settings,
-    spacy_alias=None
 )

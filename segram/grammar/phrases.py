@@ -533,8 +533,8 @@ class PhraseVectors:
         s[4:] for s in Phrase.similarity.__doc__.split("\n")[4:-1]
     )
     __slots__ = (
-        "phrase", "spec", "what", "weights",
-        "comp_vectors", "recursive", "only", "ignore",
+        "phrase", "spec", "what", "weights", "np",
+        "comp_vectors", "recursive", "only", "ignore"
     )
 
     def __init__(
@@ -566,6 +566,7 @@ class PhraseVectors:
         self.only = only
         self.ignore = ignore
         self.comp_vectors = comp_vectors
+        self.np = self.phrase.doc.doc.get_numpy()
 
     # Properties --------------------------------------------------------------
 
@@ -652,9 +653,9 @@ class PhraseVectors:
         vocab = phrase.doc.vocab
         dtype = vocab.vectors.data.dtype
         vlen = vocab.vectors_length
-        weights = np.empty(len(sdict), dtype=dtype)
-        svecs = np.empty((len(sdict), vlen), dtype=dtype)
-        ovecs = np.empty_like(svecs)
+        weights = self.np.empty(len(sdict), dtype=dtype)
+        svecs = self.np.empty((len(sdict), vlen), dtype=dtype)
+        ovecs = self.np.empty_like(svecs)
 
         for i, kv in enumerate(sdict.items()):
             name, svec = kv
@@ -768,4 +769,4 @@ class PhraseVectors:
         except KeyError:
             vlen = self.vocab.vectors_length
             dtype = self.vectors.data.dtype
-            return np.zeros(vlen, dtype=dtype)
+            return self.np.zeros(vlen, dtype=dtype)

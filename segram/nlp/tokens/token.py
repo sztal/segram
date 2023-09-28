@@ -6,7 +6,6 @@ from .abc import NLP
 from ...symbols import POS, Role
 from ...utils.colors import color_role
 from ...utils.diff import iter_diffs, equal, IDiffType
-from ... import settings
 
 
 class Token(NLP):
@@ -162,7 +161,7 @@ class Token(NLP):
     @property
     def corefs(self) -> tuple[Self, ...]:
         # pylint: disable=protected-access,redefined-outer-name
-        if (refs := getattr(self._, f"{settings.spacy_alias}_corefs", None)):
+        if (refs := getattr(self._, f"{self.alias}_corefs", None)):
             return tuple(self.doc[ref] for ref in refs)
         return ()
 
