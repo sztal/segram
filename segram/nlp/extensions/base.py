@@ -1,6 +1,6 @@
 """Default :mod:`spacy` extension backend."""
 # pylint: disable=protected-access
-from typing import ClassVar, Mapping
+from typing import ClassVar, Mapping, Union
 from types import MappingProxyType
 from functools import partial
 from spacy.tokens import Doc as SpacyDoc, Span as SpacySpan, Token as SpacyToken
@@ -64,6 +64,7 @@ class SpacyExtensions:
                 tok_types[typ].set_extension(name, **kwds)
         # Register SNS getters and keys
         tok_types["doc"].set_extension(alias, getter=self.grammar)
+        tok_types["span"].set_extension(alias, getter=self.grammar)
         alias += "_sns"
         for attr, spacy in tok_types.items():
             segram = getattr(self, attr)
@@ -85,5 +86,5 @@ class SpacyExtensions:
         return obj
 
     @staticmethod
-    def grammar(doc: SpacyDoc) -> "Doc":
-        return getattr(doc._, settings.spacy_alias+"_sns").grammar
+    def grammar(tok: SpacyDoc | SpacySpan) -> Union["Doc", "Span"]:
+        return getattr(tok._, settings.spacy_alias+"_sns").grammar

@@ -1,5 +1,6 @@
 # pylint: disable=no-name-in-module
 from typing import Any, Self, Mapping
+import numpy as np
 from spacy.tokens import Doc as SpacyDoc, Token
 from spacy.vocab import Vocab
 from .abc import DocElement
@@ -52,7 +53,7 @@ class Doc(DocElement):
     @property
     def phrases(self) -> DataIterable[Phrase]:
         """Phrase in the document grouped by sentences and conjunct groups."""
-        return DataIterable(s.phrase for s in self.sents).flat
+        return DataIterable(s.phrases for s in self.sents).flat
 
     @property
     def components(self) -> DataIterable[Component]:
@@ -71,6 +72,10 @@ class Doc(DocElement):
     @property
     def vocab(self) -> Vocab:
         return self.doc.vocab
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.doc.vector
 
     # Methods -----------------------------------------------------------------
 

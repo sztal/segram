@@ -600,7 +600,8 @@ class PhraseVectors:
         if self._is_name_ok((name := "head")):
             total_weight += self.weights.get(name, 1)
             sim += self._sim(phrase.head, other.head) * total_weight
-        for name in set(phrase.active_parts).union(other.active_parts):
+        active_parts = set(phrase.active_parts).union(other.active_parts)
+        for name in active_parts:
             if not self._is_name_ok(name):
                 continue
             sps = getattr(phrase, name)

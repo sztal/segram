@@ -117,9 +117,38 @@ nlp.add_pipe("segram", config={
 })
 nlp.add_pipe("segram_coref")
 
-doc = nlp("Merchants travelled a long way to buy spices.")
-doc._.segram
+# Get standard 'spacy' document
+doc = nlp(
+    "The merchants travelled a long way to buy spices "
+    "and rest in our taverns."
+)
+# Convert it to segram 'grammar' document
+doc = doc._.segram
+doc
 ```
+
+The code above parses the text using `spacy` and additionally applies
+further processing pipeline components defined by `segram`. They inject
+many additional functionalities into standard `spacy` tokens.
+In particular, `Doc` instances are enhanced with a special extension
+property `._.segram`, which converts them to `segram` grammar documents.
+Note that the printing results is different - the output is colored!
+
+The colors denote the partition of the document into **components**,
+which are groups of related tokens such as each non-leaf token in the
+dependency tree of a sentence is the head of one component which also
+controls all its leaf children. The following (default) color scheme
+is used:
+
+* <span style="color:orange">**Noun components**</span>
+* <span style="color:red">**Verb components**</span>
+* <span style="color:violet">**Description components**</span>
+* <span style="color:limegreen">**Preposition components**</span>
+
+Components are further organized into phrases, which are higher-order
+and more semantically-oriented units. Crucially, while components are
+non-overlapping and form a partition of the sentence, the phrases
+can be nested in each other and form a directed acyclic graph (DAG).
 
 ## Development
 

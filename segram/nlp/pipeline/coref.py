@@ -78,11 +78,11 @@ class Coref:
         in ``_ref`` custom attribute on tokens.
         """
         # pylint: disable=protected-access
-        alias = settings.spacy_alias+"_sns"
+        alias = settings.spacy_alias
         proper = []
         pronouns = []
         for i in cluster:
-            if getattr(doc[i]._, alias).is_pron:
+            if getattr(doc[i]._, alias+"_sns").is_pron:
                 pronouns.append(i)
             else:
                 proper.append(i)
