@@ -38,7 +38,7 @@ class Segram(Pipe):
         Metadata dictionary with details on :mod:`spacy`
         and `segram` models being used.
     """
-    __initialized__: ClassVar[Mapping[int, bool]] = MappingProxyType({})
+    __initialized__: ClassVar[bool] = False
 
     def __init__(
         self,
@@ -102,7 +102,7 @@ class Segram(Pipe):
             "vectors":            self.get_model_info(vectors) if vectors else None
         }
         self.configure_pipeline(*preprocess)
-        if not self.__initialized__.get(self.id, False):
+        if not self.__initialized__:
             self.init_extensions()
 
     def __call__(self, doc: Doc) -> Doc:
@@ -123,10 +123,6 @@ class Segram(Pipe):
                 v = tuple(v.items())
             hashdata.append((k, v))
         return hash(tuple(hashdata))
-
-    @property
-    def initialized(self) -> bool:
-        return self.__initialized__[self.id]
 
     # Methods -----------------------------------------------------------------
 
@@ -155,10 +151,7 @@ class Segram(Pipe):
     def init_extensions(self) -> None:
         """Initialize custom :mod:`spacy` attributes."""
         self.extensions.register()
-        self.__class__.__initialized__ = MappingProxyType({
-            **self.__class__.__initialized__,
-            self.id: True
-        })
+        self.__class__.__initialized__ = True
 
     def configure_pipeline(self, *components: str, **kwds: Any) -> None:
         """Configure secondary :mod:`segram` pipeline components.

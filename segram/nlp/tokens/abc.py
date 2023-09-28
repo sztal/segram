@@ -101,7 +101,8 @@ class NLP(ABC):
     @classmethod
     def sns(cls, tok: Doc | Span | Token) -> Self:
         """Get :mod:`segram` namespace from :mod:`spacy` token."""
-        return getattr(tok._, tok.alias+"_sns")
+        alias = getattr(tok.doc._, __title__+"_alias")
+        return getattr(tok._, alias+"_sns")
 
     def similarity(self, other: Doc | Span | Token) -> float:
         return cosine_similarity(self.vector, other.vector)

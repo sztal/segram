@@ -11,6 +11,7 @@ from spacy.vocab import Vocab
 from tqdm.auto import tqdm
 from .tokens import Doc, Token
 from ..datastruct import DataIterable, DataTuple
+from .. import __title__
 
 
 class Corpus(Sequence):
@@ -103,7 +104,8 @@ class Corpus(Sequence):
                 )
             doc = self.nlp(doc)
         if isinstance(doc, SpacyDoc):
-            doc = getattr(doc._, doc.alias+"_sns")
+            alias = getattr(doc._, __title__+"_alias")
+            doc = getattr(doc._, alias+"_sns")
         if doc not in self:
             self._dmap[doc.id] = doc
             self.token_dist += self._count_toks(doc)

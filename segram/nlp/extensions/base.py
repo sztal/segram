@@ -39,7 +39,6 @@ class SpacyExtensions:
             "doc": { "default": None },    # Segram grammar document pointer
             "data": { "default": None },   # Serialized Segram grammar data
             "numpy": { "default": None },  # Numpy/Cupy pointer
-            __title__+"_alias": { "default": None } # 'segram' alias
         }
     }
 
@@ -69,6 +68,7 @@ class SpacyExtensions:
                     name = f"{alias}_{attr}"
                 tok_types[typ].set_extension(name, **kwds)
         # Register SNS getters and keys
+        tok_types["doc"].set_extension(__title__+"_alias", default=None)
         tok_types["doc"].set_extension(alias, getter=self.grammar)
         tok_types["span"].set_extension(alias, getter=self.grammar)
         alias += "_sns"
@@ -84,7 +84,7 @@ class SpacyExtensions:
         tok: SpacyDoc | SpacySpan | SpacyToken,
         typ: type[Token]
     ) -> Token:
-        alias = "_"+tok.alias+"_sns"
+        alias = "_"+getattr(tok.doc._, __title__+"_alias")+"_sns"
         if (obj := getattr(tok._, alias)):
             return obj
         obj = typ(tok)

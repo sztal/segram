@@ -8,7 +8,7 @@ from spacy.tokens import Token as SpacyToken
 from .abc import NLP
 from .token import Token
 from .span import Span
-from ... import settings
+from ... import __title__
 from ...utils.registries import grammars
 from ...utils.diff import iter_diffs, equal, IDiffType
 
@@ -105,7 +105,7 @@ class Doc(NLP):
     @staticmethod
     def clear_user_data(user_data: dict):
         """Clear user data from cached :mod:`segram` objects."""
-        alias = settings.spacy_alias
+        alias = user_data[("._.", __title__+"_alias", None, None)]
         _alias = "_"+alias+"_sns"
         for k, v in user_data.items():
             user_data[k] = v if _alias not in k else None
@@ -136,7 +136,8 @@ class Doc(NLP):
     @classmethod
     def from_data(cls, data: dict[str, Any]) -> Self:
         """Construct from data dictionary produced by :meth:`to_data`."""
-        return getattr(SpacyDoc(**data)._, settings.spacy_alias+"_sns")
+        alias = data["user_data"][("._.", __title__+"_alias", None, None)]
+        return getattr(SpacyDoc(**data)._, alias+"_sns")
 
     def char_span(self, *args: Any, **kwds: Any) -> Span | None:
         res = self.tok.char_span(*args, **kwds)

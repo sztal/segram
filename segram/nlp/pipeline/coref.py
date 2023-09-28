@@ -6,7 +6,7 @@ from spacy.language import Language
 from spacy.tokens import Doc
 from spacy.training import Alignment
 from .base import Segram
-from ... import settings
+from ... import __title__
 from ...utils.meta import get_cname
 
 
@@ -45,6 +45,14 @@ class Coref:
         ValueError
             If ``components`` are empty but not ``None``.
         """
+        try:
+            segram = dict(nlp.pipeline)[__title__]
+            self.alias = segram.alias
+        except KeyError as exc:
+            raise RuntimeError(
+                f"'{name}' component can be "
+                f"initialized only after '{__title__}'"
+            ) from exc
         self.nlp = nlp
         self.name = name
         self.model = model
@@ -64,7 +72,7 @@ class Coref:
         for spans in cdoc.spans.values():
             cluster = [ int(align.y2x.data[t.i]) for s in spans for t in s ]
             self.set_corefs(doc, cluster)
-        getattr(doc._, f"{settings.spacy_alias}_meta")["coref"] = \
+        getattr(doc._, f"{self.alias}_meta")["coref"] = \
             Segram.get_model_info(self.model)
         return doc
 
@@ -78,7 +86,7 @@ class Coref:
         in ``_ref`` custom attribute on tokens.
         """
         # pylint: disable=protected-access
-        alias = settings.spacy_alias
+        alias = self.alias
         proper = []
         pronouns = []
         for i in cluster:
