@@ -3,8 +3,7 @@
 It implements the _Segram_ pipe component providing
 all main semantic grammar transformations and related auxiliary methods.
 """
-from typing import Any, Sequence, ClassVar, Mapping
-from types import MappingProxyType
+from typing import Any, Sequence, ClassVar
 from importlib import import_module
 import numpy as np
 import spacy
@@ -94,8 +93,7 @@ class Segram(Pipe):
             "name":               self.name,
             __title__+"_alias":   alias,
             __title__+"_version": __version__,
-            __title__+"_doc": self.grammar,
-            "spacy_alias":        alias,
+            __title__+"_grammar": f"{grammar}.{nlp.lang}",
             "spacy_version":      spacy.__version__,
             "spacy_gpu":          gpu,
             "model":              self.get_model_info(nlp),

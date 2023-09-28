@@ -93,4 +93,5 @@ class SpacyExtensions:
 
     @staticmethod
     def grammar(tok: SpacyDoc | SpacySpan) -> Union["Doc", "Span"]:
-        return getattr(tok._, tok.alias+"_sns").grammar
+        alias = getattr(tok.doc._, __title__+"_alias")
+        return getattr(tok._, alias+"_sns").grammar

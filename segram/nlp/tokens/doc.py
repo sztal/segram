@@ -150,7 +150,7 @@ class Doc(NLP):
 
     def get_grammar_type(self):
         alias = self.alias
-        key = getattr(self._, f"{alias}_meta")[f"{alias}_doc"]
+        key = getattr(self._, f"{alias}_meta")[f"{alias}_grammar"]
         return grammars.get(key)
 
     def copy(self) -> Self:

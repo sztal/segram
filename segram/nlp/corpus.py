@@ -48,6 +48,7 @@ class Corpus(Sequence):
         self.token_dist = Counter()
         self.count_method = count_method
         self.resolve_coref = resolve_coref
+        self.meta = None
 
     def __getitem__(self, idx: int | slice) -> Doc | tuple[Doc, ...]:
         return self.docs[idx]
@@ -103,12 +104,14 @@ class Corpus(Sequence):
                     "so documents passed as strings cannot be parsed."
                 )
             doc = self.nlp(doc)
+        alias = getattr(doc._, __title__+"_alias")
         if isinstance(doc, SpacyDoc):
-            alias = getattr(doc._, __title__+"_alias")
             doc = getattr(doc._, alias+"_sns")
         if doc not in self:
             self._dmap[doc.id] = doc
             self.token_dist += self._count_toks(doc)
+        if not self.meta:
+            self.meta = getattr(doc._, alias+"_meta")
 
     def add_docs(
         self,
