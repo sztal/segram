@@ -11,10 +11,10 @@ from ..nlp.tokens import Doc, Span, Token
 from ..symbols import Role
 from ..abc import labelled
 from ..utils.misc import best_matches, sort_map
-from ..datastruct import DataChain, DataTuple
+from ..datastruct import DataTuple
 
 
-PVType = DataChain[DataTuple[Phrase]]
+PVType = PhraseGraph[Phrase]
 component = labelled("component")
 
 

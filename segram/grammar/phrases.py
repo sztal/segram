@@ -14,7 +14,7 @@ from .conjuncts import PhraseGroup, Conjuncts
 from ..nlp.tokens import Doc, Token
 from ..symbols import Role, Dep
 from ..abc import labelled
-from ..datastruct import DataIterable, DataTuple, DataChain
+from ..datastruct import DataIterable, DataTuple
 from ..utils.misc import cosine_similarity, best_matches
 
 
@@ -164,7 +164,7 @@ class Phrase(TokenElement):
     def verb(self) -> PGType:
         """Return ``self`` if VP or nothing otherwise."""
         return PhraseGroup((self,)) \
-            if isinstance(self, VerbPhrase) else DataChain()
+            if isinstance(self, VerbPhrase) else PhraseGroup()
     @part
     @property
     def subj(self) -> PGType:
@@ -268,7 +268,7 @@ class Phrase(TokenElement):
         return tuple(n for n in self.part_names if getattr(self, n))
 
     @property
-    def components(self) -> DataChain[DataTuple[Component]]:
+    def components(self) -> DataIterable[Component]:
         return self.iter_subdag().get("head")
 
     # Methods -----------------------------------------------------------------
@@ -284,7 +284,7 @@ class Phrase(TokenElement):
             f"'{cls.cname(comp)}' objects"
         )
 
-    def iter_subdag(self, *, skip: int = 0) -> Iterable[Self]:
+    def iter_subdag(self, *, skip: int = 0) -> DataIterable[Self]:
         """Iterate over phrasal subtree and omit ``skip`` first items.
 
         Each phrase is emitted only when reached the first time
@@ -296,7 +296,7 @@ class Phrase(TokenElement):
                 yield from child.iter_subdag(skip=0)
         return DataIterable(islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None))
 
-    def iter_supdag(self, *, skip: int = 0) -> Iterable[Self]:
+    def iter_supdag(self, *, skip: int = 0) -> DataIterable[Self]:
         """Iterate over phrasal supertree and omit ``skip`` first items.
 
         Each phrase is emitted only when reached the first time
@@ -595,6 +595,9 @@ class PhraseVectors:
         )
 
     # Internals ---------------------------------------------------------------
+
+    def _sim_recursive2(self, phrase: Phrase, other: Phrase) -> float:
+        pass
 
     def _sim_recursive(self, phrase: Phrase, other: Phrase) -> float:
         sim = 0

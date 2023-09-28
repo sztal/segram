@@ -224,10 +224,8 @@ class DataSequenceABC(Sequence, DataIterableABC):
         groups = []
         keyfunc = self._get_keyfunc(key, **kwds)
         for key, group in self.sort(key, **kwds).pipe(groupby, key=keyfunc):
-            if not isinstance(group, DataChain):
-                group = DataTuple(group)
-            groups.append(group)
-        return DataChain(groups)
+            groups.append(DataTuple(group))
+        return DataTuple(groups)
 
 
 class DataTuple(tuple, DataSequenceABC):
@@ -236,57 +234,3 @@ class DataTuple(tuple, DataSequenceABC):
 
 class DataList(list, DataSequenceABC):
     """Data list class."""
-
-
-class DataChain(DataSequenceABC):
-    """Chain of data tuples class."""
-    __slots__ = ("__data__",)
-
-    def __init__(self, data: Iterable = ()) -> None:
-        self.__data__ = DataTuple(
-            x if isinstance(x, DataSequenceABC) else DataTuple(x)
-            for x in data
-        )
-
-    def __repr__(self) -> str:
-        return repr(self.__data__)
-
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, DataChain):
-            return self.__data__ == other.__data__
-        return False
-
-    def __lt__(self, other: Any) -> bool:
-        if isinstance(other, DataChain):
-            return self.__data__ < other.__data__
-        return NotImplemented
-
-    def __iter__(self) -> Iterable[Any]:
-        yield from self.iter_flat()
-
-    def __getitem__(self, idx: int | slice) -> Any:
-        if isinstance(idx, slice):
-            return DataTuple(self.flat[idx])
-        return self.flat[idx]
-
-    def __len__(self) -> int:
-        return sum(1 for _ in self.flat)
-
-    # Properties --------------------------------------------------------------
-
-    @property
-    def groups(self) -> DataTuple:
-        return self.__data__
-
-    @property
-    def flat(self) -> DataTuple:
-        return DataTuple(self.iter_flat())
-
-    # Methods -----------------------------------------------------------------
-
-    def iter_flat(self) -> Iterable:
-        for obj in self.__data__:
-            if isinstance(obj, DataIterableABC | tuple | list):
-                yield from obj
-            else:
-                yield obj

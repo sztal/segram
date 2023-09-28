@@ -1,6 +1,6 @@
 from typing import Any, Iterable, Self
 from ..nlp.tokens import Token
-from ..datastruct import DataTuple, DataChain
+from ..datastruct import DataTuple
 from ..utils.misc import stringify
 
 
@@ -8,7 +8,7 @@ class PhraseGroup(DataTuple):
     """Group of phrases."""
 
     @property
-    def conjs(self) -> DataChain:
+    def conjs(self) -> DataTuple["Conjuncts"]:
         """Phrases groups as conjuncts."""
         return Conjuncts.get_chain(self)
 
@@ -159,9 +159,9 @@ class Conjuncts(DataTuple):
                 yield group[0].sent.conjs[lead_idx].copy(members=group)
 
     @classmethod
-    def get_chain(cls, phrases: Iterable["Phrase"]) -> DataChain:
+    def get_chain(cls, phrases: Iterable["Phrase"]) -> DataTuple["Conjuncts"]:
         """Get chain of conjuncts groups in ``phrases``."""
-        return DataChain(cls.find_groups(phrases))
+        return DataTuple(cls.find_groups(phrases))
 
     def copy(self, **kwds: Any) -> Self:
         kwds = { **self.data, **kwds }
