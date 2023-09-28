@@ -69,6 +69,7 @@ def sort_map(mapping: Mapping) -> Mapping:
         in sorted(mapping.items(), key=lambda x: x[0])
     })
 
+
 def stringify(obj: Any, **kwds: Any) -> str:
     """Convert ``obj`` to string.
 

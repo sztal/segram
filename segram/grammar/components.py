@@ -4,6 +4,7 @@ Grammar components are groups of associated tokens controlled
 by a root token, e.g. a verb with its auxiliary verbs.
 """
 from typing import Any, Iterable, ClassVar, Self
+import numpy as np
 from .abc import TokenElement
 from .conjuncts import Conjuncts
 from ..nlp.tokens import Token
@@ -193,6 +194,10 @@ class Component(TokenElement):
                 attr = attr.name
             dct[name] = attr
         return dct
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.tok.vector
 
     # Methods -----------------------------------------------------------------
 

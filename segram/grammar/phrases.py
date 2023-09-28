@@ -24,6 +24,7 @@ PVSpecType: TypeAlias = dict[str, Union[
     str, Iterable[str],
     Callable[[Union["Phrase", Component, Token]], float]
 ]]
+FloatVec = np.ndarray[tuple[int], np.floating]
 _what_type: TypeAlias = \
     str | Callable[["Phrase"], DataTuple[Union["Phrase", Component]]]
 _what_vals = ("phrases", "components")
@@ -534,8 +535,8 @@ class PhraseVectors:
         s[4:] for s in Phrase.similarity.__doc__.split("\n")[4:-1]
     )
     __slots__ = (
-        "phrase", "spec", "what", "weights", "np",
-        "comp_vectors", "recursive", "only", "ignore"
+        "phrase", "spec", "what", "weights", "decay_rate",
+        "np", "comp_vectors", "recursive", "only", "ignore"
     )
 
     def __init__(
@@ -545,6 +546,7 @@ class PhraseVectors:
         what: Literal[*_what_vals] | dict[str, _what_type] = _what_vals[0],
         *,
         weights: dict[str, float | int] | None = None,
+        decay_rate: float = 1,
         recursive: bool = False,
         comp_vectors: bool = True,
         only: str | Iterable[str] = (),
@@ -563,6 +565,7 @@ class PhraseVectors:
         self.spec = spec
         self.what = what
         self.weights = weights
+        self.decay_rate = decay_rate
         self.recursive = recursive
         self.only = only
         self.ignore = ignore
@@ -584,22 +587,22 @@ class PhraseVectors:
         """Structured similarity between ``self.phrase`` and ``self.spec``."""
         if isinstance(self.spec, Phrase | Component):
             if self.recursive:
-                return self._sim_recursive(self.phrase, self.spec)
-            return self._sim_phrase(self.phrase, self.spec)
-        if isinstance(self.spec, str | Iterable | Mapping):
-            return self._sim_custom_spec(self.phrase, self.spec)
-        pcn = Phrase.cname()
-        raise ValueError(
-            f"specification must be a '{pcn}' instance "
-            f"or a 'dict', not '{self.spec.__class__.__name__}'"
-        )
+                sim = self._sim_recursive(self.phrase, self.spec)
+            else:
+                sim = self._sim_phrase(self.phrase, self.spec)
+        elif isinstance(self.spec, str | Iterable | Mapping):
+            sim = self._sim_custom_spec(self.phrase, self.spec)
+        else:
+            pcn = Phrase.cname()
+            raise ValueError(
+                f"specification must be a '{pcn}' instance "
+                f"or a 'dict', not '{self.spec.__class__.__name__}'"
+            )
+        return max(-1, min(sim, 1))
 
     # Internals ---------------------------------------------------------------
 
-    def _sim_recursive2(self, phrase: Phrase, other: Phrase) -> float:
-        pass
-
-    def _sim_recursive(self, phrase: Phrase, other: Phrase) -> float:
+    def _sim_recursive(self, phrase: Phrase, other: Phrase, depth: int = 0) -> float:
         sim = 0
         total_weight = 0
         if self._is_name_ok((name := "head")):
@@ -616,13 +619,13 @@ class PhraseVectors:
                 # happening for verb phrases/clauses
                 continue
 
-            w = self.weights.get(name, 1)
+            w = self.weights.get(name, 1) * self.decay_rate**(depth+1)
             total_weight += w
 
             ops = getattr(other, name)
             if not sps or not ops:
                 continue
-            best = best_matches(sps, ops, self._sim_recursive)
+            best = best_matches(sps, ops, self._sim_recursive, depth=depth+1)
             denom = max(len(ops), len(sps))
             add_sim = sum(x for x, *_ in best)
             sim += add_sim * w / denom
@@ -631,47 +634,71 @@ class PhraseVectors:
         return sim / total_weight
 
     def _sim_phrase(self, phrase: Phrase, other: Phrase) -> float:
-        # pylint: disable=too-many-locals
         sdict = self._get_parts(phrase)
         odict = self._get_parts(other)
         shared = set(sdict).intersection(odict)
-        denom = len(set(sdict).union(odict))
-        num = len(shared)
+        denom = sum(self.weights.get(k, 1) for k in set(sdict).union(odict))
+        num = sum(self.weights.get(k, 1) for k in shared)
         sdict = {
-            k: self._get_vectors(v) for k, v in sdict.items()
+            k: v for k, v in sdict.items()
             if k in shared and self._is_name_ok(k)
         }
-        odict = {
-            k: self._get_vectors(v) for k, v in odict.items()
-            if k in shared and self._is_name_ok(k)
-        }
+        W = self.np.array([
+            self.weights.get(k, 1) for k in shared
+        ], dtype=self.vocab.vectors.data.dtype)
+        odict = { k: odict[k] for k in sdict }
+        svec = DataTuple(sdict.values()) \
+            .map(lambda x: sum(c.vector for c in x)) \
+            .pipe(self.np.vstack)
+        ovec = DataTuple(sdict.values()) \
+            .map(lambda x: sum(c.vector for c in x)) \
+            .pipe(self.np.vstack)
+        cos = cosine_similarity(svec, ovec, aligned=True)
+        sim = (cos * W).sum() * (num / denom)
+        return sim
 
-        sim = 0
-        total_weight = 0
-        if self._is_name_ok((name := "head")):
-            total_weight += self.weights.get(name, 1)
-            sim += self._sim(phrase.head, other.head) * total_weight
-            denom += 1
-            num += 1
+    # def _sim_phrase(self, phrase: Phrase, other: Phrase) -> float:
+    #     # pylint: disable=too-many-locals
+    #     sdict = self._get_parts(phrase)
+    #     odict = self._get_parts(other)
+    #     shared = set(sdict).intersection(odict)
+    #     denom = len(set(sdict).union(odict))
+    #     num = len(shared)
+    #     sdict = {
+    #         k: self._get_vectors(v) for k, v in sdict.items()
+    #         if k in shared and self._is_name_ok(k)
+    #     }
+    #     odict = {
+    #         k: self._get_vectors(v) for k, v in odict.items()
+    #         if k in shared and self._is_name_ok(k)
+    #     }
 
-        vocab = phrase.doc.vocab
-        dtype = vocab.vectors.data.dtype
-        vlen = vocab.vectors_length
-        weights = self.np.empty(len(sdict), dtype=dtype)
-        svecs = self.np.empty((len(sdict), vlen), dtype=dtype)
-        ovecs = self.np.empty_like(svecs)
+    #     sim = 0
+    #     total_weight = 0
+    #     if self._is_name_ok((name := "head")):
+    #         total_weight += self.weights.get(name, 1)
+    #         sim += self._sim(phrase.head, other.head) * total_weight
+    #         denom += 1
+    #         num += 1
 
-        for i, kv in enumerate(sdict.items()):
-            name, svec = kv
-            svecs[i] = svec
-            ovecs[i] = odict[name]
-            weights[i] = self.weights.get(name, 1)
+    #     vocab = phrase.doc.vocab
+    #     dtype = vocab.vectors.data.dtype
+    #     vlen = vocab.vectors_length
+    #     weights = self.np.empty(len(sdict), dtype=dtype)
+    #     svecs = self.np.empty((len(sdict), vlen), dtype=dtype)
+    #     ovecs = self.np.empty_like(svecs)
 
-        total_weight += weights.sum()
-        if total_weight == 0:
-            return 0.
-        cos = cosine_similarity(svecs, ovecs, aligned=True)
-        return (sim + (cos * weights).sum()) / total_weight * (num / denom)
+    #     for i, kv in enumerate(sdict.items()):
+    #         name, svec = kv
+    #         svecs[i] = svec
+    #         ovecs[i] = odict[name]
+    #         weights[i] = self.weights.get(name, 1)
+
+    #     total_weight += weights.sum()
+    #     if total_weight == 0:
+    #         return 0.
+    #     cos = cosine_similarity(svecs, ovecs, aligned=True)
+    #     return (sim + (cos * weights).sum()) / total_weight * (num / denom)
 
     def _sim_custom_spec(self, phrase: Phrase, spec: PVSpecType) -> float:
         if isinstance(spec, Mapping):
@@ -747,6 +774,7 @@ class PhraseVectors:
             for name in phrase.part_names:
                 if (value := getattr(phrase, name)):
                     pdict[name] = value
+            pdict["head"] = DataTuple((phrase.head,))
         return pdict
 
     def _get_vectors(self, seq: DataTuple):
