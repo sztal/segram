@@ -3,7 +3,7 @@
 It implements the _Segram_ pipe component providing
 all main semantic grammar transformations and related auxiliary methods.
 """
-from typing import Any, Sequence, ClassVar
+from typing import Any, Sequence
 from importlib import import_module
 import numpy as np
 import spacy
@@ -37,8 +37,6 @@ class Segram(Pipe):
         Metadata dictionary with details on :mod:`spacy`
         and `segram` models being used.
     """
-    __initialized__: ClassVar[bool] = False
-
     def __init__(
         self,
         nlp: Language,
@@ -76,7 +74,7 @@ class Segram(Pipe):
         self.alias = alias
         self.nlp = nlp
         self.name = name
-        self.extensions = self.import_module(grammar, nlp.lang)
+        self.extensions = self.import_extensions(grammar, nlp.lang, alias)
         self.grammar = f"{grammar}.{nlp.lang}"
         if isinstance(vectors, str):
             vectors = spacy.load(vectors, enable="tok2vec", vocab=nlp.vocab)
@@ -84,30 +82,22 @@ class Segram(Pipe):
             vcn = vectors.__class__.__name__
             raise ValueError(f"'vectors' must be provided as a language model or a name, not '{vcn}'")
         models_registry.register(self.get_model_name(nlp), func=nlp)
-        gpu = not isinstance(self.nlp.vocab.vectors.data, np.ndarray)
-        numpy = np
-        if gpu:
-            numpy = import_module("cupy")
-        self.numpy = numpy
         self.meta = {
             "name":               self.name,
             __title__+"_alias":   alias,
             __title__+"_version": __version__,
             __title__+"_grammar": f"{grammar}.{nlp.lang}",
             "spacy_version":      spacy.__version__,
-            "spacy_gpu":          gpu,
+            "spacy_gpu":          not isinstance(self.nlp.vocab.vectors.data, np.ndarray),
             "model":              self.get_model_info(nlp),
             "vectors":            self.get_model_info(vectors) if vectors else None
         }
         self.configure_pipeline(*preprocess)
-        if not self.__initialized__:
-            self.init_extensions()
+        self.init_extensions()
 
     def __call__(self, doc: Doc) -> Doc:
-        meta = self.meta.copy()
-        setattr(doc._, __title__+"_alias", self.alias)
-        setattr(doc._, f"{self.alias}_meta", meta)
-        setattr(doc._, f"{self.alias}_numpy", self.numpy)
+        self.set_docattrs(doc, self.alias, self.meta)
+        self.set_numpy(doc, self.alias, self.meta)
         return doc
 
     # Properties --------------------------------------------------------------
@@ -124,7 +114,28 @@ class Segram(Pipe):
 
     # Methods -----------------------------------------------------------------
 
-    def import_module(self, grammar: str, lang: str) -> SpacyExtensions:
+    @staticmethod
+    def set_docattrs(doc: Doc, alias: str, meta: dict[str, Any]) -> None:
+        """Set document attributes."""
+        meta = meta.copy()
+        setattr(doc._, __title__+"_alias", alias)
+        setattr(doc._, f"{alias}_meta", meta)
+
+    @staticmethod
+    def set_numpy(doc: Doc, alias: str, meta: dict[str, Any]) -> None:
+        """Set :mod:`numpy`/:mod:`cupy` module to be used by document."""
+        if meta["spacy_gpu"]:
+            numpy = import_module("cupy")
+        else:
+            numpy = np
+        setattr(doc._, f"{alias}_numpy", numpy)
+
+    @staticmethod
+    def import_extensions(
+        grammar: str,
+        lang: str,
+        alias: str
+    ) -> SpacyExtensions:
         """Import NLP module from grammar label and language code.
 
         Returns
@@ -134,7 +145,7 @@ class Segram(Pipe):
         """
         path = f"{__title__}.nlp.backend.{grammar}.lang.{lang}"
         module = import_module(path)
-        kwds = { "alias": self.alias }
+        kwds = { "alias": alias }
         for tok_type in ("Doc", "Span", "Token"):
             try:
                 kwds[tok_type.lower()] = getattr(module, tok_type)
@@ -149,7 +160,6 @@ class Segram(Pipe):
     def init_extensions(self) -> None:
         """Initialize custom :mod:`spacy` attributes."""
         self.extensions.register()
-        self.__class__.__initialized__ = True
 
     def configure_pipeline(self, *components: str, **kwds: Any) -> None:
         """Configure secondary :mod:`segram` pipeline components.

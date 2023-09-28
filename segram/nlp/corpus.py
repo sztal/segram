@@ -11,6 +11,7 @@ from spacy.vocab import Vocab
 from tqdm.auto import tqdm
 from .tokens import Doc, Token
 from ..datastruct import DataIterable, DataTuple
+from ..nlp.pipeline.base import Segram
 from .. import __title__
 
 
@@ -105,13 +106,14 @@ class Corpus(Sequence):
                 )
             doc = self.nlp(doc)
         alias = getattr(doc._, __title__+"_alias")
+        if not self.meta:
+            self.meta = getattr(doc._, alias+"_meta")
         if isinstance(doc, SpacyDoc):
             doc = getattr(doc._, alias+"_sns")
         if doc not in self:
+            Segram.set_numpy(doc, alias, self.meta)
             self._dmap[doc.id] = doc
             self.token_dist += self._count_toks(doc)
-        if not self.meta:
-            self.meta = getattr(doc._, alias+"_meta")
 
     def add_docs(
         self,
@@ -220,7 +222,8 @@ class Corpus(Sequence):
             "vocab": self.vocab.to_bytes(),
             "token_dist": dict(self.token_dist),
             "count_method": self.count_method,
-            "resolve_coref": self.resolve_coref
+            "resolve_coref": self.resolve_coref,
+            "meta": self.meta
         }
         if nlp and self.nlp:
             data["nlp"] = {
@@ -236,6 +239,10 @@ class Corpus(Sequence):
     def from_data(cls, data: dict[str, Any]) -> Self:
         """Construct from data dictionary."""
         # pylint: disable=no-value-for-parameter
+        meta = data.pop("meta")
+        grammar, lang = meta["segram_grammar"].split(".")
+        alias = meta["segram_alias"]
+        Segram.import_extensions(grammar, lang, alias).register()
         vocab = Vocab().from_bytes(data["vocab"])
         data["vocab"] = vocab
         if (dct := data.get("nlp")):
@@ -245,8 +252,9 @@ class Corpus(Sequence):
             docs = DocBin().from_bytes(docs).get_docs(vocab)
         token_dist = Counter(data.pop("token_dist"))
         corpus = cls(**data)
-        corpus.add_docs(docs)
+        corpus.meta = meta
         corpus.token_dist = token_dist
+        corpus.add_docs(docs)
         return corpus
 
     def to_disk(

@@ -25,6 +25,7 @@ class SpacyExtensions:
     alias
         :mod:`segram` alias.
     """
+    __initialized__: ClassVar[Mapping[str, bool]] = {}
     __spacy_token_types__: ClassVar[Mapping[str, type]] = MappingProxyType({
         "token": SpacyToken,
         "span": SpacySpan,
@@ -58,6 +59,9 @@ class SpacyExtensions:
 
     def register(self) -> None:
         """Initialize extensions."""
+        key = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        if self.__class__.__initialized__.get(key, False):
+            return
         alias = self.alias
         tok_types = self.__class__.__spacy_token_types__
         for typ, attrs in self.__attributes__.items():
@@ -76,6 +80,7 @@ class SpacyExtensions:
             segram = getattr(self, attr)
             spacy.set_extension("_"+alias, default=None)
             spacy.set_extension(alias, getter=partial(self.sns_get, typ=segram))
+        self.__class__.__initialized__[key] = True
 
     # Doc extension attributes ------------------------------------------------
 
