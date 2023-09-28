@@ -5,17 +5,22 @@ syntactical relationships within sentences which go beyond simple
 syntax tree links and can be used to perform various tasks such as
 component and phrase detection.
 """
+# pylint: disable=no-name-in-module
 from typing import Any, Self, Callable, ClassVar, Final
 from typing import MutableMapping, Container, Sequence
-from abc import abstractmethod
+from abc import ABC, abstractmethod
+from importlib import import_module
 import re
 from functools import total_ordering
 from catalogue import Registry
 import numpy as np
+from spacy.vocab import Vocab
+from spacy.vectors import Vectors
 from ..nlp.tokens import Doc, Span, Token
 from ..utils.registries import grammars
-from ..abc import SegramWithDocABC
+from ..abc import SegramWithDocABC, init_class_attrs, inherit_docstring
 from ..datastruct import Namespace, DataTuple
+from ..utils.misc import cosine_similarity
 
 
 class GrammarNamespace(Namespace):
@@ -89,6 +94,7 @@ class GrammarElement(Grammar, Sequence):
     """Abstract base class for grammar elements."""
     __slots__ = ()
     alias: ClassVar[str] = "GElem"
+    Similarity: ClassVar[type["GrammarSimilarity"]] = type
 
     def __repr__(self) -> str:
         return self.to_str(color=True)
@@ -113,6 +119,11 @@ class GrammarElement(Grammar, Sequence):
         raise NotImplementedError
 
     @property
+    @abstractmethod
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        """Word vector."""
+
+    @property
     def tokens(self) -> DataTuple[Token]:
         """Tokens sequence of the element."""
         return DataTuple(self)
@@ -125,11 +136,6 @@ class GrammarElement(Grammar, Sequence):
     @property
     def lemma(self) -> str:
         return "".join(t.lemma+t.whitespace for t in self.tokens).strip()
-
-    @property
-    def vector(self) -> np.ndarray[tuple[int], np.floating]:
-        """Average token word vector."""
-        return sum(tok.coref.vector for tok in self) / len(self)
 
     # Methods -----------------------------------------------------------------
 
@@ -183,6 +189,10 @@ class GrammarElement(Grammar, Sequence):
                 is_match &= attr == test
         return is_match
 
+    def similarity(self, other: Self) -> float:
+        """Cosine similarity between word vectors."""
+        return cosine_similarity(self.vector, other.vector)
+
 
 class DocElement(GrammarElement, Sequence):
     """Document element class."""
@@ -220,6 +230,10 @@ class DocElement(GrammarElement, Sequence):
         on the same exact data.
         """
         return self.doc.id
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.doc.vector
 
     # Methods -----------------------------------------------------------------
 
@@ -281,6 +295,10 @@ class SentElement(GrammarElement):
         """
         return (self.start, self.end)
 
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.sent.vector
+
     # Methods -----------------------------------------------------------------
 
     @classmethod
@@ -336,9 +354,56 @@ class TokenElement(GrammarElement):
     def tokens(self) -> tuple[Token, ...]:
         pass
 
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.tok.vector
+
     # Methods -----------------------------------------------------------------
 
     @classmethod
     @abstractmethod
     def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from document and data dictionary."""
+
+
+class GrammarSimilarityA(ABC):
+    """Abstract base class for structured similarity scorers."""
+    __slots__ = ("element", "spec", "np")
+    slot_names: tuple[str, ...] = ()
+
+    def __init__(self, element: GrammarElement, spec: Any) -> None:
+        self.element = element
+        self.spec = spec
+        self.np = import_module(self.vocab.vectors.data.__class__.__module__)
+
+
+    def __init_subclass__(cls, register_with: type[GrammarElement]) -> None:
+        init_class_attrs(cls, {
+            "__slots__": "slot_names"
+        }, check_slots=True)
+        inherit_docstring(cls)
+        register_with.Similarity = cls
+        register_with.similarity.__doc__ += "\n".join(
+            s for s in cls.get_similarity.__doc__.split("\n")[2:-1]
+        )
+
+    # Properties --------------------------------------------------------------
+
+    @property
+    def vocab(self) -> Vocab:
+        return self.element.doc.vocab
+
+    @property
+    def vectors(self) -> Vectors:
+        return self.vocab.vectors
+
+    @property
+    def similarity(self) -> float:
+        sim = self.get_similarity(self.element, self.spec)
+        return max(-1, min(sim, 1))
+
+    # Methods -----------------------------------------------------------------
+
+    @abstractmethod
+    def get_similarity(self, element: GrammarElement, spec: Any) -> float:
+        """Get structured similarity between ``self.element`` and ``self.spec``."""

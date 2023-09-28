@@ -1,13 +1,9 @@
 # pylint: disable=no-name-in-module
-from typing import Any, Union, Callable, ClassVar, Self, Iterable, Mapping
-from typing import Literal, TypeAlias
+from typing import Any, ClassVar, Self, Iterable
 from abc import abstractmethod
-from importlib import import_module
 from itertools import islice
 from more_itertools import unique_everseen
 import numpy as np
-from spacy.vocab import Vocab
-from spacy.vectors import Vectors
 from .abc import TokenElement
 from .components import Component, Verb, Noun, Desc, Prep
 from .conjuncts import PhraseGroup, Conjuncts
@@ -15,19 +11,11 @@ from ..nlp.tokens import Doc, Token
 from ..symbols import Role, Dep
 from ..abc import labelled
 from ..datastruct import DataIterable, DataTuple
-from ..utils.misc import cosine_similarity, best_matches
 
 
 part = labelled("part")
-PGType: TypeAlias = PhraseGroup["Phrase"]
-PVSpecType: TypeAlias = dict[str, Union[
-    str, Iterable[str],
-    Callable[[Union["Phrase", Component, Token]], float]
-]]
-FloatVec = np.ndarray[tuple[int], np.floating]
-_what_type: TypeAlias = \
-    str | Callable[["Phrase"], DataTuple[Union["Phrase", Component]]]
-_what_vals = ("phrases", "components")
+component = labelled("component")
+PGType = PhraseGroup["Phrase"]
 
 
 class Phrase(TokenElement):
@@ -48,6 +36,7 @@ class Phrase(TokenElement):
     __slots__ = ("dep", "sconj", "_lead")
     alias: ClassVar[str] = "Phrase"
     part_names: ClassVar[tuple[str, ...]] = ()
+    component_names: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
         self,
@@ -272,6 +261,31 @@ class Phrase(TokenElement):
     def components(self) -> DataIterable[Component]:
         return self.iter_subdag().get("head")
 
+    @component
+    @property
+    def verbs(self) -> DataTuple[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Verb))
+
+    @component
+    @property
+    def nouns(self) -> DataTuple[Noun]:
+        return self.components.filter(lambda c: isinstance(c, Noun))
+
+    @component
+    @property
+    def preps(self) -> DataTuple[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Prep))
+
+    @component
+    @property
+    def descs(self) -> DataTuple[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Desc))
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        comps = tuple(self.components)
+        return sum(c.vector for c in comps) / len(comps)
+
     # Methods -----------------------------------------------------------------
 
     @classmethod
@@ -329,67 +343,9 @@ class Phrase(TokenElement):
                 yield DataTuple(chain)
         return DataIterable(_dfs(self))
 
-    def similarity(
-        self,
-        spec: Self | str | Iterable[str] | PVSpecType,
-        what: Literal[*_what_vals] | dict[str, _what_type] = _what_vals[0],
-        *,
-        recursive: bool = False,
-        comp_vectors: bool = True,
-        **kwds: Any
-    ) -> float:
-        """Similarity score with respect to specification.
-
-        Parameters
-        ----------
-        spec
-            Specification against which the phrase is to be compared.
-            Can be another phrase, a string or an iterable of strings,
-            which should be single words.
-            A single strings is splitted at whitespace and turned into
-            multiple words. Finally, an averaged word vector for all words
-            is computed. Alternatively, a specification can have a form
-            of dictionary mapping names of phrase parts (see ``what`` argument)
-            to either strings convertible to word vectors (as used here)
-            or callables, which will be applied to the values of the fields
-            specified by the dictionary keys and are expected to return
-            floats representing structured similarity scores.
-        what
-            Specifies whether comparison with another phrase should be
-            based on phrase parts such as subjects, direct objects etc.,
-            or on a simple comparison based on components, i.e. verbs and nouns.
-            Alternatively, custom parts may be defined by providing a dictionary
-            mapping part names to either phrase attribute names or arbitrary
-            callables accepting a single phrase and producing an instance of
-            :class:`segram.datastruct.DataTuple` populated with phrase
-            or component objects.
-        weights
-            Dictionary mapping phrase part or component names or custom names
-            as defined by ``what`` to arbitrary weights (which must be positive).
-            The weights do not have to be normalized and sum up to one.
-            They are used for reweighting importance of different parts
-            during scoring.
-        recursive
-            Should a more accurate recurisve algorithm be used
-            instead of a structured average vector approach.
-            The former may be somewhat slower than than the latter,
-            especially in the case of phrases with complex syntactic structures.
-        comp_vectors
-            If ``True`` then word vectors are based only on component
-            head tokens instead of all tokens belonging to a given
-            phrase or component.
-        only, ignore
-            Lists of part names to selectively use or ignored
-            even if ``what`` defines more fields. Cannot use both
-            at the same time.
-
-        Raises
-        ------
-        ValueError
-            If word vectors are not available.
-        """
-        kwds = dict(recursive=recursive, comp_vectors=comp_vectors, **kwds)
-        return PhraseVectors(self, spec, what, **kwds).similarity
+    def similarity(self, *args: Any, **kwds: Any) -> float:
+        """Structured similarity with respect to other phrase or sentence."""
+        return self.Similarity(self, *args, **kwds).similarity
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Phrase)
@@ -515,290 +471,3 @@ class PrepPhrase(Phrase):
     def governs(cls, comp: Component) -> bool:
         return super().governs(comp) \
             and isinstance(comp, Prep)
-
-
-# -----------------------------------------------------------------------------
-
-class PhraseVectors:
-    """Phrase vectors comparison.
-
-    This is a helper class for implementing
-    various types of comparisons between vectors
-    based on word vector embeddings.
-
-    Attributes
-    ----------
-    phrase
-        Main phrase of interest.
-    """
-    __doc__ += "\n".join(
-        s[4:] for s in Phrase.similarity.__doc__.split("\n")[4:-1]
-    )
-    __slots__ = (
-        "phrase", "spec", "what", "weights", "decay_rate",
-        "np", "comp_vectors", "recursive", "only", "ignore"
-    )
-
-    def __init__(
-        self,
-        phrase: Phrase,
-        spec: Phrase | str | Iterable[str] | PVSpecType,
-        what: Literal[*_what_vals] | dict[str, _what_type] = _what_vals[0],
-        *,
-        weights: dict[str, float | int] | None = None,
-        decay_rate: float = 1,
-        recursive: bool = False,
-        comp_vectors: bool = True,
-        only: str | Iterable[str] = (),
-        ignore: str | Iterable[str] = ()
-    ) -> None:
-        if not phrase.doc.has_vectors:
-            raise ValueError("word vectors not available")
-        if what not in _what_vals and not isinstance(what, Mapping):
-            raise ValueError(f"'what' has to be a mapping or one of {_what_vals}")
-        if only and ignore:
-            raise ValueError("'only' and 'ignore' cannot be used at the same time")
-        weights = weights or {}
-        if any(v < 0 for v in weights.values()):
-            raise ValueError("weights must be non-negative")
-        self.phrase = phrase
-        self.spec = spec
-        self.what = what
-        self.weights = weights
-        self.decay_rate = decay_rate
-        self.recursive = recursive
-        self.only = only
-        self.ignore = ignore
-        self.comp_vectors = comp_vectors
-        self.np = import_module(self.vocab.vectors.data.__class__.__module__)
-
-    # Properties --------------------------------------------------------------
-
-    @property
-    def vocab(self) -> Vocab:
-        return self.phrase.doc.vocab
-
-    @property
-    def vectors(self) -> Vectors:
-        return self.vocab.vectors
-
-    @property
-    def similarity(self) -> float:
-        """Structured similarity between ``self.phrase`` and ``self.spec``."""
-        if isinstance(self.spec, Phrase | Component):
-            if self.recursive:
-                sim = self._sim_recursive(self.phrase, self.spec)
-            else:
-                sim = self._sim_phrase(self.phrase, self.spec)
-        elif isinstance(self.spec, str | Iterable | Mapping):
-            sim = self._sim_custom_spec(self.phrase, self.spec)
-        else:
-            pcn = Phrase.cname()
-            raise ValueError(
-                f"specification must be a '{pcn}' instance "
-                f"or a 'dict', not '{self.spec.__class__.__name__}'"
-            )
-        return max(-1, min(sim, 1))
-
-    # Internals ---------------------------------------------------------------
-
-    def _sim_recursive(self, phrase: Phrase, other: Phrase, depth: int = 0) -> float:
-        sim = 0
-        total_weight = 0
-        if self._is_name_ok((name := "head")):
-            total_weight += self.weights.get(name, 1)
-            sim += self._sim(phrase.head, other.head) * total_weight
-        active_parts = set(phrase.active_parts).union(other.active_parts)
-        for name in active_parts:
-            if not self._is_name_ok(name):
-                continue
-            sps = getattr(phrase, name)
-
-            if phrase in sps.flat:
-                # This is to prevent infinite recursion
-                # happening for verb phrases/clauses
-                continue
-
-            w = self.weights.get(name, 1) * self.decay_rate**(depth+1)
-            total_weight += w
-
-            ops = getattr(other, name)
-            if not sps or not ops:
-                continue
-            best = best_matches(sps, ops, self._sim_recursive, depth=depth+1)
-            denom = max(len(ops), len(sps))
-            add_sim = sum(x for x, *_ in best)
-            sim += add_sim * w / denom
-        if total_weight == 0:
-            return 0.
-        return sim / total_weight
-
-    def _sim_phrase(self, phrase: Phrase, other: Phrase) -> float:
-        sdict = self._get_parts(phrase)
-        odict = self._get_parts(other)
-        shared = set(sdict).intersection(odict)
-        denom = sum(self.weights.get(k, 1) for k in set(sdict).union(odict))
-        num = sum(self.weights.get(k, 1) for k in shared)
-        sdict = {
-            k: v for k, v in sdict.items()
-            if k in shared and self._is_name_ok(k)
-        }
-        W = self.np.array([
-            self.weights.get(k, 1) for k in shared
-        ], dtype=self.vocab.vectors.data.dtype)
-        odict = { k: odict[k] for k in sdict }
-        svec = DataTuple(sdict.values()) \
-            .map(lambda x: sum(c.vector for c in x)) \
-            .pipe(self.np.vstack)
-        ovec = DataTuple(sdict.values()) \
-            .map(lambda x: sum(c.vector for c in x)) \
-            .pipe(self.np.vstack)
-        cos = cosine_similarity(svec, ovec, aligned=True)
-        sim = (cos * W).sum() * (num / denom)
-        return sim
-
-    # def _sim_phrase(self, phrase: Phrase, other: Phrase) -> float:
-    #     # pylint: disable=too-many-locals
-    #     sdict = self._get_parts(phrase)
-    #     odict = self._get_parts(other)
-    #     shared = set(sdict).intersection(odict)
-    #     denom = len(set(sdict).union(odict))
-    #     num = len(shared)
-    #     sdict = {
-    #         k: self._get_vectors(v) for k, v in sdict.items()
-    #         if k in shared and self._is_name_ok(k)
-    #     }
-    #     odict = {
-    #         k: self._get_vectors(v) for k, v in odict.items()
-    #         if k in shared and self._is_name_ok(k)
-    #     }
-
-    #     sim = 0
-    #     total_weight = 0
-    #     if self._is_name_ok((name := "head")):
-    #         total_weight += self.weights.get(name, 1)
-    #         sim += self._sim(phrase.head, other.head) * total_weight
-    #         denom += 1
-    #         num += 1
-
-    #     vocab = phrase.doc.vocab
-    #     dtype = vocab.vectors.data.dtype
-    #     vlen = vocab.vectors_length
-    #     weights = self.np.empty(len(sdict), dtype=dtype)
-    #     svecs = self.np.empty((len(sdict), vlen), dtype=dtype)
-    #     ovecs = self.np.empty_like(svecs)
-
-    #     for i, kv in enumerate(sdict.items()):
-    #         name, svec = kv
-    #         svecs[i] = svec
-    #         ovecs[i] = odict[name]
-    #         weights[i] = self.weights.get(name, 1)
-
-    #     total_weight += weights.sum()
-    #     if total_weight == 0:
-    #         return 0.
-    #     cos = cosine_similarity(svecs, ovecs, aligned=True)
-    #     return (sim + (cos * weights).sum()) / total_weight * (num / denom)
-
-    def _sim_custom_spec(self, phrase: Phrase, spec: PVSpecType) -> float:
-        if isinstance(spec, Mapping):
-            pdict = self._get_parts(phrase)
-            sim = 0
-            denom = 0
-            num = 0
-            total_weight = 0
-            for field, req in spec.items():
-                denom += 1
-                if not (val := pdict.get(field)):
-                    continue
-                w = self.weights.get(field, 1)
-                total_weight += w
-                num += 1
-                if isinstance(req, Callable):
-                    sim += req(val) * w
-                else:
-                    req = self._get_text_vector(req)
-                    if isinstance(val, Phrase | Component | Token):
-                        vector = val.vector
-                    elif isinstance(val, Iterable):
-                        vector = sum(map(lambda x: x.vector, val))
-                    sim += cosine_similarity(vector, req) * w
-            if total_weight == 0:
-                return 0.
-            return sim / total_weight * (num / denom)
-
-        vector = self._get_text_vector(spec)
-        return cosine_similarity(phrase.vector, vector)
-
-    def _sim(
-        self,
-        X: np.ndarray[tuple[int] | tuple[int, int], np.floating],
-        Y: np.ndarray[tuple[int] | tuple[int, int], np.floating]
-    ) -> float:
-        if not isinstance(X, np.ndarray):
-            X = X.vector
-            Y = Y.vector
-        if X.ndim > 1:
-            sim = cosine_similarity(X, Y, aligned=True)
-        else:
-            sim = cosine_similarity(X, Y)
-            if not isinstance(sim, np.ndarray):
-                return sim
-            if sim.size <= 0:
-                return 0.
-            if sim.ndim == 2:
-                axis = 1 if sim.shape[0] <= sim.shape[1] else 0
-                sim = sim.max(axis=axis)
-        return sim.mean()
-
-    def _is_name_ok(self, name: str) -> bool:
-        if self.ignore:
-            return name not in self.ignore
-        if self.only:
-            return name in self.only
-        return True
-
-    def _get_parts(self, phrase: Phrase) -> dict[str, DataTuple[Phrase | Component]]:
-        pdict = {}
-        if isinstance(self.what, Mapping):
-            for k, v in self.what.items():
-                if isinstance(v, str):
-                    pdict[k] = getattr(phrase, v)
-                else:
-                    pdict[k] = v(phrase)
-        elif self.what == "components":
-            for comp in phrase.components:
-                pdict.setdefault(comp.alias.lower(), []).append(comp)
-            pdict = { k: tuple(v) for k, v in pdict.items() }
-        else:
-            for name in phrase.part_names:
-                if (value := getattr(phrase, name)):
-                    pdict[name] = value
-            pdict["head"] = DataTuple((phrase.head,))
-        return pdict
-
-    def _get_vectors(self, seq: DataTuple):
-        if self.what == "phrases" and self.comp_vectors:
-            seq = [ c for p in seq for c in p.components ]
-        if (vec := [ x.vector for x in seq ]):
-            return sum(vec) / len(vec)
-        return vec
-
-    def _get_text_vector(
-        self,
-        toks: str | Iterable[str]
-    ) -> np.ndarray[tuple[int], np.floating]:
-        if isinstance(toks, str):
-            toks = toks.strip().split()
-        toks = tuple(toks)
-        if not toks:
-            raise ValueError("cannot fetch word vectors; empty token list")
-        return sum(self._get_single_vec(tok) for tok in toks) / len(toks)
-
-    def _get_single_vec(self, tok: str | int) -> np.ndarray[tuple[int], np.floating]:
-        try:
-            return self.vectors[tok]
-        except KeyError:
-            vlen = self.vocab.vectors_length
-            dtype = self.vectors.data.dtype
-            return self.np.zeros(vlen, dtype=dtype)

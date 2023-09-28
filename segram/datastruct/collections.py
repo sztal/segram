@@ -45,7 +45,6 @@ class DataIterableABC(Iterable):
         self,
         func: str | Callable[[Any, ...], bool] | None,
         *args: Any,
-        _drop_empty: bool = True,
         **kwds: Any
     ) -> Self:
         """Filter data iterator."""
@@ -53,26 +52,12 @@ class DataIterableABC(Iterable):
             func = bool
         else:
             func = self._handle_string_func(func)
-        def _iter():
-            for obj in self:
-                if isinstance(obj, DataIterableABC):
-                    if (subs := obj.filter(func, *args, **kwds)) \
-                    or not _drop_empty:
-                        yield subs
-                elif func(obj, *args, **kwds):
-                    yield obj
-        return self.__class__(_iter())
+        return self.__class__(x for x in self if func(x, *args, **kwds))
 
     def map(self, func: str | Callable[[Any, ...], Any], *args: Any, **kwds: Any) -> Self:
         """Map data iterator."""
         func = self._handle_string_func(func)
-        def _iter():
-            for obj in self:
-                if isinstance(obj, DataIterableABC):
-                    yield obj.map(func, *args, **kwds)
-                else:
-                    yield func(obj, *args, **kwds)
-        return self.__class__(_iter())
+        return self.__class__(func(x, *args, **kwds) for x in self)
 
     def pipe(
         self,

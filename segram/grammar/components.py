@@ -195,10 +195,6 @@ class Component(TokenElement):
             dct[name] = attr
         return dct
 
-    @property
-    def vector(self) -> np.ndarray[tuple[int], np.floating]:
-        return self.tok.vector
-
     # Methods -----------------------------------------------------------------
 
     @classmethod

@@ -4,18 +4,18 @@ from .conjuncts import PhraseGroup, Conjuncts
 from .abc import SentElement
 from .components import Component
 from .components import Verb, Noun, Prep, Desc
-from .phrases import Phrase, VerbPhrase, NounPhrase, DescPhrase, PrepPhrase
+from .phrases import Phrase
 from .graph import PhraseGraph
 from ..settings import settings
 from ..nlp.tokens import Doc, Span, Token
 from ..symbols import Role
 from ..abc import labelled
-from ..utils.misc import best_matches, sort_map
+from ..utils.misc import sort_map
 from ..datastruct import DataTuple
 
 
 PVType = PhraseGraph[Phrase]
-component = labelled("component")
+component_ = labelled("component")
 
 
 class Sent(SentElement):
@@ -89,45 +89,25 @@ class Sent(SentElement):
     def sources(self) -> PVType:
         return PhraseGroup(self.graph.sources)
 
-    @component
     @property
+    @component_
     def verbs(self) -> DataTuple[Verb]:
         return self.components.filter(lambda c: isinstance(c, Verb))
 
-    @component
     @property
+    @component_
     def nouns(self) -> DataTuple[Noun]:
         return self.components.filter(lambda c: isinstance(c, Noun))
 
-    @component
     @property
+    @component_
     def preps(self) -> DataTuple[Verb]:
         return self.components.filter(lambda c: isinstance(c, Prep))
 
-    @component
     @property
+    @component_
     def descs(self) -> DataTuple[Verb]:
         return self.components.filter(lambda c: isinstance(c, Desc))
-
-    @property
-    def vps(self) -> PVType:
-        return Conjuncts \
-            .get_chain(p for p in self.phrases if isinstance(p, VerbPhrase))
-
-    @property
-    def nps(self) -> PVType:
-        return Conjuncts \
-            .get_chain(p for p in self.phrases if isinstance(p, NounPhrase))
-
-    @property
-    def dps(self) -> PVType:
-        return Conjuncts \
-            .get_chain(p for p in self.phrases if isinstance(p, DescPhrase))
-
-    @property
-    def pps(self) -> PVType:
-        return Conjuncts \
-            .get_chain(p for p in self.phrases if isinstance(p, PrepPhrase))
 
     @property
     def tokens(self) -> DataTuple[Token]:
@@ -151,29 +131,9 @@ class Sent(SentElement):
 
     # Methods -----------------------------------------------------------------
 
-    def similarity(self, spec: Self | dict , *args: Any, **kwds: Any) -> float:
-        """Structured similarity to other sentence.
-
-        It is computed as the average similarity between
-        best matching root phrases of the two sentences.
-
-        Parameters
-        ----------
-        spec
-            Match specification. It may be another sentence
-            or a match specification dictionary as used
-            in structured similarity for phrases.
-        *args, **kwds
-            Passed to :meth:`segram.grammar.Phrase.similarity.
-        """
-        proots = self.proots
-        if isinstance(spec, Sent):
-            oroots = spec.proots
-            return sum(score for score, *_ in best_matches(
-                proots, oroots, lambda s, o: s.similarity(o, *args, **kwds)
-            )) / max(len(proots), len(oroots))
-        return sum(p.similarity(spec, *args, **kwds) for p in proots) / len(proots)
-
+    def similarity(self, *args: Any, **kwds: Any) -> float:
+        """Structured similarity with respect to other sentence or phrase."""
+        return self.Similarity(self, *args, **kwds).similarity
 
     @classmethod
     def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
