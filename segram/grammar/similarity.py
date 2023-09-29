@@ -26,7 +26,7 @@ class GrammarSimilarity(ABC):
 
     def __init__(self, element: "GrammarElement", spec: Any) -> None:
         self.element = element
-        if not self.vocab.has_vectors:
+        if not self.vocab.has_vector:
             raise RuntimeError("word vectors not available")
         self.spec = spec
         self.np = import_module(self.vocab.vectors.data.__class__.__module__)
@@ -56,12 +56,16 @@ class GrammarSimilarity(ABC):
         sim = self.get_similarity(self.element, self.spec)
         return max(-1, min(sim, 1))
 
+    @property
+    @abstractmethod
+    def config(self) -> dict[str, Any]:
+        return {}
+
     # Methods -----------------------------------------------------------------
 
     @abstractmethod
     def get_similarity(self, element: "GrammarElement", spec: Any) -> float:
         """Get structured similarity between ``self.element`` and ``self.spec``."""
-
 
 
 class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
@@ -98,8 +102,14 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
     # Properties --------------------------------------------------------------
 
     @property
-    def phrase(self) -> Phrase:
-        return self.element
+    def config(self) -> dict[str, Any]:
+        return {
+            "method": self.method,
+            "weights": self.weights,
+            "decay_rate": self.decay_rate,
+            "only": self.only,
+            "ignore": self.ignore
+        }
 
     # Methods -----------------------------------------------------------------
 
@@ -200,7 +210,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             spec = self._make_sent(Doc)
         if isinstance(spec, Sent):
             proots = spec.proots
-            return sum(self.get_similarity(self.phrase, p) for p in proots) \
+            return sum(self.get_similarity(phrase, p) for p in proots) \
                 / len(proots)
         if isinstance(spec, Phrase):
             if self.method == "recursive":
@@ -210,7 +220,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             return self._sim_parts(phrase, spec)
         if isinstance(self.spec, str | Iterable | Mapping):
             return self._sim_custom(phrase, spec)
-        pcn = self.phrase.cname()
+        pcn = phrase.cname()
         raise ValueError(
             f"cannot compare '{pcn}' with '{self.__class__.__name__}'"
         )
@@ -274,6 +284,9 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
 
     def _sim_custom(self, phrase: Phrase, spec: SpecType) -> float:
         if isinstance(spec, Mapping):
+            invalid = set(spec) - set(phrase.part_names) - set(phrase.component_names)
+            if invalid:
+                raise ValueError(f"incorrect specification fields: {invalid}")
             pdict = self._get_parts(phrase)
             sim = 0
             denom = 0
@@ -301,7 +314,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             sim *= (num / denom) / total_weight
         else:
             spec = self._get_text_vector(spec)
-            sim = cosine_similarity(self.phrase.vector, spec)
+            sim = cosine_similarity(phrase.vector, spec)
         return sim
 
     def _sim(
@@ -337,13 +350,13 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
         keys = []
         if self.method in ("components", "both"):
             keys.extend(phrase.component_names)
-        if self.method in ("phrase", "both"):
+        if self.method in ("phrases", "both"):
             keys.extend(phrase.part_names)
         if self.ignore:
             keys = [ k for k in keys if k not in self.ignore ]
         elif self.only:
             keys = [ k for k in keys if k in self.only]
-        pdict = { k: getattr(phrase, k) for k in keys }
+        pdict = { k: v for k in keys if (v := getattr(phrase, k)) }
         return pdict
 
     def _get_text_vector(
@@ -381,10 +394,6 @@ class SentSimilarity(PhraseSimilarity, register_with=Sent):
     """Structured similarity between sentences and phrases."""
 
     @property
-    def sent(self) -> Sent:
-        return self.element
-
-    @property
     def phrase(self) -> None:
         raise AttributeError(f"'{self.__class__.__name__}' object has not attribute 'phrase'")
 
@@ -395,12 +404,18 @@ class SentSimilarity(PhraseSimilarity, register_with=Sent):
         if isinstance(spec, Doc):
             spec = self._make_sent(spec)
         if isinstance(spec, Sent):
+            if self.method == "average":
+                return cosine_similarity(sent.vector, spec.vector)
             proots = sent.proots
-            oroots = sent.spec
+            oroots = spec.proots
             return sum (score for score, *_ in best_matches(
-                proots, oroots, lambda s, o: self.get_similarity(s, o)
+                proots, oroots, lambda s, o: s.Similarity(s, o, **self.config) \
+                    .similarity
             )) / max(len(proots), len(oroots))
-        return max(super().get_similarity(p, spec) for p in sent.proots)
+        return max(
+            p.Similarity(p, spec, **self.config).similarity
+            for p in sent.proots
+        )
 
 
 class DocSimilarity(GrammarSimilarity, register_with=Doc):

@@ -92,22 +92,22 @@ class Sent(SentElement):
     @property
     @component_
     def verbs(self) -> DataTuple[Verb]:
-        return self.components.filter(lambda c: isinstance(c, Verb))
+        return self.components.filter(lambda c: isinstance(c, Verb)).tuple
 
     @property
     @component_
     def nouns(self) -> DataTuple[Noun]:
-        return self.components.filter(lambda c: isinstance(c, Noun))
+        return self.components.filter(lambda c: isinstance(c, Noun)).tuple
 
     @property
     @component_
     def preps(self) -> DataTuple[Verb]:
-        return self.components.filter(lambda c: isinstance(c, Prep))
+        return self.components.filter(lambda c: isinstance(c, Prep)).tuple
 
     @property
     @component_
     def descs(self) -> DataTuple[Verb]:
-        return self.components.filter(lambda c: isinstance(c, Desc))
+        return self.components.filter(lambda c: isinstance(c, Desc)).tuple
 
     @property
     def tokens(self) -> DataTuple[Token]:

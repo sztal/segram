@@ -258,28 +258,28 @@ class Phrase(TokenElement):
         return tuple(n for n in self.part_names if getattr(self, n))
 
     @property
-    def components(self) -> DataIterable[Component]:
-        return self.iter_subdag().get("head")
+    def components(self) -> DataTuple[Component]:
+        return self.iter_subdag().get("head").tuple
 
     @component
     @property
     def verbs(self) -> DataTuple[Verb]:
-        return self.components.filter(lambda c: isinstance(c, Verb))
+        return self.components.filter(lambda c: isinstance(c, Verb)).tuple
 
     @component
     @property
     def nouns(self) -> DataTuple[Noun]:
-        return self.components.filter(lambda c: isinstance(c, Noun))
+        return self.components.filter(lambda c: isinstance(c, Noun)).tuple
 
     @component
     @property
     def preps(self) -> DataTuple[Verb]:
-        return self.components.filter(lambda c: isinstance(c, Prep))
+        return self.components.filter(lambda c: isinstance(c, Prep)).tuple
 
     @component
     @property
     def descs(self) -> DataTuple[Verb]:
-        return self.components.filter(lambda c: isinstance(c, Desc))
+        return self.components.filter(lambda c: isinstance(c, Desc)).tuple
 
     @property
     def vector(self) -> np.ndarray[tuple[int], np.floating]:
