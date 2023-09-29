@@ -1,8 +1,10 @@
+# pylint: disable=no-name-in-module
 from typing import Any, Callable, Iterable, Mapping
 from itertools import product
 from more_itertools import unique_everseen
 import numpy as np
 from numpy.linalg import norm
+from spacy.vocab import Vocab
 
 
 def cosine_similarity(
@@ -80,3 +82,54 @@ def stringify(obj: Any, **kwds: Any) -> str:
     if (to_str := getattr(obj, "to_str", None)):
         return to_str(**kwds)
     return repr(obj)
+
+
+def ensure_cpu_vectors(vocab: Vocab | Any) -> None:
+    """Ensure that word vectors are stored on CPU.
+
+    Parameters
+    ----------
+    vocab
+        Vocabulary object.
+        If an arbitrary object is passed then an attempt
+        at retrieving ``.vocab`` attribute is made.
+    """
+    if not isinstance(vocab, Vocab):
+        vocab = vocab.vocab
+    if not isinstance(vocab.vectors.data, np.ndarray):
+        vocab.vectors.data = vocab.vectors.data.get()
+
+def prefer_gpu_vectors(
+    vocab: Vocab | Any,
+    device_id: int | None = None
+) -> bool:
+    """Store word vectors on GPU if possible.
+
+    Parameters
+    ----------
+    Vocabulary object.
+        If an arbitrary object is passed then an attempt
+        at retrieving ``.vocab`` attribute is made.
+    device_id
+        GPU device id. If ``None`` then the default device
+        is used (typically it is with id ``0``).
+
+    Returns
+    -------
+    bool
+        Specifies whether the vectors where successfully moved to GPU.
+    """
+    if not isinstance(vocab, Vocab):
+        vocab = vocab.vocab
+    data = vocab.vectors.data
+    if isinstance(data, np.ndarray):
+        try:
+            import cupy as cp # pylint: disable=import-outside-toplevel
+        except ImportError:
+            return False
+        if device_id is not None:
+            with cp.cuda.Device(device_id):
+                data = cp.asarray(data)
+        else:
+            data = cp.asarray(data)
+        vocab.vectors.data = data

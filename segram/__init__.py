@@ -6,3 +6,4 @@ from .grammar import Doc
 from .semantic import Story
 from .nlp import Corpus
 from .datastruct import DataIterable, DataList, DataTuple
+from .utils.misc import ensure_cpu_vectors, prefer_gpu_vectors

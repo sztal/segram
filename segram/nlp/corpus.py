@@ -12,6 +12,7 @@ from tqdm.auto import tqdm
 from .tokens import Doc, Token
 from ..datastruct import DataIterable, DataTuple
 from ..nlp.pipeline.base import Segram
+from ..utils.misc import prefer_gpu_vectors, ensure_cpu_vectors
 from .. import __title__
 
 
@@ -184,6 +185,17 @@ class Corpus(Sequence):
                 Doc.clear_user_data(doc.tok.user_data)
         dbin = DocBin(attrs, store_user_data=user_data, docs=self.docs.get("tok"))
         return dbin
+
+    def ensure_cpu_vectors(self) -> None:
+        """Ensure that word vectors are stored on CPU."""
+        ensure_cpu_vectors(self.vocab)
+
+    def prefer_gpu_vectors(self, *args: Any, **kwds: Any) -> bool:
+        """Put word vectors on GPU if possible.
+
+        Arguments are passed to :func:`segram.utils.misc.prefer_gpu_vectors`.
+        """
+        prefer_gpu_vectors(self.vocab, *args, **kwds)
 
     @classmethod
     def from_texts(
