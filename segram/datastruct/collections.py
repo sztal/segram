@@ -129,6 +129,10 @@ class DataIterable(DataABC):
             groups[k] = DataTuple(g)
         return groups
 
+    def zip(self, iterable: Iterable) -> Self:
+        """Zip with other iterable."""
+        return self.__class__(zip(self, iterable))
+
     def iter_flat(self) -> Iterable:
         for obj in self:
             if isinstance(obj, DataIterable | tuple | list):

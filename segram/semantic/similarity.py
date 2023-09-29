@@ -2,11 +2,12 @@
 from typing import Any, Literal, Iterable, Mapping
 from abc import ABC, abstractmethod
 from importlib import import_module
+import re
 import numpy as np
 from spacy.vocab import Vocab
 from spacy.vectors import Vectors
 from ..grammar import Component, Phrase, Sent, Doc
-from ..abc import init_class_attrs, inherit_docstring
+from ..abc import init_class_attrs
 from ..datastruct import DataTuple
 from ..utils.misc import best_matches, cosine_similarity
 
@@ -32,11 +33,10 @@ class GrammarSimilarity(ABC):
         init_class_attrs(cls, {
             "__slots__": "slot_names"
         }, check_slots=True)
-        inherit_docstring(cls)
         register_with.Similarity = cls
-        register_with.similarity.__doc__ += "\n".join(
-            s for s in cls.get_similarity.__doc__.split("\n")[2:-1]
-        )
+        ds = cls._get_docstring()
+        ds = re.sub(r"(\n\s*)Attributes(\s*\n)", r"\1Parameters\2", ds)
+        register_with.similarity.__doc__ += ds
 
     # Properties --------------------------------------------------------------
 
@@ -64,9 +64,105 @@ class GrammarSimilarity(ABC):
     def get_similarity(self, element: "GrammarElement", spec: Any) -> float:
         """Get structured similarity between ``self.element`` and ``self.spec``."""
 
+    # Internals ---------------------------------------------------------------
+
+    @classmethod
+    def _get_docstring(cls) -> str:
+        return "\n"+"\n".join(cls.__doc__.split("\n")[1:-1])
+
 
 class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
-    """Structured similarity between phrases and sentences."""
+    r"""Structured similarity between phrases and sentences.
+
+    All methods defined here are designed to ensure that:
+
+    * Similarity of a phrase with respect to itself is ``1``.
+    * Similarity ``x ~ y == y ~ x``.
+
+    In some case the above may be true only approximately due to
+    accumulation of floating point imprecision.
+
+    Attributes
+    ----------
+    element
+        Grammar phrase to compare.
+    spec
+        Specification against which the phrase is to be compared.
+        Can be another phrase, a string or an iterable of strings,
+        which should be single words. A single strings is splitted at
+        whitespace and turned into multiple words.
+        Finally, an averaged word vector for all words is computed.
+        Alternatively, a specification can have a form
+        of a dictionary mapping names of phrase parts or components
+        (see :attr:`segram.grammar.phrases.Phrase.part_names`
+        and :attr:`segram.grammar.phrase.Phrase.component_names`)
+        to either strings or iterables of strings convertible to word
+        vectors (as previously) or other phrases.
+        Importantly, phrases can be also compared against
+        :class:`segram.grammar.Sent` and :class:`segram.grammar.Doc`
+        objects as long as they are comprised of a single sentence.
+        See :class:`SentSimilarity` for details.
+    method
+        Method for calculating similarity between phrases:
+
+        ``components``
+            Components are grouped in buckets by type
+            (verbs, nouns, prepositions and descriptions)
+            and averaged vectors are compared between
+            the same types. Finally, a weighted average
+            (with weights defined by the ``weight`` parameter)
+            is taken and rescaled with a factor ``shared / union``,
+            where ``shared`` is the numebr of types present in
+            both elements and ``union`` is the total number of unique
+            types among both of them. Thus, the final result is akin
+            to a fuzzy Jaccard similarity:
+
+            .. math::
+
+                J = \frac{|A \cap B|}{|A \cup B|}
+
+        ``phrases``
+            As above but based on phrase parts and phrase head compoents.
+            See :attr:`segram.grammar.Phrase.part_names` for a full list.
+
+        ``both``
+            As above but components and phrases are used
+            together.
+
+        ``average``
+            Simple average vectors calculated over all component
+            head tokens are used. In this case weights are ignored.
+
+        ``recursive``
+            First, head components are compared between two phrases,
+            and then the same rule is applied recursively to all
+            parts (subjects, direct objects etc.) where for each
+            type elements of the two phrases are matched in pairs
+            to maximize similarity. As previously, weights can be
+            applied to different types and a Jaccard-like rescaling
+            is applied. Additionaly, importance of nested phrases
+            may be discounted using ``decay_rate`` parameter by
+            rescaling each weight with a factor of ``decay_rate**depth``,
+            where ``depth`` is calculated relative to the depth
+            of the ``self.phrase``.
+
+    weights
+        Dictionary mapping phrase part or component names to arbitrary
+        weights (which must be positive). The weights do not have to be
+        normalized and sum up to one.
+    decay_rate
+        Additional parameter used when ``method="recursive"``,
+        which controls the rate at which contributions coming
+        from nested subphrases are discounted.
+    only, ignore
+        Lists of part or component names to selectively use or ignore.
+        Both arguments cannot be used at the same time.
+
+    Raises
+    ------
+    RuntimeError
+        If word vectors are not available.
+    """
     __slots__ = ("method", "weights", "decay_rate", "only", "ignore")
 
     def __init__(
@@ -111,97 +207,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
     # Methods -----------------------------------------------------------------
 
     def get_similarity(self, element: Phrase, spec: SpecType) -> float:
-        r"""Structured similarity between ``self.phrase`` and ``self.spec``.
-
-        All methods defined here are designed to ensure that:
-
-        * Similarity of a phrase with respect to itself is ``1``.
-        * Similarity ``x ~ y == y ~ x``.
-
-        In some case the above may be true only approximately due to
-        accumulation of floating point imprecision.
-
-        Attributes
-        ----------
-        element
-            Grammar phrase to compare.
-        spec
-            Specification against which the phrase is to be compared.
-            Can be another phrase, a string or an iterable of strings,
-            which should be single words. A single strings is splitted at
-            whitespace and turned into multiple words.
-            Finally, an averaged word vector for all words is computed.
-            Alternatively, a specification can have a form
-            of a dictionary mapping names of phrase parts or components
-            (see :attr:`segram.grammar.phrases.Phrase.part_names`
-            and :attr:`segram.grammar.phrase.Phrase.component_names`)
-            to either strings or iterables of strings convertible to word
-            vectors (as previously) or other phrases.
-            Importantly, phrases can be also compared against
-            :class:`segram.grammar.Sent` and :class:`segram.grammar.Doc`
-            objects as long as they are comprised of a single sentence.
-            See :class:`SentSimilarity` for details.
-        method
-            Method for calculating similarity between phrases:
-
-            ``components``
-                Components are grouped in buckets by type
-                (verbs, nouns, prepositions and descriptions)
-                and averaged vectors are compared between
-                the same types. Finally, a weighted average
-                (with weights defined by the ``weight`` parameter)
-                is taken and rescaled with a factor ``shared / union``,
-                where ``shared`` is the numebr of types present in
-                both elements and ``union`` is the total number of unique
-                types among both of them. Thus, the final result is akin
-                to a fuzzy Jaccard similarity:
-
-                .. math::
-
-                    J = \frac{|A \cap B|}{|A \cup B|}
-
-            ``phrases``
-                As above but based on phrase parts and phrase head compoents.
-                See :attr:`segram.grammar.Phrase.part_names` for a full list.
-
-            ``both``
-                As above but components and phrases are used
-                together.
-
-            ``average``
-                Simple average vectors calculated over all component
-                head tokens are used. In this case weights are ignored.
-
-            ``recursive``
-                First, head components are compared between two phrases,
-                and then the same rule is applied recursively to all
-                parts (subjects, direct objects etc.) where for each
-                type elements of the two phrases are matched in pairs
-                to maximize similarity. As previously, weights can be
-                applied to different types and a Jaccard-like rescaling
-                is applied. Additionaly, importance of nested phrases
-                may be discounted using ``decay_rate`` parameter by
-                rescaling each weight with a factor of ``decay_rate**depth``,
-                where ``depth`` is calculated relative to the depth
-                of the ``self.phrase``.
-
-        weights
-            Dictionary mapping phrase part or component names to arbitrary
-            weights (which must be positive). The weights do not have to be
-            normalized and sum up to one.
-        decay_rate
-            Additional parameter used when ``method="recursive"``,
-            which controls the rate at which contributions coming
-            from nested subphrases are discounted.
-        only, ignore
-            Lists of part or component names to selectively use or ignore.
-            Both arguments cannot be used at the same time.
-
-        Raises
-        ------
-        RuntimeError
-            If word vectors are not available.
-        """
+        r"""Structured similarity between ``self.phrase`` and ``self.spec``."""
         phrase = element
         if isinstance(spec, Doc):
             spec = self._make_sent(Doc)
@@ -247,10 +253,11 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             ops = getattr(other, name)
             if not sps or not ops:
                 continue
-            denom = max(len(ops), len(sps))
+            # denom = max(len(ops), len(sps))
             best = best_matches(sps, ops, self._sim_recursive, depth=depth+1)
             add_sim = sum(x for x, *_ in best)
-            sim += add_sim * w / denom
+            # sim += add_sim * w / denom
+            sim += add_sim * w
         if not total_weight:
             return .0
         return sim / total_weight
@@ -262,7 +269,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
         denom = sum(self.weights.get(k, 1) for k in set(sdict).union(odict))
         if not denom:
             return .0
-        num = sum(self.weights.get(k, 1) for k in shared)
+        # num = sum(self.weights.get(k, 1) for k in shared)
         sdict = {
             k: v for k, v in sdict.items()
             if k in shared and self._is_name_ok(k)
@@ -281,15 +288,19 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             .map(lambda x: sum(c.vector for c in x)) \
             .pipe(self.np.vstack)
         cos = cosine_similarity(svec, ovec, aligned=True)
-        sim = (cos * W).sum() * (num / denom) / W.sum()
+        # sim = (cos * W).sum() * (num / denom) / W.sum()
+        sim = (cos * W).sum() / W.sum()
         return sim
 
     def _sim_custom(self, phrase: Phrase, spec: SpecType) -> float:
         if isinstance(spec, Mapping):
-            invalid = set(spec) - set(phrase.part_names) - set(phrase.component_names)
+            invalid = set(spec) \
+                - set(phrase.part_names) \
+                - set(phrase.component_names) \
+                - {"head"}
             if invalid:
                 raise ValueError(f"incorrect specification fields: {invalid}")
-            pdict = self._get_parts(phrase)
+            pdict = { k: getattr(phrase, k) for k in spec }
             sim = 0
             denom = 0
             num = 0
@@ -302,6 +313,8 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
                 w = self.weights.get(key, 1)
                 total_weight += 1
                 parts = pdict[key]
+                if not parts:
+                    continue
                 if isinstance(_spec, Doc):
                     _spec = self._make_sent(_spec)
                 if isinstance(_spec, Phrase | Sent):
@@ -315,6 +328,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
                     raise ValueError(f"invalid specification '{_spec}' for key '{key}'")
             if not denom or not total_weight:
                 return .0
+            # sim *= (num / denom) / total_weight
             sim *= (num / denom) / total_weight
         else:
             spec = self._get_text_vector(spec)
@@ -396,6 +410,8 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
 
 class SentSimilarity(PhraseSimilarity, register_with=Sent):
     """Structured similarity between sentences and phrases."""
+    # pylint: disable=protected-access
+    __doc__ += PhraseSimilarity._get_docstring()
 
     @property
     def phrase(self) -> None:
@@ -424,3 +440,5 @@ class SentSimilarity(PhraseSimilarity, register_with=Sent):
 
 class DocSimilarity(GrammarSimilarity, register_with=Doc):
     """Structured similarity between documents."""
+    # pylint: disable=protected-access
+    __doc__ += PhraseSimilarity._get_docstring()
