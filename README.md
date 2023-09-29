@@ -19,7 +19,9 @@ lemmatization, dependency parsing and coreference resolution.
 * Automated grammatical analysis in terms of phrases/clauses focused
   on detecting actions as well as subjects and objects of those actions.
 
+<p align="center">
 <img src="docs/figures/printing.png" alt="Simple example of document parsing using `segram` and of printing a phrasal graph to the console" width="50%">
+</p>
 
 * Flexible filtering and matching with queries expressible
   in terms of properties of subjects, verbs, objects, prepositions and
@@ -38,8 +40,10 @@ lemmatization, dependency parsing and coreference resolution.
   of sequentially shifting semantics.
 * Hypergraphical representation of grammatical structure of sentences.
 
+<p align="center">
 <img src="docs/figures/hypergraph.png" alt="Representation of sentence
 as a hypergraph of phrases" width="50%">
+</p>
 
 
 
