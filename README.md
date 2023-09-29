@@ -19,7 +19,7 @@ lemmatization, dependency parsing and coreference resolution.
 * Automated grammatical analysis in terms of phrases/clauses focused
   on detecting actions as well as subjects and objects of those actions.
 
-![Simple example of document parsing using `segram` and of printing a phrasal graph to the console](docs/figures/printing.png)
+<img src="docs/figures/printing.png" alt="Simple example of document parsing using `segram` and of printing a phrasal graph to the console" width="50%">
 
 * Flexible filtering and matching with queries expressible
   in terms of properties of subjects, verbs, objects, prepositions and
