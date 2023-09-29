@@ -10,7 +10,7 @@ from .components import Component
 from ..nlp.tokens import Doc as DocNLP
 from .. import __title__
 from ..utils.misc import sort_map
-from ..datastruct import DataIterable, DataTuple
+from ..datastruct import DataIterator, DataTuple
 
 
 class Doc(DocElement):
@@ -51,14 +51,14 @@ class Doc(DocElement):
         return DataTuple(self.smap.values())
 
     @property
-    def phrases(self) -> DataIterable[Phrase]:
+    def phrases(self) -> DataIterator[Phrase]:
         """Phrase in the document grouped by sentences and conjunct groups."""
-        return DataIterable(s.phrases for s in self.sents).flat
+        return DataIterator(s.phrases for s in self.sents).flat
 
     @property
-    def components(self) -> DataIterable[Component]:
+    def components(self) -> DataIterator[Component]:
         """Unique components by sentences."""
-        return DataIterable(s.components for s in self.sents).flat
+        return DataIterator(s.components for s in self.sents).flat
 
     @property
     def tokens(self) -> DataTuple[Token]:

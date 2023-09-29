@@ -4,7 +4,7 @@ import re
 from ..grammar import Sent, Phrase, NounPhrase, VerbPhrase
 from ..symbols import Dep
 from ..utils.matching import Matcher
-from ..datastruct import DataIterable
+from ..datastruct import DataIterator
 
 
 class Frame(Sequence):
@@ -60,11 +60,11 @@ class Frame(Sequence):
     # Properties --------------------------------------------------------------
 
     @property
-    def phrases(self) -> DataIterable[Phrase]:
+    def phrases(self) -> DataIterator[Phrase]:
         return self.story.phrases.filter(self.match)
 
     @property
-    def sents(self) -> DataIterable[Sent]:
+    def sents(self) -> DataIterator[Sent]:
         return self.phrases.unique(lambda p: (p.doc.idx, p.idx)).get("sent")
 
     # Methods -----------------------------------------------------------------

@@ -10,7 +10,7 @@ from spacy.language import Language
 from spacy.vocab import Vocab
 from tqdm.auto import tqdm
 from .tokens import Doc, Token
-from ..datastruct import DataIterable, DataTuple
+from ..datastruct import DataIterator, DataTuple
 from ..nlp.pipeline.base import Segram
 from ..utils.misc import prefer_gpu_vectors, ensure_cpu_vectors
 from .. import __title__
@@ -76,8 +76,8 @@ class Corpus(Sequence):
     # Properties --------------------------------------------------------------
 
     @property
-    def docs(self) -> DataIterable[Doc]:
-        return DataIterable(self._dmap.values())
+    def docs(self) -> DataIterator[Doc]:
+        return DataIterator(self._dmap.values())
 
     # Methods -----------------------------------------------------------------
 

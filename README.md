@@ -151,7 +151,7 @@ further processing pipeline components defined by `segram`. They inject
 many additional functionalities into standard `spacy` tokens.
 In particular, `Doc` instances are enhanced with a special extension
 property `._.segram`, which converts them to `segram` grammar documents.
-Note that the printing results is different - the output is colored!
+Note that the printing results is different now - the output is colored!
 
 The colors denote the partition of the document into **components**,
 which are groups of related tokens headed by a syntactically and/or

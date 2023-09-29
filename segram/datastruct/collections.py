@@ -1,7 +1,8 @@
 """Enhanced :mod:`collections.abc` classes implementing
 generic data filtering and transformation method.
 """
-from typing import Self, Any, Callable, Sequence, Iterable
+from typing import Self, Any, Callable, Literal
+from typing import Iterable, Iterator, Sequence, Mapping
 from types import MethodType
 from abc import abstractmethod
 from functools import total_ordering
@@ -9,55 +10,13 @@ from itertools import groupby, product, islice
 from more_itertools import unique_everseen
 
 
-class DataIterableABC(Iterable):
-    """Abstract base class for data iterables."""
+class DataABC(Iterable):
+    """Abstract base class for data classes."""
     __slots__ = ()
 
     @abstractmethod
     def __iter__(self) -> Iterable:
         pass
-
-    def __getitem__(self, idx: int | slice) -> Any | Self:
-        if isinstance(idx, int):
-            return next(islice(self, idx, idx+1))
-        start = idx.start
-        stop = idx.stop
-        step = idx.step
-        return self.__class__(islice(self, start, stop, step))
-
-    # Properties --------------------------------------------------------------
-
-    @property
-    def flat(self) -> Self:
-        return self.__class__(self.iter_flat())
-
-    @property
-    def list(self) -> "DataList":
-        return self.pipe(DataList)
-
-    @property
-    def tuple(self) -> "DataTuple":
-        return self.pipe(DataTuple)
-
-    # Methods -----------------------------------------------------------------
-
-    def filter(
-        self,
-        func: str | Callable[[Any, ...], bool] | None,
-        *args: Any,
-        **kwds: Any
-    ) -> Self:
-        """Filter data iterator."""
-        if func is None:
-            func = bool
-        else:
-            func = self._handle_string_func(func)
-        return self.__class__(x for x in self if func(x, *args, **kwds))
-
-    def map(self, func: str | Callable[[Any, ...], Any], *args: Any, **kwds: Any) -> Self:
-        """Map data iterator."""
-        func = self._handle_string_func(func)
-        return self.__class__(func(x, *args, **kwds) for x in self)
 
     def pipe(
         self,
@@ -68,27 +27,6 @@ class DataIterableABC(Iterable):
         """Pipe self to a function."""
         func = self._handle_string_func(func)
         return func(self, *args, **kwds)
-
-    def get(self, attr: str) -> Self:
-        """Extract attributes from data items."""
-        return self.map(lambda m: getattr(m, attr))
-
-    def unique(self, key: str | Callable[[Any, ...], Any] | None = None) -> Self:
-        """Return unique values (only first unique occurences are returned)."""
-        return self.__class__(self.pipe(unique_everseen, key=key))
-
-    def any(self) -> bool:
-        return any(self)
-
-    def all(self) -> bool:
-        return all(self)
-
-    def iter_flat(self) -> Iterable:
-        for obj in self:
-            if isinstance(obj, DataIterableABC | tuple | list):
-                yield from obj
-            else:
-                yield obj
 
     # Internals ---------------------------------------------------------------
 
@@ -115,19 +53,111 @@ class DataIterableABC(Iterable):
         return keyfunc
 
 
-class DataIterable(DataIterableABC):
-    """Data iterable class."""
+class DataIterable(DataABC):
+    """Abstract base class for data iterables."""
+    # pylint: disable=abstract-method
+
+    # Properties --------------------------------------------------------------
+
+    @property
+    def flat(self) -> Self:
+        return self.__class__(self.iter_flat())
+
+    @property
+    def list(self) -> "DataList":
+        return self.pipe(DataList)
+
+    @property
+    def tuple(self) -> "DataTuple":
+        return self.pipe(DataTuple)
+
+    # Methods -----------------------------------------------------------------
+
+    def get(self, attr: str) -> Self:
+        """Extract attributes from data items."""
+        return self.map(lambda m: getattr(m, attr))
+
+    def any(self) -> bool:
+        return any(self)
+
+    def all(self) -> bool:
+        return all(self)
+
+    def map(self, func: str | Callable[[Any, ...], Any], *args: Any, **kwds: Any) -> Self:
+        """Map data iterator."""
+        func = self._handle_string_func(func)
+        return self.__class__(func(x, *args, **kwds) for x in self)
+
+    def filter(
+        self,
+        func: str | Callable[[Any, ...], bool] | None,
+        *args: Any,
+        **kwds: Any
+    ) -> Self:
+        """Filter data iterator."""
+        if func is None:
+            func = bool
+        else:
+            func = self._handle_string_func(func)
+        return self.__class__(x for x in self if func(x, *args, **kwds))
+
+    def unique(self, key: str | Callable[[Any, ...], Any] | None = None) -> Self:
+        """Return unique values (only first unique occurences are returned)."""
+        return self.__class__(self.pipe(unique_everseen, key=key))
+
+    def groupby(self, *args: Any, **kwds: Any) -> Self:
+        """Group by key attribute or function/method.
+
+        Importantly, the key function/values must be sortable.
+
+        Parameters
+        ----------
+        *args
+            First argument is interpreted as key function (or its name).
+            The rest is passed as actual ``*args`` to the function.
+            No grouping is done if no function/name is passed.
+        **kwds
+            Passed to the function.
+        """
+        if not args:
+            return self
+        key, *args = args
+        groups = []
+        keyfunc = self._get_keyfunc(key, **kwds)
+        for key, group in self.sort(key, **kwds).pipe(groupby, key=keyfunc):
+            groups.append(DataTuple(group))
+        return DataTuple(groups)
+
+    def iter_flat(self) -> Iterable:
+        for obj in self:
+            if isinstance(obj, DataIterable | tuple | list):
+                yield from obj
+            else:
+                yield obj
+
+
+class DataIterator(Iterator, DataIterable):
+    """Data iterators class."""
+    # pylint: disable=abstract-method
     __slots__ = ("__data__",)
 
     def __init__(self, data: Iterable, /) -> None:
-        self.__data__ = data
+        self.__data__ = iter(data)
 
-    def __iter__(self) -> Iterable:
-        yield from self.__data__
+    def __next__(self) -> Any:
+        return next(self.__data__)
+
+    def __getitem__(self, idx: int | slice) -> Any | Self:
+        if isinstance(idx, int):
+            return next(islice(self, idx, idx+1))
+        start = idx.start
+        stop = idx.stop
+        step = idx.step
+        return self.__class__(islice(self, start, stop, step))
 
 
 @total_ordering
-class DataSequenceABC(Sequence, DataIterableABC):
+class DataSequence(Sequence, DataIterable):
     """Data sequence class."""
 
     @abstractmethod
@@ -189,33 +219,122 @@ class DataSequenceABC(Sequence, DataIterableABC):
             data = zip(sorted(self.map(keyfunc), reverse=reverse), data)
         return self.__class__(data)
 
-    def groupby(self, *args: Any, **kwds: Any) -> Self:
-        """Group by key attribute or function/method.
 
-        Importantly, the key function/values must be sortable.
+class DataMapping(Mapping, DataABC):
+    """Abstract base class for data mappings."""
+    # pylint: disable=abstract-method
+    _what_vals = ("items", "keys", "values")
+
+    def keys(self) -> DataSequence:
+        return DataTuple(super().keys())
+
+    def values(self) -> DataSequence:
+        return DataTuple(super().values())
+
+    def items(self) -> DataSequence[tuple[Any, Any]]:
+        return DataTuple(super().items())
+
+    def map(self, _what: Literal[*_what_vals], *args: Any, **kwds: Any) -> Self:
+        """Map over keys, values or items and return a transformed dictionary.
 
         Parameters
         ----------
-        *args
-            First argument is interpreted as key function (or its name).
-            The rest is passed as actual ``*args`` to the function.
-            No grouping is done if no function/name is passed.
-        **kwds
-            Passed to the function.
+        _what
+            Part of dictionary to process.
+        *args, **kwds
+            Passed to :meth:`DataIteratorABC.map`.
         """
-        if not args:
-            return self
-        key, *args = args
-        groups = []
-        keyfunc = self._get_keyfunc(key, **kwds)
-        for key, group in self.sort(key, **kwds).pipe(groupby, key=keyfunc):
-            groups.append(DataTuple(group))
-        return DataTuple(groups)
+        if _what not in self._what_vals:
+            raise ValueError(
+                f"data dictionary can be mapped only over one of: {self._what_vals}"
+            )
+        if _what == "items":
+            return self.__class__(self.items().map(*args, **kwds))
+        keys = self.keys()
+        vals = self.values()
+        if _what == "keys":
+            keys = keys.map(*args, **kwds)
+        else:
+            vals = vals.map(*args, **kwds)
+        return self.__class__(zip(keys, vals))
+
+    def filter(self, _what: Literal[*_what_vals], *args: Any, **kwds: Any) -> Self:
+        """Filter dictonary by keys, values or items.
+
+        Parameters
+        ----------
+        _what
+            Part of dictionary to process.
+        *args, **kwds
+            Passed to :meth:`DataIteratorABC.map`.
+        """
+        if _what not in self._what_vals:
+            raise ValueError(
+                f"data dictionary can be filtered only over one of: {self._what_vals}"
+            )
+        if _what == "items":
+            return self.__class__(self.items().filter(*args, **kwds))
+        if args:
+            func, *args = args
+        if _what == "keys":
+            flt = lambda item: func(item[0], *args, **kwds)
+        else:
+            flt = lambda item: func(item[1], *args, **kwds)
+        return self.__class__(self.items().filter(flt))
+
+    def sort(self, _what: Literal[*_what_vals], *args: Any, **kwds: Any) -> Self:
+        """Sort dictionary.
+
+        Parameters
+        ----------
+        _what
+            Part of dictionary to process.
+        *args, **kwds
+            Passed to :meth:`DataSequenceABC.sort`,
+            which is called on ``self.items()``.
+        """
+        return self._apply("sort", _what, *args, **kwds)
+
+    # Internals ---------------------------------------------------------------
+
+    def _apply(self, __method__: str, _what: str, *args: Any, **kwds: Any) -> Self:
+        if _what not in self._what_vals:
+            raise ValueError(
+                f"data dictionary can be filtered only over one of: {self._what_vals}"
+            )
+        if args:
+            func, *args = args
+        else:
+            func = None
+
+        if _what == "keys":
+            idx = 0
+        elif _what == "values":
+            idx = 1
+        else:
+            idx = None
+
+        def flt(item, idx, func, *args, **kwds):
+            if idx is not None:
+                item = item[idx]
+            if func is not None:
+                item = func(item, *args, **kwds)
+            return item
+
+        method = getattr(self.items(), __method__)
+        return self.__class__(method(flt, idx, func, *args, **kwds))
 
 
-class DataTuple(tuple, DataSequenceABC):
+class DataTuple(tuple, DataSequence):
     """Data tuple class."""
 
 
-class DataList(list, DataSequenceABC):
+class DataList(list, DataSequence):
     """Data list class."""
+
+
+class DataDict(dict, DataMapping):
+    """Data dict class."""
+    keys = DataMapping.keys
+    values = DataMapping.values
+    items = DataMapping.items

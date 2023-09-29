@@ -10,7 +10,7 @@ from .conjuncts import PhraseGroup, Conjuncts
 from ..nlp.tokens import Doc, Token
 from ..symbols import Role, Dep
 from ..abc import labelled
-from ..datastruct import DataIterable, DataTuple
+from ..datastruct import DataIterator, DataTuple
 
 
 part = labelled("part")
@@ -299,7 +299,7 @@ class Phrase(TokenElement):
             f"'{cls.cname(comp)}' objects"
         )
 
-    def iter_subdag(self, *, skip: int = 0) -> DataIterable[Self]:
+    def iter_subdag(self, *, skip: int = 0) -> DataIterator[Self]:
         """Iterate over phrasal subtree and omit ``skip`` first items.
 
         Each phrase is emitted only when reached the first time
@@ -309,9 +309,9 @@ class Phrase(TokenElement):
             yield self
             for child in self.children:
                 yield from child.iter_subdag(skip=0)
-        return DataIterable(islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None))
+        return DataIterator(islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None))
 
-    def iter_supdag(self, *, skip: int = 0) -> DataIterable[Self]:
+    def iter_supdag(self, *, skip: int = 0) -> DataIterator[Self]:
         """Iterate over phrasal supertree and omit ``skip`` first items.
 
         Each phrase is emitted only when reached the first time
@@ -321,7 +321,7 @@ class Phrase(TokenElement):
             yield self
             for parent in self.parents:
                 yield from parent.iter_supdag(skip=0)
-        return DataIterable(islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None))
+        return DataIterator(islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None))
 
     def dfs(self, subdag: bool = True) -> DataTuple[DataTuple[Self]]:
         """Depth-first search.
@@ -341,7 +341,7 @@ class Phrase(TokenElement):
                     yield from _dfs(p, chain=new_chain)
             else:
                 yield DataTuple(chain)
-        return DataIterable(_dfs(self))
+        return DataIterator(_dfs(self))
 
     def similarity(self, *args: Any, **kwds: Any) -> float:
         """Structured similarity with respect to other phrase or sentence."""

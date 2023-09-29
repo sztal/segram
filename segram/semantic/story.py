@@ -3,7 +3,7 @@ from spacy.language import Language
 from .frames import Frame, Actants, Events
 from ..grammar import Doc, Sent, Phrase
 from ..nlp import Corpus
-from ..datastruct import DataIterable
+from ..datastruct import DataIterator
 
 
 class Story:
@@ -41,19 +41,19 @@ class Story:
     # Properties --------------------------------------------------------------
 
     @property
-    def docs(self) -> DataIterable[Doc]:
+    def docs(self) -> DataIterator[Doc]:
         """Grammar documents in the story."""
-        return DataIterable(doc.grammar for doc in self.corpus.docs)
+        return DataIterator(doc.grammar for doc in self.corpus.docs)
 
     @property
-    def sents(self) -> DataIterable[Sent]:
+    def sents(self) -> DataIterator[Sent]:
         """Grammar sentences in the story."""
-        return DataIterable(doc.sents for doc in self.docs).flat
+        return DataIterator(doc.sents for doc in self.docs).flat
 
     @property
-    def phrases(self) -> DataIterable[Phrase]:
+    def phrases(self) -> DataIterator[Phrase]:
         """Phrase in the story."""
-        return DataIterable(s.phrases for s in self.sents).flat
+        return DataIterator(s.phrases for s in self.sents).flat
 
     # Methods -----------------------------------------------------------------
 

@@ -1,2 +1,2 @@
-from .collections import DataIterable, DataTuple, DataList
+from .collections import DataIterator, DataTuple, DataList, DataDict
 from .namespace import Namespace
