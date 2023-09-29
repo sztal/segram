@@ -5,10 +5,7 @@ from importlib import import_module
 import numpy as np
 from spacy.vocab import Vocab
 from spacy.vectors import Vectors
-from .components import Component
-from .phrases import Phrase
-from .sent import Sent
-from .doc import Doc
+from ..grammar import Component, Phrase, Sent, Doc
 from ..abc import init_class_attrs, inherit_docstring
 from ..datastruct import DataTuple
 from ..utils.misc import best_matches, cosine_similarity
