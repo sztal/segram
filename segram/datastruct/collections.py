@@ -122,11 +122,12 @@ class DataIterable(DataABC):
         if not args:
             return self
         key, *args = args
-        groups = []
         keyfunc = self._get_keyfunc(key, **kwds)
-        for key, group in self.sort(key, **kwds).pipe(groupby, key=keyfunc):
-            groups.append(DataTuple(group))
-        return DataTuple(groups)
+        groups = DataDict()
+        data = DataTuple(self)
+        for k, g in data.sort(key, **kwds).pipe(groupby, key=keyfunc):
+            groups[k] = DataTuple(g)
+        return groups
 
     def iter_flat(self) -> Iterable:
         for obj in self:
