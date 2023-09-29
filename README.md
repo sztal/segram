@@ -245,4 +245,4 @@ in the [GitHub repository](https://github.com/sztal/segram).
 Authors
 =======
 
-* Szymon Talaga <stalaga@protonmail.com>
+* Szymon Talaga, <stalaga@protonmail.com>
