@@ -250,12 +250,12 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             ops = getattr(other, name)
             if not sps or not ops:
                 continue
-            best = best_matches(sps, ops, self._sim_recursive, depth=depth+1)
             denom = max(len(ops), len(sps))
+            best = best_matches(sps, ops, self._sim_recursive, depth=depth+1)
             add_sim = sum(x for x, *_ in best)
             sim += add_sim * w / denom
-        if total_weight == 0:
-            return 0.
+        if not total_weight:
+            return .0
         return sim / total_weight
 
     def _sim_parts(self, phrase: Phrase, other: Phrase) -> float:
@@ -263,6 +263,8 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
         odict = self._get_parts(other)
         shared = set(sdict).intersection(odict)
         denom = sum(self.weights.get(k, 1) for k in set(sdict).union(odict))
+        if not denom:
+            return .0
         num = sum(self.weights.get(k, 1) for k in shared)
         sdict = {
             k: v for k, v in sdict.items()
@@ -271,6 +273,9 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
         W = self.np.array([
             self.weights.get(k, 1) for k in shared
         ], dtype=self.vocab.vectors.data.dtype)
+        w_total = W.sum()
+        if not w_total:
+            return .0
         odict = { k: odict[k] for k in sdict }
         svec = DataTuple(sdict.values()) \
             .map(lambda x: sum(c.vector for c in x)) \
@@ -311,6 +316,8 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
                         * w
                 else:
                     raise ValueError(f"invalid specification '{_spec}' for key '{key}'")
+            if not denom or not total_weight:
+                return .0
             sim *= (num / denom) / total_weight
         else:
             spec = self._get_text_vector(spec)
