@@ -28,7 +28,9 @@ lemmatization, dependency parsing and coreference resolution.
   data after an initial parsing without access to any `spacy` language
   model.
 * Structured vector similarity model based on weighted averages of
-  cosine similarities between different components of phrases/sentences.
+  cosine similarities between different components of phrases/sentences
+  (several algorithms based on somewhat different notions of what
+  it means for sentences or phrases to be similar are available).
 * Structured vector similarity model for comparing documents in terms
   of sequentially shifting semantics.
 * Hypergraphical representation of grammatical structure of sentences.
@@ -44,31 +46,27 @@ lemmatization, dependency parsing and coreference resolution.
 
 The required Python version will not change in the future releases
 for the foreseeable future, so before the package becomes fully
-mature the dependency on `python>=3.11` will not be too demanding.
+mature the dependency on `python>=3.11` will not be too demanding
+(although it may be bumped to `>=3.12` as the new release is expected
+soon as of time of writing - 29.09.2023).
 
 ### Core requirements (coreference resolution)
 
-`Segram` comes with a coreference resolution component based on the
-experimental model provided in the package `spacy-experimental`.
+`Segram` comes with a coreference resolution component based on an
+experimental model provided by `spacy-experimental` package.
 However, both at the level of `segram` and `spacy` this is currently
 an experimental feature, which comes with a significant price tag attached.
 Namely, the acceptable `spacy` version is significantly limited
 (see the table below). However, as `spacy-experimental` gets integrated
-in the `spacy` core in the future, these constraints should be relaxed.
+in the `spacy` core in the future, these constraints will be relaxed.
 
 
 | Package                  | Version            |
 | ------------------------ | ------------------ |
 | `spacy`                  | `>=3.4,<3,5`       |
-| `spacy-experimental`     | `0.6.1`            |
+| `spacy-experimental`     | `0.6.3`            |
 | `en_coreference_web_trf` | `3.4.0a2`          |
 
-> **Warning**
-> Due to a bug in `spacy-experimental=0.6.1` GPU acceleration is
-> currently not supported, i.e. using `spacy.prefer_gpu()` will
-> result in errors during coreference resolution
-> (see the corresponding
-> [Github issue](https://github.com/explosion/spaCy/issues/13023)).
 
 ## Supported models and languages
 
@@ -98,6 +96,17 @@ python -m download en_core_web_trf
 python -m download en_core_web_lg  # skip if word vectors are not needed
 pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.4.1/en_core_web_lg-3.4.1-py3-none-any.whl
 ```
+
+#### With GPU acceleration
+
+```bash
+pip install segram[gpu]
+# OR in the case when coreference resolution is required
+pip install segram[coref,gpu]
+```
+
+The rest of commands should remain the same depending on whether
+coreference installation or not is used.
 
 ### Github (development version)
 
@@ -140,10 +149,10 @@ dependency tree of a sentence is the head of one component which also
 controls all its leaf children. The following (default) color scheme
 is used:
 
-* <span style="color:orange">**Noun components**</span>
-* <span style="color:red">**Verb components**</span>
-* <span style="color:violet">**Description components**</span>
-* <span style="color:limegreen">**Preposition components**</span>
+* <span style="color:orange">**Noun components**</span> `#FF0000`
+* <span style="color:red">**Verb components**</span> `#FFA500`
+* <span style="color:violet">**Description components**</span> `#EE82EE`
+* <span style="color:limegreen">**Preposition components**</span> `#32CD32`
 
 Components are further organized into phrases, which are higher-order
 and more semantically-oriented units. Crucially, while components are

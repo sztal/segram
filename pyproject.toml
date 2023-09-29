@@ -18,6 +18,7 @@ coref = [
     "spacy>=3.4,<3.5",
     "spacy-experimental==0.6.3"
 ]
+gpu = ["cupy"]
 
 [project.entry-points.spacy_factories]
 segram = "segram.nlp.pipeline.factories:create_base"
