@@ -80,7 +80,7 @@ in the `spacy` core in the future, these constraints will be relaxed.
 
 ## Supported models and languages
 
-Currently, only English is supported and `segram` was tested on models:
+Currently, **only English is supported** and `segram` was tested on models:
 
 * `en_core_web_trf>=3.4.1` (transformer-based model for the general NLP)
 * `en_core_web_lgl>=3.4.1` (used for context-free word vectors)
