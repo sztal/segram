@@ -38,6 +38,9 @@ lemmatization, dependency parsing and coreference resolution.
   of sequentially shifting semantics.
 * Hypergraphical representation of grammatical structure of sentences.
 
+<img src="docs/figures/hypergraph.png" alt="Representation of sentence
+as a hypergraph of phrases" width="50%">
+
 
 
 ## Core requirements
