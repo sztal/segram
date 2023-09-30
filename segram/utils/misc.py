@@ -11,7 +11,8 @@ def cosine_similarity(
     X: np.ndarray[tuple[int] | tuple[int, int], np.floating],
     Y: np.ndarray[tuple[int] | tuple[int, int], np.floating],
     *,
-    aligned: bool = False
+    aligned: bool = False,
+    nans_as_zeros: bool = True
 ) -> float | np.ndarray[tuple[int, ...], np.floating]:
     """Cosine similarity between two vectors.
 
@@ -25,6 +26,9 @@ def cosine_similarity(
     aligned
         If ``True`` then ``X`` and ``Y`` have to be 2D and of the
         same shape and row-by-row similarities are calculated.
+    nans_as_zeros
+        Should NaN values arising from zero vector norm
+        be interpreted as zero similarities.
     """
     if aligned:
         if X.ndim != 2:
@@ -34,15 +38,22 @@ def cosine_similarity(
         Xnorm = np.linalg.norm(X, axis=1)
         Ynorm = np.linalg.norm(Y, axis=1)
         sim = (X*Y).sum(axis=1)
-        mask = (Xnorm != 0) & (Ynorm != 0)
-        sim = sim[mask] / (Xnorm*Ynorm)[mask]
+        if nans_as_zeros:
+            mask = (Xnorm != 0) & (Ynorm != 0)
+            sim = sim[mask] / (Xnorm*Ynorm)[mask]
+        else:
+            sim /= Xnorm*Ynorm
         return sim
     Xnorm = norm(X.T, axis=0)
     Ynorm = norm(Y.T, axis=0)
-    Xnz = Xnorm != 0
-    Ynz = Ynorm != 0
-    cos = (X@Y.T)[Xnz][:, Ynz]
-    cos = np.clip(cos / np.outer(Xnorm[Xnz], Ynorm[Ynz]), -1, 1)
+    if nans_as_zeros:
+        Xnz = Xnorm != 0
+        Ynz = Ynorm != 0
+        cos = (X@Y.T)[Xnz][:, Ynz]
+        cos = np.clip(cos / np.outer(Xnorm[Xnz], Ynorm[Ynz]), -1, 1)
+    else:
+        cos = X@Y.T
+        cos = np.clip(cos / np.outer(Xnorm, Ynorm), -1, 1)
     if cos.size == 1:
         return float(cos[0][0])
     return cos.squeeze()

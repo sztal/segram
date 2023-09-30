@@ -32,10 +32,11 @@ class SentNLP(GrammarNLP, Sent):
         # pylint: disable=protected-access
         sent = cls(sent)
         for tok in sent.sent:
-            cls.types.Noun.from_tok(tok)
-            cls.types.Verb.from_tok(tok)
-            cls.types.Prep.from_tok(tok)
-            cls.types.Desc.from_tok(tok)
+            for typ in ("Noun", "Verb", "Prep", "Desc"):
+                try:
+                    cls.types[typ].from_tok(tok)
+                except AttributeError:
+                    continue
         sent.add_subs()
         sent.graph = PhraseGraph.from_links(sent.find_links())
         sent.conjs = { conj.lead.idx: conj for conj in sorted(sent.find_conjs()) }

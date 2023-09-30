@@ -179,8 +179,10 @@ class RulebasedEnglishToken(Token):
         return (self.is_adp and not self.is_agent) or self.is_prep
     @property
     def is_pp_head(self) -> bool:
-        return (self.is_preplike or self.is_agent) \
-            and not self.lead.head.is_preplike
+        if not self.is_root and self.lead.head.is_preplike:
+            return False
+        return self.is_preplike or self.is_agent \
+            or (self.is_root and self.is_adp)
 
     # Flags for descriptive components ----------------------------------------
 

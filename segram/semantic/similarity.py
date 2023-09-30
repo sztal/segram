@@ -289,8 +289,8 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
         ovec = DataTuple(odict.values()) \
             .map(lambda x: sum(c.vector for c in x)) \
             .pipe(self.np.vstack)
-        cos = cosine_similarity(svec, ovec, aligned=True)
-        sim = (cos * W).sum() * (num / denom) / W.sum()
+        cos = cosine_similarity(svec, ovec, aligned=True, nans_as_zeros=False)
+        sim = self.np.nansum(cos * W) * (num / denom) / W.sum()
         return sim
 
     def _sim_custom(self, phrase: Phrase, spec: SpecType) -> float:
@@ -334,27 +334,6 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             spec = self._get_text_vector(spec)
             sim = cosine_similarity(phrase.vector, spec)
         return sim
-
-    def _sim(
-        self,
-        X: np.ndarray[tuple[int] | tuple[int, int], np.floating],
-        Y: np.ndarray[tuple[int] | tuple[int, int], np.floating]
-    ) -> float:
-        if not isinstance(X, np.ndarray):
-            X = X.vector
-            Y = Y.vector
-        if X.ndim > 1:
-            sim = cosine_similarity(X, Y, aligned=True)
-        else:
-            sim = cosine_similarity(X, Y)
-            if not isinstance(sim, np.ndarray):
-                return sim
-            if sim.size <= 0:
-                return 0.
-            if sim.ndim == 2:
-                axis = 1 if sim.shape[0] <= sim.shape[1] else 0
-                sim = sim.max(axis=axis)
-        return sim.mean()
 
     def _is_name_ok(self, name: str) -> bool:
         if self.ignore:
