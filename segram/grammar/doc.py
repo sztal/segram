@@ -40,7 +40,10 @@ class Doc(DocElement):
         super().__init__(doc)
         if smap is None:
             self.smap = {}  # Little trick to make 's.grammar' work
-            smap = { (s.start, s.end): s.grammar for s in doc.sents }
+            smap = {
+                sent.idx: sent
+                for s in doc.sents if (sent := s.grammar).text.strip()
+            }
         self.smap = sort_map(smap)
 
     # Properties --------------------------------------------------------------
