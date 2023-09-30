@@ -1,6 +1,5 @@
 # pylint: disable=no-name-in-module
 from typing import Any, Sequence, Iterable, Self, Literal
-from types import ModuleType
 import os
 import pickle
 from collections import Counter
@@ -268,7 +267,9 @@ class Corpus(Sequence):
         grammar, lang = meta["segram_grammar"].split(".")
         alias = meta["segram_alias"]
         Segram.import_extensions(grammar, lang, alias).register()
-        vocab = Vocab().from_bytes(data["vocab"])
+        vocab = data["vocab"]
+        if isinstance(vocab, bytes):
+            vocab = Vocab().from_bytes(vocab)
         data["vocab"] = vocab
         if (dct := data.get("nlp")):
             nlp = getattr(import_module(dct["module"]), dct["name"])()
@@ -299,7 +300,7 @@ class Corpus(Sequence):
         cls,
         path: str | bytes | os.PathLike,
         *,
-        vocab: Vocab | None = None
+        vocab: Vocab | bytes | None = None
     ) -> Self:
         """Construct from disk.
 

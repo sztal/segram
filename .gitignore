@@ -1,5 +1,5 @@
-# Development data 
-devdata.segram
+# Segram data 
+**/*.segram
 
 # Sandbox
 _sandbox/
