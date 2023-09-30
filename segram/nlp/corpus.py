@@ -264,8 +264,11 @@ class Corpus(Mapping):
         return data
 
     @classmethod
-    def from_data(cls, data: dict[str, Any]) -> Self:
-        """Construct from data dictionary."""
+    def from_data(cls, data: dict[str, Any], **kwds: Any) -> Self:
+        """Construct from data dictionary.
+
+        ``**kwds`` are passed to :meth:`add_docs`.
+        """
         # pylint: disable=no-value-for-parameter
         meta = data.pop("meta")
         grammar, lang = meta["segram_grammar"].split(".")
@@ -281,13 +284,16 @@ class Corpus(Mapping):
                 nlp = getattr(import_module(dct["module"]), dct["name"])()
                 nlp = nlp.from_bytes(dct["data"])
             data["nlp"] = nlp
+        total = None
         if (docs := data.pop("docs", ())):
-            docs = DocBin().from_bytes(docs).get_docs(vocab)
+            docbin = DocBin().from_bytes(docs)
+            total = len(docbin)
+            docs = docbin.get_docs(vocab)
         token_dist = Counter(data.pop("token_dist"))
         corpus = cls(**data)
         corpus.meta = meta
         corpus.token_dist = token_dist
-        corpus.add_docs(docs)
+        corpus.add_docs(docs, **{ "total": total, **kwds })
         return corpus
 
     def to_disk(
@@ -320,7 +326,7 @@ class Corpus(Mapping):
             and/or language model for initializing corpus. Useful when a corpus
             has been saved to disk with ``vocab=False`` and/or ``nlp=False``.
         **kwds
-            Passed to :meth:`add_docs`.
+            Passed to :meth:`from_data`.
         """
         with open(path, "rb") as fh:
             data = pickle.load(fh)
