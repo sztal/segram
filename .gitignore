@@ -1,5 +1,6 @@
-# Segram data 
+# Binaries data 
 **/*.segram
+**/*.pkl
 
 # Sandbox
 _sandbox/
