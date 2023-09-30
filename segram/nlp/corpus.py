@@ -227,15 +227,29 @@ class Corpus(Sequence):
         obj.add_docs(nlp.pipe(texts, **pipe_kws), progress=progress, **tqdm_kws)
         return obj
 
-    def to_data(self, nlp: bool = False) -> dict[str, Any]:
-        """Dump to data dictionary."""
+    def to_data(
+        self,
+        *,
+        vocab: bool = True,
+        nlp: bool = False
+    ) -> dict[str, Any]:
+        """Dump to data dictionary.
+
+        Parameters
+        ----------
+        vocab
+            Should ``self.vocab`` be used.
+        nlp
+            Should ``self.nlp`` be used.
+        """
         data = {
-            "vocab": self.vocab.to_bytes(),
             "token_dist": dict(self.token_dist),
             "count_method": self.count_method,
             "resolve_coref": self.resolve_coref,
             "meta": self.meta
         }
+        if vocab:
+            data["vocab"] = self.vocab.to_bytes()
         if nlp and self.nlp:
             data["nlp"] = {
                 "module": self.nlp.__class__.__module__,
@@ -271,31 +285,33 @@ class Corpus(Sequence):
     def to_disk(
         self,
         path: str | bytes | os.PathLike,
-        compression: ModuleType | type | None = None
+        **kwds: Any
     ) -> None:
         """Save to disk.
 
-        Anything exposing :func:`open` function/method
-        can be passed as ``compression`` argument.
+        ``**kwds`` are passed to :meth:`to_data`.
         """
-        _open = compression.open if compression else open
-        with _open(path, "wb") as fh:
-            pickle.dump(self.to_data(), fh)
+        with open(path, "wb") as fh:
+            pickle.dump(self.to_data(**kwds), fh)
 
     @classmethod
     def from_disk(
         cls,
         path: str | bytes | os.PathLike,
-        compression: ModuleType | type | None = None
+        *,
+        vocab: Vocab | None = None
     ) -> Self:
         """Construct from disk.
 
-        Anything exposing :func:`open` function/method
-        can be passed as ``compression`` argument.
+        Use ``vocab`` to pass an arbitrary vocab for initializing
+        corpus. Useful when a corpus has been saved to disk with
+        ``vocab=False`` argument.
         """
-        _open = compression.open if compression else open
-        with _open(path, "rb") as fh:
-            return cls.from_data(pickle.load(fh))
+        with open(path, "rb") as fh:
+            data = pickle.load(fh)
+            if vocab:
+                data["vocab"] = vocab
+            return cls.from_data(data)
 
     # Internals ---------------------------------------------------------------
 
