@@ -86,6 +86,7 @@ class Doc(NLP):
     @property
     def sents(self) -> Iterable[Span]:
         for sent in self.tok.sents:
+            # if sent.text.strip():
             yield self.sns(sent)
 
     @property

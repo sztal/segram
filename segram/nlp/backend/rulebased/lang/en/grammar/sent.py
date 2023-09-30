@@ -70,6 +70,8 @@ class RulebasedEnglishSent(
             head = tok
             while not head.is_root:
                 head = head.head
+                if head is tok:
+                    break
                 if head in comps:
                     comp = self.cmap[head.i]
                     if tok not in comp.tokens:

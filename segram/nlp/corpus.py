@@ -1,5 +1,5 @@
 # pylint: disable=no-name-in-module
-from typing import Any, Sequence, Iterable, Self, Literal
+from typing import Any, Iterable, Self, Literal, Mapping
 import os
 import pickle
 from collections import Counter
@@ -15,7 +15,7 @@ from ..utils.misc import prefer_gpu_vectors, ensure_cpu_vectors
 from .. import __title__
 
 
-class Corpus(Sequence):
+class Corpus(Mapping):
     """Corpus class.
 
     Attributes
@@ -51,11 +51,14 @@ class Corpus(Sequence):
         self.resolve_coref = resolve_coref
         self.meta = None
 
-    def __getitem__(self, idx: int | slice) -> Doc | tuple[Doc, ...]:
-        return self.docs[idx]
+    def __getitem__(self, key: int) -> Doc:
+        return self._dmap[key]
 
     def __len__(self) -> int:
         return len(self._dmap)
+
+    def __iter__(self) -> int:
+        yield from self._dmap
 
     def __contains__(self, doc: Doc) -> bool:
         if isinstance(doc, Doc):
