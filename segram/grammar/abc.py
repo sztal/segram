@@ -236,8 +236,8 @@ class DocElement(GrammarElement, Sequence):
 
     @classmethod
     @abstractmethod
-    def from_data(cls, data: dict[str, Any]) -> Self:
-        """Construct data dictionary."""
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
+        """Construct NLP document and data dictionary."""
 
 
 @total_ordering

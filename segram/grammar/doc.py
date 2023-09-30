@@ -86,7 +86,7 @@ class Doc(DocElement):
         """Represent as string."""
         return " ".join(s.to_str(**kwds) for s in self.sents)
 
-    def to_data(self, *, grammar: bool = True) -> dict[str, Any]:
+    def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary.
 
         Parameters
@@ -94,27 +94,20 @@ class Doc(DocElement):
         grammar
             Should grammar data be serialized too.
         """
-        if grammar:
-            key = f"{self.doc.alias}_data"
-            smap = { idx: s.to_data() for idx, s in self.smap.items() }
-            setattr(self.doc._, key, smap)
-        return self.doc.to_data()
+        return { s.idx: s.to_data() for s in self.sents }
 
     def copy(self) -> Self:
         # pylint: disable=arguments-differ
-        return self.from_data(self.to_data())
+        return self.from_data(self.doc.doc, self.to_data())
 
     @classmethod
-    def from_data(cls, data: dict[str, Any]) -> Self:
-        """Construct from data dictionary
-        as returned by :meth:`segram.nlp.tokens.Doc.to_data`.
-        """
-        doc = DocNLP.from_data(data)
-        grammar = cls.from_doc(doc, smap={})
+    def from_data(cls, doc: DocNLP, data: dict[str, Any]) -> Self:
+        """Construct from NLP documet and data dictionary."""
         smap = getattr(doc._, f"{doc.alias}_data")
+        doc = cls(doc)
         for idx, dct in smap.items():
-            grammar.smap[idx] = grammar.types.Sent.from_data(doc, dct)
-        return grammar
+            doc.smap[idx] = doc.types.Sent.from_data(doc, dct)
+        return doc
 
     @classmethod
     def from_doc(cls, doc: DocNLP, *args: Any, **kwds: Any) -> Self:

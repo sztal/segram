@@ -38,11 +38,9 @@ class GrammarDiff:
     def __call__(self) -> dict[str, Any]:
         """Compute diff between ``self.res`` and ``self.exp``."""
         diff = []
-        for name, msg, r, e \
-        in self.results.iter_diffs(self.expected, strict=self.strict):
+        for name, r, e in self.results.iter_diffs(self.expected, strict=self.strict):
             diff.append({
                 "name": name,
-                "message": msg,
                 "res": r,
                 "exp": e
             })
@@ -60,9 +58,8 @@ class GrammarDiff:
         """
         s = ""
         for diff in self():
-            name, message, r, e = diff.values()
+            name, r, e = diff.values()
             name = str(name)
-            message = str(message)
             if "PhraseGraph" in name:
                 r = r.to_str() if r else r
                 e = e.to_str() if e else e
@@ -72,7 +69,7 @@ class GrammarDiff:
             else:
                 r = repr(r)
                 e = repr(e)
-            div = self.msg.divider(message).lstrip()
+            div = self.msg.divider(name).lstrip()
             s += div+"\n\n"
             s += self.side_by_side(r, e)
             s += "\n"

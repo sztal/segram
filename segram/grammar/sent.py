@@ -147,7 +147,7 @@ class Sent(SentElement):
         }
         data["graph"] = PhraseGraph.from_data(sent, data["graph"])
         data["conjs"] = {
-            (conj := Conjuncts.from_data(sent, c))._lead: conj
+            (conj := Conjuncts.from_data(sent, c)).lead.idx: conj
             for c in data["conjs"]
         }
         return cls(sent, **data)

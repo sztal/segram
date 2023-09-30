@@ -44,7 +44,8 @@ class Segram(Pipe):
         grammar: str,
         preprocess: Sequence[str],
         alias: str = __title__,
-        vectors: str | Language | None = None
+        vectors: str | Language | None = None,
+        store_data: bool = True
     ) -> None:
         """Initialization method.
 
@@ -64,6 +65,8 @@ class Segram(Pipe):
             model. Must be provided by the name of a model or the model
             object itself, so the it is possible to keep track of the model
             name.
+        store_data
+            Should document data be stored automatically at the time of parsing.
         """
         if not alias:
             raise ValueError(
@@ -75,6 +78,7 @@ class Segram(Pipe):
         self.name = name
         self.extensions = self.import_extensions(grammar, nlp.lang, alias)
         self.grammar = f"{grammar}.{nlp.lang}"
+        self.store_data = store_data
         if isinstance(vectors, str):
             vectors = spacy.load(vectors, enable="tok2vec", vocab=nlp.vocab)
         elif vectors:
@@ -95,6 +99,9 @@ class Segram(Pipe):
 
     def __call__(self, doc: Doc) -> Doc:
         self.set_docattrs(doc, self.alias, self.meta)
+        if self.store_data:
+            data = getattr(doc._, self.alias).to_data()
+            setattr(doc._, f"{self.alias}_data", data)
         return doc
 
     # Properties --------------------------------------------------------------
