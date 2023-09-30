@@ -268,12 +268,15 @@ class Corpus(Sequence):
         alias = meta["segram_alias"]
         Segram.import_extensions(grammar, lang, alias).register()
         vocab = data["vocab"]
-        if isinstance(vocab, bytes):
+        if not isinstance(vocab, Vocab):
             vocab = Vocab().from_bytes(vocab)
         data["vocab"] = vocab
-        if (dct := data.get("nlp")):
-            nlp = getattr(import_module(dct["module"]), dct["name"])()
-            data["nlp"] = nlp.from_bytes(dct["data"])
+        if (nlp := data.get("nlp")):
+            if not isinstance(nlp, Language):
+                dct = nlp
+                nlp = getattr(import_module(dct["module"]), dct["name"])()
+                nlp = nlp.from_bytes(dct["data"])
+            data["nlp"] = nlp
         if (docs := data.pop("docs", ())):
             docs = DocBin().from_bytes(docs).get_docs(vocab)
         token_dist = Counter(data.pop("token_dist"))
@@ -300,18 +303,21 @@ class Corpus(Sequence):
         cls,
         path: str | bytes | os.PathLike,
         *,
-        vocab: Vocab | bytes | None = None
+        vocab: Vocab | bytes | None = None,
+        nlp: Language | bytes | None = None
     ) -> Self:
         """Construct from disk.
 
-        Use ``vocab`` to pass an arbitrary vocab for initializing
-        corpus. Useful when a corpus has been saved to disk with
-        ``vocab=False`` argument.
+        Use ``vocab`` and ``nlp`` to pass an arbitrary vocabulary
+        and/or language model for initializing corpus. Useful when a corpus
+        has been saved to disk with ``vocab=False`` and/or ``nlp=False``.
         """
         with open(path, "rb") as fh:
             data = pickle.load(fh)
             if vocab:
                 data["vocab"] = vocab
+            if nlp:
+                data["nlp"] = nlp
             return cls.from_data(data)
 
     # Internals ---------------------------------------------------------------
