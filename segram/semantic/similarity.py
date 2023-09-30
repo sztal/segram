@@ -14,7 +14,7 @@ from ..utils.misc import best_matches, cosine_similarity
 
 SpecType = dict[str, str | Iterable[str] | Phrase | Sent | Doc]
 FloatVec = np.ndarray[tuple[int], np.floating]
-_sim_methods = ("components", "phrases", "both", "recursive", "average")
+_sim_methods = ("components", "phrases", "recursive", "average")
 
 
 class GrammarSimilarity(ABC):
@@ -134,6 +134,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             head tokens are used. In this case weights are ignored.
 
         ``recursive``
+            NOTE. Currently not implemented.
             First, head components are compared between two phrases,
             and then the same rule is applied recursively to all
             parts (subjects, direct objects etc.) where for each
@@ -231,36 +232,37 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
     # Internals ---------------------------------------------------------------
 
     def _sim_recursive(self, phrase: Phrase, other: Phrase, depth: int = 0) -> float:
-        sim = 0
-        total_weight = 0
-        if self._is_name_ok((name := "head")):
-            total_weight += self.weights.get(name, 1)
-            sim += self._sim(phrase.head, other.head) * total_weight
-        active_parts = set(phrase.active_parts).union(other.active_parts)
-        for name in active_parts:
-            if not self._is_name_ok(name):
-                continue
-            sps = getattr(phrase, name)
+        raise NotImplementedError("'recursive' method is not yet implemented")
+        # sim = 0
+        # total_weight = 0
+        # if self._is_name_ok((name := "head")):
+        #     total_weight += self.weights.get(name, 1)
+        #     sim += self._sim(phrase.head, other.head) * total_weight
+        # active_parts = set(phrase.active_parts).union(other.active_parts)
+        # for name in active_parts:
+        #     if not self._is_name_ok(name):
+        #         continue
+        #     sps = getattr(phrase, name)
 
-            if phrase in sps.flat:
-                # This is to prevent infinite recursion
-                # happening for verb phrases/clauses
-                continue
+        #     if phrase in sps.flat:
+        #         # This is to prevent infinite recursion
+        #         # happening for verb phrases/clauses
+        #         continue
 
-            w = self.weights.get(name, 1) * self.decay_rate**(depth+1)
-            total_weight += w
+        #     w = self.weights.get(name, 1) * self.decay_rate**(depth+1)
+        #     total_weight += w
 
-            ops = getattr(other, name)
-            if not sps or not ops:
-                continue
-            # denom = max(len(ops), len(sps))
-            best = best_matches(sps, ops, self._sim_recursive, depth=depth+1)
-            add_sim = sum(x for x, *_ in best)
-            # sim += add_sim * w / denom
-            sim += add_sim * w
-        if not total_weight:
-            return .0
-        return sim / total_weight
+        #     ops = getattr(other, name)
+        #     if not sps or not ops:
+        #         continue
+        #     # denom = max(len(ops), len(sps))
+        #     best = best_matches(sps, ops, self._sim_recursive, depth=depth+1)
+        #     add_sim = sum(x for x, *_ in best)
+        #     # sim += add_sim * w / denom
+        #     sim += add_sim * w
+        # if not total_weight:
+        #     return .0
+        # return sim / total_weight
 
     def _sim_parts(self, phrase: Phrase, other: Phrase) -> float:
         sdict = self._get_parts(phrase)
@@ -269,7 +271,7 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
         denom = sum(self.weights.get(k, 1) for k in set(sdict).union(odict))
         if not denom:
             return .0
-        # num = sum(self.weights.get(k, 1) for k in shared)
+        num = sum(self.weights.get(k, 1) for k in shared)
         sdict = {
             k: v for k, v in sdict.items()
             if k in shared and self._is_name_ok(k)
@@ -288,14 +290,13 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
             .map(lambda x: sum(c.vector for c in x)) \
             .pipe(self.np.vstack)
         cos = cosine_similarity(svec, ovec, aligned=True)
-        # sim = (cos * W).sum() * (num / denom) / W.sum()
-        sim = (cos * W).sum() / W.sum()
+        sim = (cos * W).sum() * (num / denom) / W.sum()
         return sim
 
     def _sim_custom(self, phrase: Phrase, spec: SpecType) -> float:
         if isinstance(spec, Mapping):
             invalid = set(spec) \
-                - set(phrase.part_names) \
+                - set(phrase.component_names) \
                 - set(phrase.component_names) \
                 - {"head"}
             if invalid:
@@ -328,7 +329,6 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
                     raise ValueError(f"invalid specification '{_spec}' for key '{key}'")
             if not denom or not total_weight:
                 return .0
-            # sim *= (num / denom) / total_weight
             sim *= (num / denom) / total_weight
         else:
             spec = self._get_text_vector(spec)
@@ -365,11 +365,14 @@ class PhraseSimilarity(GrammarSimilarity, register_with=Phrase):
 
     def _get_parts(self, phrase: Phrase) -> dict[str, DataTuple[Phrase | Component]]:
         pdict = {}
-        keys = []
-        if self.method in ("components", "both"):
-            keys.extend(phrase.component_names)
-        if self.method in ("phrases", "both"):
-            keys.extend(phrase.part_names)
+        if self.method == "components":
+            keys = phrase.component_names
+        elif self.method == "phrases":
+            keys = ("head", *phrase.controlled_names)
+        else:
+            raise ValueError(
+                f"cannot calculate by parts comparison for method '{self.method}'"
+            )
         if self.ignore:
             keys = [ k for k in keys if k not in self.ignore ]
         elif self.only:
@@ -426,6 +429,8 @@ class SentSimilarity(PhraseSimilarity, register_with=Sent):
         if isinstance(spec, Sent):
             if self.method == "average":
                 return cosine_similarity(sent.vector, spec.vector)
+            if self.method == "components":
+                return self._sim_parts(sent, spec)
             proots = sent.proots
             oroots = spec.proots
             return sum (score for score, *_ in best_matches(

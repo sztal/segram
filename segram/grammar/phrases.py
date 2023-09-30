@@ -13,7 +13,7 @@ from ..abc import labelled
 from ..datastruct import DataIterator, DataTuple
 
 
-part = labelled("part")
+controlled = labelled("controlled")
 component = labelled("component")
 PGType = PhraseGroup["Phrase"]
 
@@ -35,7 +35,7 @@ class Phrase(TokenElement):
     # pylint: disable=too-many-public-methods
     __slots__ = ("dep", "sconj", "_lead")
     alias: ClassVar[str] = "Phrase"
-    part_names: ClassVar[tuple[str, ...]] = ()
+    controlled_names: ClassVar[tuple[str, ...]] = ()
     component_names: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
@@ -149,14 +149,14 @@ class Phrase(TokenElement):
         return self.sent.conjs.get(self._lead) \
             or Conjuncts([self])
 
-    @part
     @property
+    @controlled
     def verb(self) -> PGType:
         """Return ``self`` if VP or nothing otherwise."""
         return PhraseGroup((self,)) \
             if isinstance(self, VerbPhrase) else PhraseGroup()
-    @part
     @property
+    @controlled
     def subj(self) -> PGType:
         """Subject phrases."""
         subjects = []
@@ -166,57 +166,57 @@ class Phrase(TokenElement):
             elif c.dep & Dep.agent:
                 subjects.extend(c.subj)
         return PhraseGroup(subjects)
-    @part
     @property
+    @controlled
     def dobj(self) -> PGType:
         """Direct object phrases."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.dobj
         )
-    @part
     @property
+    @controlled
     def iobj(self) -> PGType:
         """Indirect object phrases."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.iobj
         )
-    @part
     @property
+    @controlled
     def desc(self) -> PGType:
         """Description phrases."""
         return PhraseGroup(
             c for c in self.children if c.dep & (Dep.desc | Dep.misc)
         )
-    @part
     @property
+    @controlled
     def cdesc(self) -> PGType:
         """Clausal descriptions."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.cdesc
         )
-    @part
     @property
+    @controlled
     def adesc(self) -> PGType:
         """Adjectival complement descriptions."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.adesc
         )
-    @part
     @property
+    @controlled
     def prep(self) -> PGType:
         """Prepositions."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.prep
         )
-    @part
     @property
+    @controlled
     def pobj(self) -> PGType:
         """Prepositional objects."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.pobj
         )
-    @part
     @property
+    @controlled
     def subcl(self) -> PGType:
         """Subclauses."""
         return PhraseGroup(
@@ -224,38 +224,34 @@ class Phrase(TokenElement):
             if (c.dep & Dep.subcl) \
             or (isinstance(c, VerbPhrase) and (c.dep & Dep.acl))
         )
-    @part
     @property
+    @controlled
     def relcl(self) -> PGType:
         """Relative clausses."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.relcl
         )
-    @part
     @property
+    @controlled
     def xcomp(self) -> PGType:
         """Open clausal complements."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.xcomp
         )
-    @part
     @property
+    @controlled
     def appos(self) -> PGType:
         """Appositional modifiers."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.appos
         )
-    @part
     @property
+    @controlled
     def nmod(self) -> PGType:
         """Nominal modifiers."""
         return PhraseGroup(
             c for c in self.children if c.dep & Dep.nmod
         )
-
-    @property
-    def active_parts(self) -> tuple[str, ...]:
-        return tuple(n for n in self.part_names if getattr(self, n))
 
     @property
     def components(self) -> DataTuple[Component]:

@@ -133,3 +133,4 @@ def prefer_gpu_vectors(
         else:
             data = cp.asarray(data)
         vocab.vectors.data = data
+    return True
