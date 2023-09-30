@@ -114,7 +114,7 @@ class Corpus(Mapping):
         if isinstance(doc, SpacyDoc):
             doc = getattr(doc._, alias+"_sns")
         if doc not in self:
-            self._dmap[doc.id] = doc
+            self._dmap[doc.id] = doc.grammar
             self.token_dist += self._count_toks(doc)
 
     def add_docs(
@@ -184,8 +184,9 @@ class Corpus(Mapping):
         """
         if user_data:
             for doc in self.docs:
-                Doc.clear_user_data(doc.tok.user_data)
-        dbin = DocBin(attrs, store_user_data=user_data, docs=self.docs.get("tok"))
+                Doc.clear_user_data(doc.doc.tok.user_data)
+        docs = self.docs.get("doc").get("tok")
+        dbin = DocBin(attrs, store_user_data=user_data, docs=docs)
         return dbin
 
     def ensure_cpu_vectors(self) -> None:
@@ -307,13 +308,19 @@ class Corpus(Mapping):
         path: str | bytes | os.PathLike,
         *,
         vocab: Vocab | bytes | None = None,
-        nlp: Language | bytes | None = None
+        nlp: Language | bytes | None = None,
+        **kwds: Any
     ) -> Self:
         """Construct from disk.
 
-        Use ``vocab`` and ``nlp`` to pass an arbitrary vocabulary
-        and/or language model for initializing corpus. Useful when a corpus
-        has been saved to disk with ``vocab=False`` and/or ``nlp=False``.
+        Parameters
+        ----------
+        nlp, vocab
+            Use ``vocab`` and ``nlp`` to pass an arbitrary vocabulary
+            and/or language model for initializing corpus. Useful when a corpus
+            has been saved to disk with ``vocab=False`` and/or ``nlp=False``.
+        **kwds
+            Passed to :meth:`add_docs`.
         """
         with open(path, "rb") as fh:
             data = pickle.load(fh)
@@ -321,7 +328,7 @@ class Corpus(Mapping):
                 data["vocab"] = vocab
             if nlp:
                 data["nlp"] = nlp
-            return cls.from_data(data)
+            return cls.from_data(data, **kwds)
 
     # Internals ---------------------------------------------------------------
 

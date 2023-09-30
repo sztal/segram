@@ -38,12 +38,15 @@ class Story:
     def __delitem__(self, key: str) -> None:
         del self.frames[key]
 
+    def __len__(self) -> int:
+        return len(self.corpus)
+
     # Properties --------------------------------------------------------------
 
     @property
     def docs(self) -> DataIterator[Doc]:
         """Grammar documents in the story."""
-        return DataIterator(doc.grammar for doc in self.corpus.docs)
+        return self.corpus.docs
 
     @property
     def sents(self) -> DataIterator[Sent]:

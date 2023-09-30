@@ -95,9 +95,12 @@ class Doc(NLP):
 
     @property
     def grammar(self) -> "Doc":
-        if (doc := getattr(self._, f"{self.alias}_doc")):
+        alias = self.alias
+        if (doc := getattr(self._, f"{alias}_doc")):
             return doc
         typ = self.get_grammar_type()
+        if (data := getattr(self._, f"{alias}_data")):
+            return typ.types.Doc.from_data(self, data)
         return typ.types.Doc(self)
 
     # Methods -----------------------------------------------------------------
