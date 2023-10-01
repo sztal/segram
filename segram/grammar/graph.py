@@ -5,14 +5,11 @@ from ..nlp.tokens import Span
 
 
 class Graph(MutableMapping, SegramABC):
-    """Graph.
+    """Graph object.
 
-    By default it has a form of a mapping from sources to targets,
-    but the order can be easily reversed using :attr:`~rev` property.
-
-    Notes
-    -----
-    Only hashable objects can used as nodes.
+    This is a mutable mapping with several additional methods
+    for reversing the key-value pairing or testing whether
+    a graph is a directed acyclic graph (DAG).
     """
     __slots__ = ("_data", "_is_dag", "_rev")
 
@@ -169,15 +166,7 @@ class Graph(MutableMapping, SegramABC):
 
 
 class PhraseGraph(Graph):
-    """PhraseGraph.
-
-    By default it has a form of a mapping from sources to targets,
-    but the order can be easily reversed using :attr:`~rev` property.
-
-    Notes
-    -----
-    Only hashable objects can used as nodes.
-    """
+    """PhraseGraph."""
     __slots__ = ()
 
     def __repr__(self) -> str:

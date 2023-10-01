@@ -11,8 +11,8 @@ class Story:
 
     Attributes
     ----------
-    phrases
-        Tuple of phrases the story operates on.
+    corpus
+        Document corpus.
     """
     def __init__(
         self,

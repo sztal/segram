@@ -23,14 +23,10 @@ class Phrase(TokenElement):
 
     Attributes
     ----------
-    tok
-        Head token object.
     dep
         Dependency relative to the (main) parent.
     sconj
         Subordinating conjunction token.
-    lead
-        Lead phrase, initialized from index.
     """
     # pylint: disable=too-many-public-methods
     __slots__ = ("dep", "sconj", "_lead")
@@ -46,6 +42,13 @@ class Phrase(TokenElement):
         sconj: Token | None = None,
         lead: int | None = None
     ) -> None:
+        """Initialization method.
+
+        Parameters
+        ----------
+        lead
+            Index of the lead phrase in a conjunct group.
+        """
         super().__init__(tok)
         self.dep = dep
         self.sconj = sconj
