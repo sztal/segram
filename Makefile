@@ -62,9 +62,9 @@ cov-report:
 coverage: cov-run cov-report
 
 docs:
-	rm -rf docs/api/
+	rm -rf docs/api
 	rm -rf docs/_build/
-	sphinx-apidoc -o docs/api/ segram
+	sphinx-apidoc --module-first --separate -t docs/_templates/ -o docs/api/ segram
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	xdg-open docs/_build/html/index.html || open docs/_build/html/index.html

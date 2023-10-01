@@ -1,6 +1,11 @@
 segram.nlp.backend.rulebased.lang.en.pipeline package
 =====================================================
 
+.. automodule:: segram.nlp.backend.rulebased.lang.en.pipeline
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Subpackages
 -----------
 
@@ -13,18 +18,7 @@ Subpackages
 Submodules
 ----------
 
-segram.nlp.backend.rulebased.lang.en.pipeline.factories module
---------------------------------------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: segram.nlp.backend.rulebased.lang.en.pipeline.factories
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: segram.nlp.backend.rulebased.lang.en.pipeline
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   segram.nlp.backend.rulebased.lang.en.pipeline.factories

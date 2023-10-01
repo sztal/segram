@@ -3,13 +3,13 @@ of entities of a given class, for instance semantic roles
 such as subjects or direct objects of verb.
 
 The advantage of using symbols, implemented based on :class:`enum.Flag`,
-is that it allows combining and filtering based on symbols using simple
-boolean logic.
+is that it allows combining and filtering based on symbols using binary
+boolean operators.
 """
 from typing import Self
 from enum import Flag, auto
 
-__all__ = ("POS", "Role", "Tense")
+__all__ = ("POS", "Role", "Tense", "Modal", "Mood")
 
 
 class Symbol(Flag):
@@ -91,8 +91,8 @@ class Role(Symbol):
     also selected, most important, roles are defined. Moreover,
     it is still an open question what roles should be defined.
 
-    Attributes
-    ----------
+    Class Attributes
+    ----------------
     VERB
         Verb or a verb-like predicate.
     NOUN

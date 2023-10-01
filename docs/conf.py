@@ -69,7 +69,7 @@ extlinks = {
 }
 
 # Sphinx-Bibtex
-bibtex_bibfiles = ["refs.bib"]
+bibtex_bibfiles = ["sections/refs.bib"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

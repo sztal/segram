@@ -1,6 +1,11 @@
 segram.nlp.backend.rulebased package
 ====================================
 
+.. automodule:: segram.nlp.backend.rulebased
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Subpackages
 -----------
 
@@ -8,11 +13,3 @@ Subpackages
    :maxdepth: 4
 
    segram.nlp.backend.rulebased.lang
-
-Module contents
----------------
-
-.. automodule:: segram.nlp.backend.rulebased
-   :members:
-   :undoc-members:
-   :show-inheritance:

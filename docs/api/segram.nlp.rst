@@ -1,6 +1,11 @@
 segram.nlp package
 ==================
 
+.. automodule:: segram.nlp
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Subpackages
 -----------
 
@@ -16,18 +21,7 @@ Subpackages
 Submodules
 ----------
 
-segram.nlp.corpus module
-------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: segram.nlp.corpus
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: segram.nlp
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   segram.nlp.corpus
