@@ -1,3 +1,5 @@
 Sphinx>=4.3
 sphinx-rtd-theme>=1.0
 sphinxcontrib-bibtex>=2.4
+more_itertools
+spacy
