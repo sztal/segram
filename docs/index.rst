@@ -4,28 +4,31 @@
    contain the root `toctree` directive.
 
 
-Contents:
-=========
-
 .. toctree::
    :maxdepth: 1
+   :caption: Home
+   :hidden:
 
-   sections/installation
-   sections/usage
-   sections/contributing
-   sections/authors
-   sections/history
-   modules
-
-.. include:: /sections/overview.rst
+    /sections/about
+    /sections/installation
+    /sections/langs
+    /sections/authors
+    /sections/contributing
 
 
-Feedback
-========
+.. include:: /sections/about.rst
+.. include:: /sections/installation.rst
+.. include:: /sections/langs.rst
+.. include:: /sections/quickstart.rst
+.. include:: /sections/authors.rst
+.. include:: /sections/contributing.rst
+.. include:: /sections/license.rst
 
-If you have any suggestions or questions about `segram` feel free to email me
-at `stalaga@protonmail.com`.
 
-If you encounter any errors or problems, also let me know!
-The best way to do that is to `open an issue <https://github.com/sztal/segram/issues>`_
-at the `Github repository <http://github.com/sztal/segram>`_.
+.. toctree::
+    :maxdepth: 1
+    :caption: API Reference
+    :hidden:
+
+    /api/module
+

@@ -1,5 +1,5 @@
-Overview
-========
+About
+=====
 
 Segram is a software implementation of a framework for automated
 semantics-oriented grammatical analysis of text data. It is implemented
@@ -22,7 +22,7 @@ Main use cases and features
 * Automated grammatical analysis in terms of phrases/clauses focused
   on detecting actions as well as subjects and objects of those actions.
 
-.. image:: /figures/printing.png
+.. image:: /assets/images/printing.png
     :width: 50%
     :align: center
     :alt: Simple example of document parsing using `segram` and of printing a phrasal graph to the console
@@ -44,7 +44,7 @@ Main use cases and features
   of sequentially shifting semantics.
 * Hypergraphical representation of grammatical structure of sentences.
 
-.. image:: /figures/hypergraph.png
+.. image:: /assets/images/hypergraph.png
     :width: 50%
     :align: center
     :alt: Representation of sentence as a hypergraph of phrases
@@ -55,12 +55,6 @@ Main use cases and features
     Since `segram` is to a significant degree based on `spacy`_ and its
     design philosophy, it is recommended to have at least a basic level
     of familiarity with it (or other similar NLP libraries).
-
-
-Supported languages
--------------------
-
-See section :ref:`langs`.
 
 
 .. include:: /sections/links.rst
