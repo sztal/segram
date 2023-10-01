@@ -59,10 +59,3 @@ Before you submit a pull request, check that it meets these guidelines:
    under pull requests for active pull requests or run the ``tox`` command and
    make sure that the tests pass for all supported Python versions.
 
-
-Tips
-----
-
-To run a subset of tests::
-
-	 $ py.test test/test_segram.py

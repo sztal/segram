@@ -60,19 +60,7 @@ Main use cases and features
 Supported languages
 -------------------
 
-Currently **only English is supported**.
-
-
-
-Feedback
-========
-
-If you have any suggestions or questions about `segram` feel free to email me
-at stalaga@protonmail.com.
-
-If you encounter any errors or problems, also let me know!
-The best way to do that is to `open an issue <https://github.com/sztal/segram/issues>`_
-at the `Github repository <http://github.com/sztal/segram>`_.
+See section :ref:`langs`.
 
 
 .. include:: /sections/links.rst

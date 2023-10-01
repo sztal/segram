@@ -3,25 +3,29 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. include:: /sections/overview.rst
 
 Contents:
 =========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   installation
-   usage
-   contributing
-   authors
-   history
+   sections/installation
+   sections/usage
+   sections/contributing
+   sections/authors
+   sections/history
+   modules
+
+.. include:: /sections/overview.rst
+
 
 Feedback
 ========
 
-If you have any suggestions or questions about **Segram** feel free to email me
-at stalaga@protonmail.com.
+If you have any suggestions or questions about `segram` feel free to email me
+at `stalaga@protonmail.com`.
 
-If you encounter any errors or problems with **Segram**, please let me know!
-Open an Issue at the GitHub http://github.com/sztal/segram main repository.
+If you encounter any errors or problems, also let me know!
+The best way to do that is to `open an issue <https://github.com/sztal/segram/issues>`_
+at the `Github repository <http://github.com/sztal/segram>`_.

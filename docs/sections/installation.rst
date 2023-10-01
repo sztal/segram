@@ -77,6 +77,9 @@ in the `spacy` core in the future, these constraints will be relaxed.
     * - `en_coreference_web_trf`
       - `3.4.0a2`
 
+
+.. _langs:
+
 Supported languages and models
 ------------------------------
 
