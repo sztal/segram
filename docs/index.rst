@@ -26,10 +26,26 @@
 
 
 .. toctree::
+    :maxdepth: 2
+    :caption: Quick reference links
+    :hidden:
+
+    Components </api/segram.grammar.components.rst>
+    Phrases </api/segram.grammar.phrases.rst>
+    Sentences </api/segram.grammar.sent.rst>
+    Documents </api/segram.grammar.doc.rst>
+    Corpus </api/segram.nlp.corpus.rst>
+    Stories </api/segram.semantic.story.rst>
+    Frames </api/segram.semantic.frames.rst>
+    Segram pipeline component </api/segram.nlp.pipeline.base.rst>
+    Segram coref components </api/segram.nlp.pipeline.coref.rst>
+    Data collections </api/segram.datastruct.rst>
+
+
+.. toctree::
     :maxdepth: 5
     :caption: API Reference
     :hidden:
 
-    /api/modules
-
+    /api/segram.rst
 
