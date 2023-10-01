@@ -36,9 +36,9 @@ and installed quite easily:
 .. code-block::
 
     # Core model based on the trasnformer architecture
-    python -m download en_core_web_trf
+    python -m spacy download en_core_web_trf
     # Mode for word vectors (can be skipped if vector similarity methods are not needed)
-    python -m download en_core_web_lg  # skip if word vectors are not needed
+    python -m spacy download en_core_web_lg  # skip if word vectors are not needed
     # Coreference resolution model
     pip install https://github.com/explosion/spacy-experimental/releases/download/v0.6.1/en_coreference_web_trf-3.4.0a2-py3-none-any.whl
 

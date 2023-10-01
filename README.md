@@ -94,42 +94,40 @@ Currently, **only English is supported** and `segram` was tested on models:
 
 ```bash
 pip install segram
-python -m download en_core_web_trf
-python -m download en_core_web_lg  # skip if word vectors are not needed
+python -m spacy download en_core_web_trf
+python -m spacy download en_core_web_lg  # skip if word vectors are not needed
 ```
 
-#### With coreference resolution
+#### With GPU support coreference resolution
 
 ```bash
-pip install segram[coref]
-python -m download en_core_web_trf
-python -m download en_core_web_lg  # skip if word vectors are not needed
+pip install segram[coref,gpu]
+# Just one of the two options can also be selected
+
+# And language models
+python -m spacy download en_core_web_trf
+python -m spacy download en_core_web_lg
+# The last one is a special model for the coref component
 pip install https://github.com/explosion/spacy-experimental/releases/download/v0.6.1/en_coreference_web_trf-3.4.0a2-py3-none-any.whl
 ```
-
-#### With GPU acceleration
-
-```bash
-pip install segram[gpu]
-# OR in the case when coreference resolution is required
-pip install segram[coref,gpu]
-```
-
-The rest of commands should remain the same depending on whether
-coreference installation or not is used.
 
 ### Github (development version)
 
 ```bash
 pip install git+ssh://git@github.com/sztal/segram.git
+# + downloading language models
 ```
 
-#### With coreference resolution
+#### With GPU and coreference resolution
+
+```bash
+pip install "segram[gpu,coref] @ git+ssh://git@github.com/sztal/segram.git"
+```
 
 ### Dependencies for running example notebooks
 
 ```bash
-pip install -r requirements-examples.txt
+pip install -r requirements/examples.txt
 ```
 
 

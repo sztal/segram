@@ -1,0 +1,7 @@
+ipython
+ipdb
+ipywidgets
+pylint>=2.14
+pytest>=7.2
+coverage
+bumpver
