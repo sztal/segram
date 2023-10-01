@@ -78,5 +78,5 @@ in the `spacy` core in the future, these constraints will be relaxed.
       - `3.4.0a2`
 
 
-.. include:: /sections/links.rst
+.. include:: /links.rst
 

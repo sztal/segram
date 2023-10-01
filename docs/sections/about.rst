@@ -57,4 +57,4 @@ Main use cases and features
     of familiarity with it (or other similar NLP libraries).
 
 
-.. include:: /sections/links.rst
+.. include:: /links.rst

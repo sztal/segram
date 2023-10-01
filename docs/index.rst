@@ -18,8 +18,15 @@
 
 
 .. include:: /sections/about.rst
+
+.. _installation:
+
 .. include:: /sections/installation.rst
+
+.. _langs:
+
 .. include:: /sections/langs.rst
+
 .. include:: /sections/authors.rst
 .. include:: /sections/contributing.rst
 .. include:: /sections/license.rst
@@ -30,8 +37,7 @@
     :caption: Tutorials
     :hidden:
 
-    /tutorials/intro
-
+    See Github <https://github.com/sztal/segram/tree/master/examples>
 
 .. toctree::
     :maxdepth: 2
