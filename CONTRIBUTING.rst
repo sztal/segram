@@ -2,8 +2,8 @@
 Contributing
 ============
 
-Contributions are welcome, and they are greatly appreciated! Every
-little bit helps, and credit will always be given.
+Contributions are welcome, and they are greatly appreciated! Every little bit
+helps, and credit will always be given.
 
 You can contribute in many ways:
 
@@ -42,7 +42,8 @@ Development
 ------------
 
 Latest details on the contribution workflow and setting up a dev environment
-can be found in the `Development`_ section of the README in the `Github repo`_.
+can be found in the `Development`_ section of the README in the
+`Github repo <https://github.com/sztal/segram>`_.
 
 
 Pull Request Guidelines

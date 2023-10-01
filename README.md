@@ -126,6 +126,13 @@ pip install git+ssh://git@github.com/sztal/segram.git
 
 #### With coreference resolution
 
+### Dependencies for running example notebooks
+
+```bash
+pip install -r requirements-examples.txt
+```
+
+
 ## Basic usage
 
 ```python
@@ -159,10 +166,10 @@ semantically important token. They are divided into four distinct types
 which are marked with different colors when printing to the console.
 The following (default) color scheme is:
 
-* <span style="color:orange">**Noun components**</span> `#FF0000`
-* <span style="color:red">**Verb components**</span> `#FFA500`
-* <span style="color:violet">**Description components**</span> `#EE82EE`
-* <span style="color:limegreen">**Preposition components**</span> `#32CD32`
+* $\text{\color{orange}\bf Noun components}$
+* $\text{\color{red}\bf Verb components}$
+* $\text{\color{violet}\bf Description components}$
+* $\text{\color{limegreen}\bf Preposition components}$
 
 Components are further organized into phrases, which are higher-order
 and more semantically-oriented units. Crucially, while components are
