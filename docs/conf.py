@@ -32,8 +32,8 @@ from segram.about import __version__
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
@@ -54,6 +54,12 @@ napoleon_use_admonition_for_references = False
 napoleon_use_ivar = False
 napoleon_use_param = True
 napoleon_use_rtype = True
+
+# Autodoc options
+autodoc_default_options = {
+    "member-order": "bysource",
+    "no-undoc-members": True
+}
 
 # Intersphinx mapping
 intersphinx_mapping = {
