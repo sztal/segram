@@ -71,6 +71,11 @@ docs:
 	$(MAKE) -C docs html
 	xdg-open docs/_build/html/index.html || open docs/_build/html/index.html
 
+build: gzip-jsons clean
+	git diff-index --quiet HEAD -- || echo "\n\033[1;31mThere are untracked/uncommited files!!!\033[0m\n" && exit 1
+	python -m build
+	twine check dist/*
+
 release: clean
 	python setup.py sdist upload
 	python setup.py bdist_wheel upload
