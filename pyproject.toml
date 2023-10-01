@@ -8,10 +8,33 @@ requires-python = ">=3.11"
 version = "0.0.0"
 authors = [{name = "Szymon Talaga", email = "stalaga@protonmail.com"}]
 readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["natural language processing", "NLP", "narratives", "narrative analysis", "semantics", "syntax", "grammar"]
+description = "A framework for semantic grammar and narrative analysis."
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Environment :: GPU",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Visualization"
+]
 dependencies = [
     "spacy>=3.4",
     "more-itertools>=8.0"
 ]
+
+[project.urls]
+documentation = "https://segram.readthedocs.io/en/latest/"
+repository = "https://github.com/sztal/segram"
+changelog = "https://github.com/sztal/segram/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
 coref = [

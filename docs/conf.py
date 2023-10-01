@@ -12,6 +12,7 @@
 # serve to show the default.
 
 import sys, os, datetime
+from importlib.metadata import version
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -22,7 +23,10 @@ cwd = os.getcwd()
 parent = os.path.dirname(cwd)
 sys.path.insert(0, parent)
 
-from segram.about import __version__
+# General information about the project.
+project = "Segram"
+copyright = f"{datetime.date.today().year}, Szymon Talaga"
+__version__ = version("segram")
 
 # -- General configuration -----------------------------------------------------
 
@@ -88,10 +92,6 @@ source_suffix = ".rst"
 
 # The master toctree document.
 master_doc = "index"
-
-# General information about the project.
-project =   "Segram"
-copyright = f"{datetime.date.today().year}, Szymon Talaga"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
