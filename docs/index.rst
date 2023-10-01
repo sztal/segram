@@ -27,6 +27,14 @@
 
 .. toctree::
     :maxdepth: 2
+    :caption: Tutorials
+    :hidden:
+
+    /tutorials/intro
+
+
+.. toctree::
+    :maxdepth: 2
     :caption: Quick reference links
     :hidden:
 
