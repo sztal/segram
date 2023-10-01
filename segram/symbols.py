@@ -190,6 +190,7 @@ class Dep(Symbol):
     misc
         Miscellaneous (all other dependency roles).
     """
+    # pylint: disable=invalid-name
     root   = auto()
     subj   = auto()
     dobj   = auto()

@@ -1,6 +1,5 @@
 from .grammar import GrammarNLP
 from ...grammar import Doc
-from ..tokens import Doc as _Doc
 
 
 class DocNLP(GrammarNLP, Doc):

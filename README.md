@@ -212,6 +212,37 @@ coverage run    # run unit tests and gather coverage statistics
 coverage report # show coverage report
 ```
 
+
+### Contribution
+
+1. [Fork](https://github.com/sztal/segram/fork) the `segram`
+   repo on GitHub.
+2. Clone your fork locally::
+
+```bash
+git clone git@github.com:your_name_here/segram.git
+```
+
+3. Create a branch for local development::
+
+```bash
+git checkout -b name-of-your-bugfix-or-feature
+```
+
+Now you can make your changes locally.
+
+4. When you're done making changes, check that your changes pass style
+   and unit tests.
+
+5. Commit your changes and push your branch to GitHub::
+
+    $ git add .
+    $ git commit -m "Your detailed description of your changes."
+    $ git push origin name-of-your-bugfix-or-feature
+
+6. Submit a pull request through the GitHub website.
+
+
 ### Makefile
 
 `Makefile` defines many commands useful during development

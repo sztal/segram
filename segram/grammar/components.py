@@ -4,7 +4,6 @@ Grammar components are groups of associated tokens controlled
 by a root token, e.g. a verb with its auxiliary verbs.
 """
 from typing import Any, Iterable, ClassVar, Self
-import numpy as np
 from .abc import TokenElement
 from .conjuncts import Conjuncts
 from ..nlp.tokens import Token

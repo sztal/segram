@@ -21,23 +21,11 @@ If you are reporting a bug, please include:
 * Any details about your local setup that might be helpful in troubleshooting.
 * Detailed steps to reproduce the bug.
 
-Fix Bugs
-~~~~~~~~
-
-Look through the GitHub issues for bugs. Anything tagged with "bug"
-is open to whoever wants to implement it.
-
-Implement Features
-~~~~~~~~~~~~~~~~~~
-
-Look through the GitHub issues for features. Anything tagged with "feature"
-is open to whoever wants to implement it.
-
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
-Segram could always use more documentation, whether as part of the
-official Segram docs, in docstrings, or even on the web in blog posts,
+`Segram` could always use more documentation, whether as part of the
+official `Segram` docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
 Submit Feedback
@@ -49,42 +37,13 @@ If you are proposing a feature:
 
 * Explain in detail how it would work.
 * Keep the scope as narrow as possible, to make it easier to implement.
-* Remember that this is a volunteer-driven project, and that contributions
-  are welcome :)
 
-Get Started!
+Development
 ------------
 
-Ready to contribute? Here's how to set up `segram` for
-local development.
+Latest details on the contribution workflow and setting up a dev environment
+can be found in the `Development`_ section of the README in the `Github repo`_.
 
-1. Fork_ the `segram` repo on GitHub.
-2. Clone your fork locally::
-
-    $ git clone git@github.com:your_name_here/segram.git
-
-3. Create a branch for local development::
-
-    $ git checkout -b name-of-your-bugfix-or-feature
-
-Now you can make your changes locally.
-
-4. When you're done making changes, check that your changes pass style and unit
-   tests, including testing other Python versions with tox::
-
-    $ tox
-
-To get tox, just pip install it.
-
-5. Commit your changes and push your branch to GitHub::
-
-    $ git add .
-    $ git commit -m "Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
-
-6. Submit a pull request through the GitHub website.
-
-.. _Fork: https://github.com/sztal/segram/fork
 
 Pull Request Guidelines
 -----------------------

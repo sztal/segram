@@ -1,4 +1,5 @@
 .. _Github repo: https://github.com/sztal/segram
+.. _Development: https://github.com/sztal/segram/tree/master#development
 .. _examples: https://github.com/sztal/segram/tree/master/examples
 .. _conda: https://docs.conda.io/en/latest/
 .. _numpy: https://numpy.org/

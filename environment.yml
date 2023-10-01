@@ -13,4 +13,3 @@ dependencies:
   - pylint>=2.14
   - pytest>=7.2
   - coverage
-

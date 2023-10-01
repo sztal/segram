@@ -17,6 +17,7 @@ class Graph(MutableMapping, SegramABC):
     __slots__ = ("_data", "_is_dag", "_rev")
 
     def __init__(self, data: Mapping[Any, tuple[Any, ...]]) -> None:
+        super().__init__()
         self._data = data
         self._is_dag = None
         self._rev = None
