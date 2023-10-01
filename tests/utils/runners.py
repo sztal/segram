@@ -1,14 +1,14 @@
 """Base test runner class."""
-from typing import Any, Optional, Callable
+from typing import Any, Callable
 from functools import partial
 import re
 import ipdb
 import pytest
 from IPython import embed
-from spacy.tokens import Doc
+from spacy.tokens import Doc as SpacyDoc
 from spacy.language import Language
-from segram import settings
-from segram.nlp import DocABC
+from segram import __title__
+from segram.nlp.tokens import Doc
 from segram.utils.resources import JSONResource
 from segram.utils.versioning import is_correct_version
 from segram.utils.meta import get_cname
@@ -37,8 +37,8 @@ class PyTestRunner:
 
     def __init_subclass__(
         cls,
-        lang: Optional[str] = None,
-        resource: Optional[str] = None
+        lang: str | None = None,
+        resource: str | None = None
     ) -> None:
         if not lang:
             return
@@ -226,9 +226,10 @@ class PyTestRunner:
 
 class SpacyTestRunner(PyTestRunner):
     """Test runner for :mod:`spacy`."""
+
     @staticmethod
-    def callback(doc: Doc) -> DocABC:
-        return getattr(doc._, settings.spacy_alias)
+    def callback(doc: SpacyDoc) -> Doc:
+        return getattr(doc._, doc._.segram_alias+"_sns")
 
     def validate_metadata(self, nlp: Language, tests: TestSet) -> None:
         """Check if model metadata matche test requirements.
@@ -238,7 +239,7 @@ class SpacyTestRunner(PyTestRunner):
         TypeError
             If metadata do not agree.
         """
-        meta = dict(nlp.pipeline)[settings.spacy_alias].meta
+        meta = dict(nlp.pipeline)[__title__].meta
         tests = self.tests.meta
 
         for package in ("spacy", "segram"):
@@ -252,16 +253,16 @@ class SpacyTestRunner(PyTestRunner):
                     f"is not consistent with the constraint '{allowed}'"
                 )
 
-        if (mlang := meta["lang"]) != (tlang := tests["lang"]):
+        if (mlang := meta["model"]["lang"]) != (tlang := tests["lang"]):
             raise TypeError(f"model language is '{mlang}' but tests are for '{tlang}'")
 
         model = meta["model"]
-        name = f"{mlang}_{model}"
-        version = meta["model_version"]
+        name = f"{mlang}_{model['name']}"
+        version = model["version"]
         allowed = { m["name"]: m["version"] for m in tests["models"] }
-        if model not in allowed:
+        if model["name"] not in allowed:
             raise TypeError(f"test set is not for '{name}' model")
-        if not is_correct_version(version, (const := allowed[model])):
+        if not is_correct_version(version, (const := allowed[model["name"]])):
             raise TypeError(
                 f"'{name}' model version '{version}' "
                 f"is not consistent with the constraint '{const}'"

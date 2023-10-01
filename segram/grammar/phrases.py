@@ -1,45 +1,55 @@
-from __future__ import annotations
-from typing import Any, Optional, ClassVar, Iterator
-from collections.abc import Sequence
+# pylint: disable=no-name-in-module
+from typing import Any, ClassVar, Self, Iterable
 from abc import abstractmethod
-from .abc import SentElement
+from itertools import islice
+from more_itertools import unique_everseen
+import numpy as np
+from .abc import TokenElement
 from .components import Component, Verb, Noun, Desc, Prep
-from .conjuncts import Conjuncts
-from ..nlp import TokenABC
+from .conjuncts import PhraseGroup, Conjuncts
+from ..nlp.tokens import Doc, Token
 from ..symbols import Role, Dep
+from ..abc import labelled
+from ..datastruct import DataIterator, DataTuple
 
 
-class Phrase(SentElement):
+controlled = labelled("controlled")
+component = labelled("component")
+PGType = PhraseGroup["Phrase"]
+
+
+class Phrase(TokenElement):
     """Sentence phrase class.
 
     Attributes
     ----------
-    sent
-        Sentence the phrase belongs to.
-    head
-        Phrase head component.
     dep
         Dependency relative to the (main) parent.
     sconj
         Subordinating conjunction token.
-    lead
-        Lead phrase, initialized from index.i
     """
     # pylint: disable=too-many-public-methods
-    __slots__ = ("head", "dep", "sconj", "_lead")
+    __slots__ = ("dep", "sconj", "_lead")
     alias: ClassVar[str] = "Phrase"
+    controlled_names: ClassVar[tuple[str, ...]] = ()
+    component_names: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
         self,
-        sent: "Sent",
-        head: Component,
+        tok: Token,
         *,
         dep: Dep = Dep.misc,
-        sconj: Optional[TokenABC] = None,
-        lead: Optional[int] = None
+        sconj: Token | None = None,
+        lead: int | None = None
     ) -> None:
-        super().__init__(sent)
-        self.head = head
+        """Initialization method.
+
+        Parameters
+        ----------
+        lead
+            Index of the lead phrase in a conjunct group.
+        """
+        super().__init__(tok)
         self.dep = dep
         self.sconj = sconj
         self._lead = lead
@@ -48,35 +58,234 @@ class Phrase(SentElement):
         obj = super().__new__(cls)
         obj.__init__(*args, **kwds)
         if (cur := obj.sent.pmap.get(obj.idx)):
-            cur.__init__(obj.sent, **obj.data)
+            cur.__init__(**obj.data)
             return cur
         obj.sent.pmap[obj.idx] = obj
         return obj
 
-    def __iter__(self) -> Iterator[Phrase]:
-        yield from self.subtree
+    def __iter__(self) -> Iterable[Token]:
+        for sub in self.iter_subdag():
+            yield from sub.head
 
     def __len__(self) -> int:
-        return sum(1 for _ in self.subtree)
+        return sum(1 for _ in self)
 
-    def __getitem__(self, idx: int | slice) -> Phrase | list[Phrase]:
-        end = idx.stop if isinstance(idx, slice) else idx+1
-        sub = []
-        for i, p in enumerate(self.subtree):
-            if not end or i < end:
-                sub.append(p)
-        return sub[idx]
+    def __getitem__(self, idx: int | slice) -> tuple[Token, ...]:
+        return tuple(self)[idx]
 
-    def __contains__(self, other: Phrase | Component | TokenABC) -> bool:
-        if self.is_comparable_with(other):
-            return any(other == p for p in self.subtree)
-        if isinstance(other, Component):
-            return any(p.head == other for p in self.subtree)
-        if isinstance(other, TokenABC):
-            return any(other in p.head for p in self.subtree)
-        return super().__contains__(other)
+    # Properties --------------------------------------------------------------
 
-    # Abstract methods --------------------------------------------------------
+    @property
+    def idx(self) -> int:
+        """Index of the head token."""
+        return self.tok.i
+
+    @property
+    def head(self) -> Component:
+        """Head component of the phrase."""
+        return self.sent.cmap[self.idx]
+
+    @property
+    def lead(self) -> Self:
+        """Lead phrase."""
+        return self.sent.pmap[self._lead] if self._lead is not None else self
+
+    @property
+    def is_lead(self) -> Self:
+        """Is the phrase a lead phrase."""
+        return self.lead is self
+
+    @property
+    def tokens(self) -> tuple[Token, ...]:
+        return tuple(self)
+
+    @property
+    def neg(self) -> Token | None:
+        return self.head.neg
+
+    @property
+    def data(self) -> dict[str, Any]:
+        return {
+            **super().data,
+            "lead": self._lead
+        }
+
+    @property
+    def children(self) -> PGType:
+        """Child phrases."""
+        return PhraseGroup(self.sent.graph[self])
+
+    @property
+    def parents(self) -> PGType:
+        """Parent phrases."""
+        return PhraseGroup(self.sent.graph.rev[self])
+
+    @property
+    def subdag(self) -> PGType:
+        """Phrasal proper subdag."""
+        return PhraseGroup(self.iter_subdag(skip=1))
+
+    @property
+    def supdag(self) -> PGType:
+        """Phrasal proper superdag."""
+        return PhraseGroup(self.iter_supdag(skip=1))
+
+    @property
+    def depth(self) -> int:
+        """Depth of the phrase within the phrasal tree of the sentence."""
+        if (parents := self.parents):
+            return min(p.depth + 1 for p in parents)
+        return 0
+
+    @property
+    def conjuncts(self) -> Conjuncts:
+        """Conjoined phrases."""
+        if (conjs := self.sent.conjs.get(self._lead)):
+            return conjs.copy(members=[
+                m for m in conjs.members if m is not self
+            ])
+        return Conjuncts()
+
+    @property
+    def group(self) -> Conjuncts:
+        """Group of self and its conjoined phrases."""
+        return self.sent.conjs.get(self._lead) \
+            or Conjuncts([self])
+
+    @property
+    @controlled
+    def verb(self) -> PGType:
+        """Return ``self`` if VP or nothing otherwise."""
+        return PhraseGroup((self,)) \
+            if isinstance(self, VerbPhrase) else PhraseGroup()
+    @property
+    @controlled
+    def subj(self) -> PGType:
+        """Subject phrases."""
+        subjects = []
+        for c in self.children:
+            if c.dep & Dep.subj:
+                subjects.append(c)
+            elif c.dep & Dep.agent:
+                subjects.extend(c.subj)
+        return PhraseGroup(subjects)
+    @property
+    @controlled
+    def dobj(self) -> PGType:
+        """Direct object phrases."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.dobj
+        )
+    @property
+    @controlled
+    def iobj(self) -> PGType:
+        """Indirect object phrases."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.iobj
+        )
+    @property
+    @controlled
+    def desc(self) -> PGType:
+        """Description phrases."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & (Dep.desc | Dep.misc)
+        )
+    @property
+    @controlled
+    def cdesc(self) -> PGType:
+        """Clausal descriptions."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.cdesc
+        )
+    @property
+    @controlled
+    def adesc(self) -> PGType:
+        """Adjectival complement descriptions."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.adesc
+        )
+    @property
+    @controlled
+    def prep(self) -> PGType:
+        """Prepositions."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.prep
+        )
+    @property
+    @controlled
+    def pobj(self) -> PGType:
+        """Prepositional objects."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.pobj
+        )
+    @property
+    @controlled
+    def subcl(self) -> PGType:
+        """Subclauses."""
+        return PhraseGroup(
+            c for c in self.children
+            if (c.dep & Dep.subcl) \
+            or (isinstance(c, VerbPhrase) and (c.dep & Dep.acl))
+        )
+    @property
+    @controlled
+    def relcl(self) -> PGType:
+        """Relative clausses."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.relcl
+        )
+    @property
+    @controlled
+    def xcomp(self) -> PGType:
+        """Open clausal complements."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.xcomp
+        )
+    @property
+    @controlled
+    def appos(self) -> PGType:
+        """Appositional modifiers."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.appos
+        )
+    @property
+    @controlled
+    def nmod(self) -> PGType:
+        """Nominal modifiers."""
+        return PhraseGroup(
+            c for c in self.children if c.dep & Dep.nmod
+        )
+
+    @property
+    def components(self) -> DataTuple[Component]:
+        return self.iter_subdag().get("head").tuple
+
+    @component
+    @property
+    def verbs(self) -> DataTuple[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Verb)).tuple
+
+    @component
+    @property
+    def nouns(self) -> DataTuple[Noun]:
+        return self.components.filter(lambda c: isinstance(c, Noun)).tuple
+
+    @component
+    @property
+    def preps(self) -> DataTuple[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Prep)).tuple
+
+    @component
+    @property
+    def descs(self) -> DataTuple[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Desc)).tuple
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        comps = tuple(self.components)
+        return sum(c.vector for c in comps) / len(comps)
+
+    # Methods -----------------------------------------------------------------
 
     @classmethod
     @abstractmethod
@@ -89,138 +298,53 @@ class Phrase(SentElement):
             f"'{cls.cname(comp)}' objects"
         )
 
-    # Properties --------------------------------------------------------------
+    def iter_subdag(self, *, skip: int = 0) -> DataIterator[Self]:
+        """Iterate over phrasal subtree and omit ``skip`` first items.
 
-    @property
-    def idx(self) -> int:
-        return self.head.idx
+        Each phrase is emitted only when reached the first time
+        during the depth-first search.
+        """
+        def _iter():
+            yield self
+            for child in self.children:
+                yield from child.iter_subdag(skip=0)
+        return DataIterator(islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None))
 
-    @property
-    def lead(self) -> Phrase:
-        return self.sent.pmap[self._lead] if self._lead is not None else self
+    def iter_supdag(self, *, skip: int = 0) -> DataIterator[Self]:
+        """Iterate over phrasal supertree and omit ``skip`` first items.
 
-    @property
-    def is_lead(self) -> Phrase:
-        return self.lead is self
+        Each phrase is emitted only when reached the first time
+        during the depth-first search.
+        """
+        def _iter():
+            yield self
+            for parent in self.parents:
+                yield from parent.iter_supdag(skip=0)
+        return DataIterator(islice(unique_everseen(_iter(), key=lambda p: p.idx), skip, None))
 
-    @property
-    def tokens(self) -> tuple[TokenABC, ...]:
-        return tuple(t for t, _ in self.iter_token_roles())
+    def dfs(self, subdag: bool = True) -> DataTuple[DataTuple[Self]]:
+        """Depth-first search.
 
-    @property
-    def data(self) -> dict[str, Any]:
-        return {
-            **super().data,
-            "lead": self._lead
-        }
+        Parameters
+        ----------
+        subdag
+            Should search be performed in the subgraph direction
+            (i.e. through the children).
+        """
+        attr = "children" if subdag else "parents"
+        def _dfs(phrase, chain=()):
+            if (adjacent := getattr(phrase, attr)):
+                for p in adjacent:
+                    new_chain = list(chain)
+                    new_chain.append(p)
+                    yield from _dfs(p, chain=new_chain)
+            else:
+                yield DataTuple(chain)
+        return DataIterator(_dfs(self))
 
-    @property
-    def children(self) -> tuple[Phrase, ...]:
-        return self.sent.graph[self]
-
-    @property
-    def parents(self) -> tuple[Phrase, ...]:
-        return self.sent.graph.rev[self]
-
-    @property
-    def subtree(self) -> Iterator[Phrase]:
-        yield self
-        for child in self.children:
-            yield from child.subtree
-
-    @property
-    def suptree(self) -> Iterator[Phrase]:
-        yield self
-        for parent in self.parents:
-            yield from parent.suptree
-
-    @property
-    def depth(self) -> int:
-        if (parents := self.parents):
-            return min(p.depth + 1 for p in parents)
-        return 0
-
-    @property
-    def conjuncts(self) -> Conjuncts:
-        if (conjs := self.sent.conjs.get(self.lead)):
-            return conjs.copy(members=[
-                m for m in conjs.members if m is not self
-            ])
-        return Conjuncts()
-
-    @property
-    def subj(self) -> Sequence[Phrase]:
-        subjects = []
-        for c in self.children:
-            if c.dep & Dep.subj:
-                subjects.append(c)
-            elif c.dep & Dep.agent:
-                subjects.extend(c.subj)
-        return Conjuncts.get_chain(subjects)
-    @property
-    def dobj(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.dobj
-        )
-    @property
-    def iobj(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.iobj
-        )
-    @property
-    def desc(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.desc
-        )
-    @property
-    def cdesc(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.cdesc
-        )
-    @property
-    def adesc(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.adesc
-        )
-    @property
-    def prep(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.prep
-        )
-    @property
-    def pobj(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.pobj
-        )
-    @property
-    def subcl(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children
-            if (c.dep & Dep.subcl) \
-            or (isinstance(c, VerbPhrase) and (c.dep & Dep.acl))
-        )
-    @property
-    def relcl(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.relcl
-        )
-    @property
-    def xcomp(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.xcomp
-        )
-    @property
-    def appos(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.appos
-        )
-    @property
-    def nmod(self) -> Sequence[Phrase]:
-        return Conjuncts.get_chain(
-            c for c in self.children if c.dep & Dep.nmod
-        )
-
-    # Methods -----------------------------------------------------------------
+    def similarity(self, *args: Any, **kwds: Any) -> float:
+        """Structured similarity with respect to other phrase or sentence."""
+        return self.Similarity(self, *args, **kwds).similarity
 
     def is_comparable_with(self, other: Any) -> bool:
         return isinstance(other, Phrase)
@@ -235,8 +359,20 @@ class Phrase(SentElement):
             for t, r in self.iter_token_roles()
         )
 
-    def iter_token_roles(self) -> Iterator[TokenABC, Role | None]:
-        """Iterate over token-role pairs."""
+    def iter_token_roles(
+        self,
+        *,
+        bg: bool = False
+    ) -> Iterable[tuple[Token, Role | None]]:
+        """Iterate over token-role pairs.
+
+        Parameters
+        ----------
+        bg
+            Should tokens be marked as a background token
+            (e.g. as a part of a subclause).
+            This is used for graying out subclauses when printing.
+        """
         def _iter():
             role = self.dep.role if self.dep else None
             yield from self.head.iter_token_roles(role=role)
@@ -248,43 +384,48 @@ class Phrase(SentElement):
                         yield pconj, None
                     if (cconj := conjs.cconj):
                         yield cconj, None
-                yield from child.iter_token_roles()
-        yield from sorted(set(_iter()), key=lambda x: x[0])
+                is_vp = isinstance(child, VerbPhrase)
+                yield from child.iter_token_roles(bg=is_vp)
+        toks = sorted(set(_iter()), key=lambda x: x[0])
+        if bg:
+            for tok, _ in toks:
+                yield tok, Role.BG
+        else:
+            yield from toks
 
     @classmethod
-    def from_component(cls, comp: Component, **kwds: Any) -> Phrase:
+    def from_component(cls, comp: Component, **kwds: Any) -> Self:
         """Construct from a grammar component."""
         for typ in cls.types.values():
             if not issubclass(typ, Phrase) \
             or getattr(typ, "__abstractmethods__", None):
                 continue
             if typ.governs(comp):
-                return typ(comp.sent, comp, **kwds)
+                return typ(comp.tok, **kwds)
         raise ValueError(f"no matching phrase type for '{cls.cname(comp)}'")
 
     def to_data(self) -> dict[str, Any]:
         """Serialize to a data dictionary."""
         return {
             "@class": self.alias,
-            "head": self.head.idx,
+            "head": self.tok.i,
             "dep": self.dep.name,
             "sconj": self.sconj.i if self.sconj else None,
             "lead": self._lead
         }
 
     @classmethod
-    def from_data(cls, sent: "Sent", data: dict[str, Any]) -> Phrase:
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
         """Construct from sentence and data dictionary."""
         data = data.copy()
-        doc = sent.doc
         typ = cls.types[data.pop("@class")]
+        tok = doc[data["head"]]
         kwds = dict(
-            head=sent.cmap[data["head"]],
             dep=Dep.from_name(data["dep"]),
             sconj=doc[i] if (i := data["sconj"]) is not None else None,
             lead=data["lead"]
         )
-        return typ(sent, **kwds)
+        return typ(tok, **kwds)
 
 
 class VerbPhrase(Phrase):

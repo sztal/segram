@@ -1,156 +1,120 @@
-from __future__ import annotations
-from typing import Any, Optional, ClassVar
-from collections.abc import Iterable, Mapping, Sequence
-from .conjuncts import Conjuncts
-from .abc import DocElement
+from typing import Any, ClassVar, Self, Mapping
+from .conjuncts import PhraseGroup, Conjuncts
+from .abc import SentElement
 from .components import Component
-from .components import Verb, Noun
-from .components import Prep, Desc
-from .phrases import Phrase, VerbPhrase, NounPhrase, DescPhrase, PrepPhrase
+from .components import Verb, Noun, Prep, Desc
+from .phrases import Phrase
 from .graph import PhraseGraph
 from ..settings import settings
-from ..nlp import DocABC, SpanABC, TokenABC
+from ..nlp.tokens import Doc, Span, Token
 from ..symbols import Role
+from ..abc import labelled
+from ..utils.misc import sort_map
+from ..datastruct import DataTuple
 
 
-class Sent(Sequence, DocElement):
+PVType = PhraseGraph[Phrase]
+component_ = labelled("component")
+
+
+class Sent(SentElement):
     """Grammar sentence class.
 
     Components within a sentence form a directed acyclic graph
-    with connections going from controlling to dependent componentss.
+    with connections going from controlling to dependent components.
 
     Attributes
     ----------
-    start, end
-        Start and end indices.
-    verbs
-        Verb components.
-    nouns
-        Noun components.
-    descs
-        Descriptive components.
-    preps
-        Prepositional components.
+    cmap
+        Mapping from head token ids to components.
+    pmap
+        Mapping from head tokens ids to phrases.
     graph
         Component graph.
     conjuncts
         Mapping from lead components to conjunct groups.
     """
     # pylint: disable=too-many-public-methods
-    # pylint: disable=too-many-instance-attributes
-    __components__ = ("verbs", "nouns", "descs", "preps")
-    __slots__ = (
-        "start", "end", *__components__,
-        "graph", "conjs", "_cmap", "_pmap"
-    )
+    __slots__ = ("graph", "conjs", "cmap", "pmap")
     alias = "Sent"
     component_names: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
         self,
-        doc: DocABC,
-        start: int,
-        end: int,
-        verbs: Iterable[Verb] = (),
-        nouns: Iterable[Noun] = (),
-        descs: Iterable[Desc] = (),
-        preps: Iterable[Prep] = (),
-        graph: Optional[PhraseGraph[Phrase, tuple[Phrase, ...]]] = None,
-        conjs: Optional[Mapping[Component, Conjuncts]] = None
+        sent: Span,
+        *,
+        cmap: Mapping[int, Component] | None = None,
+        pmap: Mapping[int, Phrase] | None = None,
+        graph: PhraseGraph[Phrase, tuple[Phrase, ...]] | None = None,
+        conjs: Mapping[int, Conjuncts] | None = None
     ) -> None:
-        super().__init__(doc)
-        self.start = start
-        self.end = end
-        self.check_sent(self.sent)
-        self.nouns = tuple(nouns)
-        self.verbs = tuple(verbs)
-        self.preps = tuple(preps)
-        self.descs = tuple(descs)
+        super().__init__(sent)
+        self.cmap = sort_map(cmap or {})
+        self.pmap = sort_map(pmap or {})
         self.graph = graph
         self.conjs = conjs or {}
-        self._cmap = {}
-        self._pmap = {}
+
+    def __new__(cls, *args: Any, **kwds: Any) -> None:
+        obj = super().__new__(cls)
+        obj.__init__(*args, **kwds)
+        idx = obj.idx
+        cache = obj.doc.smap
+        if (cur := cache.get(idx)):
+            cur.__init__(**obj.data)
+            return cur
+        cache[idx] = obj
+        return obj
 
     def __len__(self) -> int:
         return len(self.sent)
 
-    def __getitem__(self, idx: int | slice) -> Component | tuple[Component, ...]:
-        return self.sent[idx]
-
-    def __contains__(
-        self,
-        other: TokenABC | Component
-    ) -> bool:
-        if isinstance(other, Phrase):
-            return other in self.phrases
-        if isinstance(other, Component):
-            return other in self.components
-        if isinstance(other, TokenABC):
-            return other in self.sent
-        return super().__contains__(other)
-
-    def __init_subclass__(cls):
-        super().__init_subclass__()
-        cls.init_class_attrs({ "__components__": "component_names" })
-
     # Properties --------------------------------------------------------------
 
     @property
-    def doc(self) -> DocABC:
-        return self._doc
-
-    @property
-    def idx(self) -> tuple[int, int]:
-        return (self.start, self.end)
-
-    @property
-    def sent(self) -> SpanABC:
-        return self.doc[self.start:self.end]
-
-    @property
-    def cmap(self) -> Mapping[int, Component]:
-        return self._cmap
-
-    @property
-    def pmap(self) -> Mapping[int, Phrase]:
-        return self._pmap
-
-    @property
     def root(self) -> Component:
-        root = self.sent.root
-        return next(c for c in self.components if root in c)
+        """Root component."""
+        return self.cmap[super().root.i]
 
     @property
-    def sources(self) -> tuple[Phrase, ...]:
-        return Conjuncts.get_chain(self.graph.sources)
+    def proots(self) -> Conjuncts[Phrase]:
+        """Root phrases."""
+        return self.root.phrase.group
 
     @property
-    def vps(self) -> tuple[Phrase, ...]:
-        return tuple(p for p in self.phrases if isinstance(p, VerbPhrase))
+    def sources(self) -> PVType:
+        return PhraseGroup(self.graph.sources)
 
     @property
-    def nps(self) -> tuple[Phrase, ...]:
-        return tuple(p for p in self.phrases if isinstance(p, NounPhrase))
+    @component_
+    def verbs(self) -> DataTuple[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Verb)).tuple
 
     @property
-    def dps(self) -> tuple[Phrase, ...]:
-        return tuple(p for p in self.phrases if isinstance(p, DescPhrase))
+    @component_
+    def nouns(self) -> DataTuple[Noun]:
+        return self.components.filter(lambda c: isinstance(c, Noun)).tuple
 
     @property
-    def pps(self) -> tuple[Phrase, ...]:
-        return tuple(p for p in self.phrases if isinstance(p, PrepPhrase))
+    @component_
+    def preps(self) -> DataTuple[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Prep)).tuple
 
     @property
-    def tokens(self) -> tuple[TokenABC, ...]:
-        return tuple(self.sent)
+    @component_
+    def descs(self) -> DataTuple[Verb]:
+        return self.components.filter(lambda c: isinstance(c, Desc)).tuple
 
     @property
-    def components(self) -> tuple[Component, ...]:
-        return tuple(self.cmap.values())
+    def tokens(self) -> DataTuple[Token]:
+        return DataTuple(tuple(self.sent))
 
     @property
-    def phrases(self) -> tuple[Phrase, ...]:
-        return tuple(self.pmap.values())
+    def components(self) -> DataTuple[Component]:
+        return DataTuple(self.cmap.values())
+
+    @property
+    def phrases(self) -> PVType:
+        return PhraseGroup(self.pmap.values())
 
     @property
     def coverage(self) -> float:
@@ -158,51 +122,43 @@ class Sent(Sequence, DocElement):
 
     # Methods -----------------------------------------------------------------
 
+    def similarity(self, *args: Any, **kwds: Any) -> float:
+        """Structured similarity with respect to other sentence or phrase."""
+        return self.Similarity(self, *args, **kwds).similarity
+
     @classmethod
-    def from_data(cls, doc: DocABC, data: dict[str, Any]) -> Sent:
-        """Construct from a :class:`~segram.nlp.DocABC` and a data dictionary."""
-        sent = cls(doc, data["start"], data["end"])
-        sent.nouns = tuple(
-            cls.types.Noun.from_data(sent, dct)
-            for dct in data.get("nouns", {}).values()
-        )
-        sent.verbs = tuple(
-            cls.types.Verb.from_data(sent, dct)
-            for dct in data.get("verbs", {}).values()
-        )
-        sent.preps = tuple(
-            cls.types.Prep.from_data(sent, dct)
-            for dct in data.get("preps", {}).values()
-        )
-        sent.descs = tuple(
-            cls.types.Desc.from_data(sent, dct)
-            for dct in data.get("descs", {}).values()
-        )
-        for dct in data["phrases"]:
-            phrase = cls.types.Phrase.from_data(sent, dct)
-            sent.pmap[phrase.idx] = phrase
-        sent.graph = PhraseGraph.from_data(sent, data["graph"])
-        sent.conjs = {
-            (conj := Conjuncts.from_data(sent, c)).lead: conj
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
+        """Construct from a :class:`~segram.nlp.Doc` and a data dictionary."""
+        # pylint: disable=protected-access
+        data = data.copy()
+        sent = doc[data.pop("start"):data.pop("end")]
+        data["cmap"] = {
+            idx: cls.types.Component.from_data(doc, dct)
+            for idx, dct in data["cmap"].items()
+        }
+        data["pmap"] = {
+            idx: cls.types.Phrase.from_data(doc, dct)
+            for idx, dct in data["pmap"].items()
+        }
+        data["graph"] = PhraseGraph.from_data(sent, data["graph"])
+        data["conjs"] = {
+            (conj := Conjuncts.from_data(sent, c)).lead.idx: conj
             for c in data["conjs"]
         }
-        return sent
+        return cls(sent, **data)
 
     def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary."""
-        return dict(
-            start=self.start,
-            end=self.end,
-            nouns={ c.idx: c.to_data() for c in self.nouns },
-            verbs={ c.idx: c.to_data() for c in self.verbs },
-            preps={ c.idx: c.to_data() for c in self.preps },
-            descs={ c.idx: c.to_data() for c in self.descs },
-            phrases=[ p.to_data() for p in self.phrases ],
-            graph=self.graph.to_data(),
-            conjs=[ c.to_data() for c in self.conjs.values() ]
-        )
+        return {
+            "start": self.start,
+            "end":   self.end,
+            "cmap":  { idx: c.to_data() for idx, c in self.cmap.items() },
+            "pmap":  { idx: p.to_data() for idx, p in self.pmap.items() },
+            "graph": self.graph.to_data(),
+            "conjs": [ c.to_data() for c in self.conjs.values() ]
+        }
 
-    def iter_token_roles(self) -> tuple[TokenABC, Role | None]:
+    def iter_token_roles(self) -> tuple[Token, Role | None]:
         """Iterate over token-role pairs."""
         def _iter():
             seen = set()
@@ -221,11 +177,11 @@ class Sent(Sequence, DocElement):
             s += tok.to_str(color=color, role=role)+tok.whitespace
         return s
 
-    def is_comparable_with(self, other: Sent) -> None:
+    def is_comparable_with(self, other: Any) -> None:
         return isinstance(other, Sent)
 
     @staticmethod
-    def check_sent(span: SpanABC) -> bool:
+    def check_sent(span: Span) -> bool:
         """Check if a span is a proper sentence."""
         if span != span[0].sent:
             raise ValueError("'span' must be a proper sentence")

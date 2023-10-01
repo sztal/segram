@@ -1,7 +1,7 @@
-from typing import Iterator
+from typing import Iterable
 from abc import abstractmethod
 from .grammar import GrammarNLP
-from ..tokens import SpanABC
+from ..tokens import Span
 from ...grammar import Phrase, Sent, PhraseGraph, Conjuncts
 from ...symbols import Dep
 
@@ -13,47 +13,33 @@ class SentNLP(GrammarNLP, Sent):
     __slots__ = ()
 
     @abstractmethod
-    def find_links(self) -> Iterator[tuple[Phrase, Phrase]]:
+    def find_links(self) -> Iterable[tuple[Phrase, Phrase]]:
         """Find phrase links."""
-        raise NotImplementedError
 
     @abstractmethod
-    def find_conjs(self) -> Iterator[Conjuncts]:
+    def find_conjs(self) -> Iterable[Conjuncts]:
         """Iterate over groups of conjoined components."""
-        raise NotImplementedError
 
     @abstractmethod
     def add_subs(self) -> None:
         """Add free subtree tokens to components."""
-        raise NotImplementedError
 
     # Methods -----------------------------------------------------------------
 
     @classmethod
-    def from_sent(cls, sent: SpanABC) -> Sent:
+    def from_sent(cls, sent: Span) -> Sent:
         """Construct from a sentence span object."""
-        cls.check_sent(sent)
-        sent = cls(sent.doc, sent.start, sent.end)
-        nouns = []
-        verbs = []
-        preps = []
-        descs = []
+        # pylint: disable=protected-access
+        sent = cls(sent)
         for tok in sent.sent:
-            if (np := cls.types.Noun.from_tok(sent, tok)):
-                nouns.append(np)
-            if (vp := cls.types.Verb.from_tok(sent, tok)):
-                verbs.append(vp)
-            if (pp := cls.types.Prep.from_tok(sent, tok)):
-                preps.append(pp)
-            if (dp := cls.types.Desc.from_tok(sent, tok)):
-                descs.append(dp)
-        sent.verbs = tuple(verbs)
-        sent.nouns = tuple(nouns)
-        sent.descs = tuple(descs)
-        sent.preps = tuple(preps)
+            for typ in ("Noun", "Verb", "Prep", "Desc"):
+                try:
+                    cls.types[typ].from_tok(tok)
+                except AttributeError:
+                    continue
         sent.add_subs()
         sent.graph = PhraseGraph.from_links(sent.find_links())
-        sent.conjs = { conj.lead: conj for conj in sorted(sent.find_conjs()) }
+        sent.conjs = { conj.lead.idx: conj for conj in sorted(sent.find_conjs()) }
         sent.make_mutable_children()
         sent.destroy_conjunct_links()
         sent.propagate_children_conjuncts()

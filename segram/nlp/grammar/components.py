@@ -1,8 +1,8 @@
 # pylint: disable=abstract-method
-from typing import Any, Optional, Iterable, Sequence, ClassVar
+from typing import Any, Iterable, Sequence, ClassVar
 from abc import abstractmethod
 from .grammar import GrammarNLP
-from ..tokens import TokenABC
+from ..tokens import Token
 from ...grammar import Component
 from ...symbols import POS, Role, Dep
 
@@ -39,12 +39,12 @@ class ComponentNLP(GrammarNLP, Component):
 
     @classmethod
     @abstractmethod
-    def is_head(cls, tok: TokenABC) -> bool:
+    def is_head(cls, tok: Token) -> bool:
         """Test for head token."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_dep(self, parent: Component) -> Optional[Dep]:
+    def get_dep(self, parent: Component) -> Dep | None:
         """Get dependency between ``self`` and ``parent``."""
         raise NotImplementedError
 
@@ -62,7 +62,7 @@ class ComponentNLP(GrammarNLP, Component):
             if self.is_child_of(comp):
                 yield comp
 
-    def get_sconj(self, parent: Component) -> Optional[TokenABC]:
+    def get_sconj(self, parent: Component) -> Token | None:
         """Get conjunction subordinating ``self`` to ``parent``."""
         if self.head.head == parent.head:
             for tok in self.subtokens:
@@ -70,7 +70,7 @@ class ComponentNLP(GrammarNLP, Component):
                     return tok
         return None
 
-    def get_cconj(self, other: Component) -> Optional[TokenABC]:
+    def get_cconj(self, other: Component) -> Token | None:
         """Get conjunction token coordinating ``self`` and ``other``."""
         conjs = self.head.conjuncts
         if other.head not in conjs:
@@ -84,18 +84,15 @@ class ComponentNLP(GrammarNLP, Component):
     @classmethod
     def from_tok(
         cls,
-        sent: "Sent",
-        tok: TokenABC,
-        pos: Optional[POS] = None,
-        role: Optional[Role] = None,
+        tok: Token,
+        pos: POS | None = None,
+        role: Role | None = None,
         **kwds: Any
     ) -> Component:
         """Construct from a token.
 
         Parameters
         ----------
-        sent
-            Grammar sentence object.
         tok
             NLP token object.
         pos
@@ -128,7 +125,7 @@ class ComponentNLP(GrammarNLP, Component):
             role = Role.from_name(role)
         typ = cls.get_comp_type(role, tok.pos)
         if typ is not cls:
-            return typ.from_tok(sent, tok, pos, role=role, **kwds)
+            return typ.from_tok(tok, pos, role=role, **kwds)
         slots = {}
         finders = {
             name: getattr(cls, f"find_{name}")
@@ -137,7 +134,7 @@ class ComponentNLP(GrammarNLP, Component):
         }
         for child in tok.children:
             for name, finder in finders.items():
-                if (v := slots.get(name)) and isinstance(v, TokenABC):
+                if (v := slots.get(name)) and isinstance(v, Token):
                     continue
                 if add_tok(finder(child), name, slots):
                     break
@@ -148,10 +145,10 @@ class ComponentNLP(GrammarNLP, Component):
                     continue
                 finder = getattr(cls, f"find_{name}")
                 slots[name] = next((finder(c) for c in lead.children), None)
-        comp = cls(sent, tok, role=role, **slots, **kwds)
+        comp = cls(tok, role=role, **slots, **kwds)
         # Apply post-init finders ---------------------------------------------
-        for name in cls.post_init:
-            finder = getattr(cls, f"find_{name}")
+        for name in comp.__class__.post_init:
+            finder = getattr(comp.__class__, f"find_{name}")
             tok = add_tok(finder(comp), name, slots)
             setattr(comp, name, tok)
         # Get and set attributes ----------------------------------------------

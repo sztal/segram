@@ -18,8 +18,7 @@ def is_correct_version(v: str, constraints: str) -> bool:
         * ``>=version``
         * ``<version``
         * ``<=version``
-        * ``[constraint1],[constraint2]`` where the two constraints
-        follow given consistent bounds using the forms above.
+        * ``[constraint1],[constraint2]`` where the two constraints follow given consistent bounds using the forms above.
 
     Returns
     -------

@@ -1,0 +1,15 @@
+import pytest
+from ....utils.runners import SpacyTestRunner
+
+
+class TestRulebasedEnglishGrammar(
+    SpacyTestRunner,
+    lang=(lang := "en"),
+    resource=(resource := "en-core-complex.json")
+):
+    @pytest.mark.parametrize(
+        "key", SpacyTestRunner.casekeys(lang, resource),
+        indirect=True
+    )
+    def test_grammar(self, testset, key):
+        self.check_doc(testset, key)

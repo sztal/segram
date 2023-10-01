@@ -1,7 +1,6 @@
 """Utilities for managing package options."""
-from __future__ import annotations
-from typing import Any, Optional
-from .types import Namespace
+from typing import Any, Self
+from ..datastruct import Namespace
 
 
 class Settings(Namespace):
@@ -17,7 +16,7 @@ class Settings(Namespace):
             self.default = default
         super().__init__(**kwds)
 
-    def __enter__(self) -> Settings:
+    def __enter__(self) -> Self:
         for group in self.__dict__.values():
             group.maps.appendleft({})
 
@@ -25,7 +24,7 @@ class Settings(Namespace):
         for group in self.__dict__.values():
             group.maps.popleft()
 
-    def get(self, key: Optional[str] = None, default: Any = None, /) -> Any:
+    def get(self, key: str | None = None, default: Any = None, /) -> Any:
         """Get option value or a default.
 
         Instance attribute ``self.__default__`` is used

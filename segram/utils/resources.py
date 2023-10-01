@@ -1,6 +1,5 @@
 """Utilities for accessing package resources."""
-from __future__ import annotations
-from typing import Any, Optional, Literal, Iterator, Iterable, Mapping
+from typing import Any, Literal, Iterable, Mapping, Self
 from pathlib import Path
 import os
 import gzip
@@ -33,7 +32,7 @@ class Resource:
         self,
         path: str | bytes | os.PathLike,
         *,
-        compression: Optional[Literal[list(__compressions__)]] = None
+        compression: Literal[*__compressions__] | None = None
     ) -> None:
         self.path = Path(path)
         self._compression = compression
@@ -51,7 +50,7 @@ class Resource:
     # Methods -----------------------------------------------------------------
 
     @classmethod
-    def from_package(cls, package: str, filename: str) -> Resource:
+    def from_package(cls, package: str, filename: str) -> Self:
         """Construct from a package/filename specification.
 
         Parameters
@@ -148,7 +147,7 @@ class JSONResource(Resource):
     def get(
         self,
         *,
-        json_kws: Optional[Mapping] = None,
+        json_kws: Mapping | None = None,
         **kwds: Any
     ) -> dict | list:
         """Get JSON resource.
@@ -168,7 +167,7 @@ class JSONResource(Resource):
         self,
         data: str | list | dict,
         mode: str = "w",
-        json_kws: Optional[Mapping] = None,
+        json_kws: Mapping | None = None,
         **kwds: Any
     ) -> None:
         """Write JSON resource."""
@@ -195,9 +194,9 @@ class JSONLinesResource(JSONResource):
     def iter(
         self,
         *,
-        json_kws: Optional[Mapping],
+        json_kws: Mapping | None,
         **kwds: Any
-    ) -> Iterator[str | list | dict]:
+    ) -> Iterable[str | list | dict]:
         """Get resource data line by line.
 
         Parameters
@@ -218,9 +217,9 @@ class JSONLinesResource(JSONResource):
     def get(
         self,
         *,
-        json_kws: Optional[Mapping],
+        json_kws: Mapping | None,
         **kwds: Any
-    ) -> Iterator[str | list | dict]:
+    ) -> Iterable[str | list | dict]:
         """Get resource data line by line.
 
         Parameters
@@ -237,7 +236,7 @@ class JSONLinesResource(JSONResource):
         self,
         data: Iterable[str | list | dict],
         mode: str = "x",
-        json_kws: Optional[Mapping] = None,
+        json_kws: Mapping | None = None,
         **kwds: Any
     ) -> None:
         """Write JSON resource."""

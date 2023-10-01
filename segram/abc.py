@@ -1,17 +1,31 @@
-from __future__ import annotations
-from typing import Any, Optional, ClassVar, Type
+from typing import Any, ClassVar, Self, Callable
 from abc import ABC, abstractmethod
 from .utils.docstrings import inherit_docstring
 from .utils.diff import iter_diffs, IDiffType
 from .utils.meta import init_class_attrs, get_cname, get_ppath
+from .utils.misc import stringify
+
+
+def labelled(label: str) -> Callable:
+    """Assign ``label`` as attribute ``attr`` to a function."""
+    def decorator(func: Callable) -> Callable:
+        if isinstance(func, property):
+            target = func.fget
+        else:
+            target = func
+        setattr(target, "__group_label__", label)
+        return func
+    return decorator
 
 
 class SegramABC(ABC):
     """Abstract base class for specialized :mod:`segram` classes."""
-    __slots__ = ()
-    __dont_compare__ = ()
+    __slots__ = ("_hashdata",)
     slot_names: ClassVar[tuple[str, ...]] = ()
-    differ: Type["Differ"]
+    differ: type["Differ"]
+
+    def __init__(self) -> None:
+        self._hashdata = None
 
     def __hash__(self) -> int:
         return hash(self.hashdata)
@@ -22,11 +36,15 @@ class SegramABC(ABC):
         cls.init_class_attrs({
             "__slots__": "slot_names",
         }, check_slots=True)
-        cls.init_class_attrs({
-            "__dont_compare__": "dont_compare"
-        }, check_slots=False)
         if len(cls.slot_names) != len(set(cls.slot_names)):
             raise TypeError(f"'__slots__' are not unique: {cls.slot_names}")
+        # Handle labelled methods
+        for name, attr in vars(cls).items():
+            target = attr.fget if isinstance(attr, property) else attr
+            if (label := getattr(target, "__group_label__", None)):
+                names_attr = f"{label}_names"
+                names = getattr(cls, names_attr, ())
+                setattr(cls, names_attr, (*names, name))
         inherit_docstring(cls)
 
     # Abstract methods --------------------------------------------------------
@@ -41,7 +59,9 @@ class SegramABC(ABC):
     @property
     def hashdata(self) -> tuple[Any, ...]:
         """Tuple with hashable objects used for calculating instance hash."""
-        raise NotImplementedError
+        if self._hashdata is None:
+            self._hashdata = self.get_hashdata()
+        return self._hashdata
 
     @property
     def data(self) -> dict[str, Any]:
@@ -53,13 +73,17 @@ class SegramABC(ABC):
 
     # Methods -----------------------------------------------------------------
 
+    def get_hashdata(self) -> None:
+        """Get data used for generating object hash."""
+        raise NotImplementedError(f"'{self.cname()}' is not hashable")
+
     @classmethod
-    def cname(cls, obj: Optional[Any] = None) -> str:
+    def cname(cls, obj: Any | None = None) -> str:
         """Get class name."""
         return get_cname(obj if obj is not None else cls)
 
     @classmethod
-    def ppath(cls, obj: Optional[Any] = None) -> str:
+    def ppath(cls, obj: Any | None = None) -> str:
         """Get full python path of the class."""
         return get_ppath(obj if obj is not None else cls)
 
@@ -72,7 +96,7 @@ class SegramABC(ABC):
         """
         init_class_attrs(cls, attrs, **kwds)
 
-    def copy(self, **kwds: Any) -> SegramABC:
+    def copy(self, **kwds: Any) -> Self:
         """Copy self and modify attributes with ``**kwds``."""
         return self.__class__(**{ **self.data, **kwds })
 
@@ -100,16 +124,14 @@ class SegramABC(ABC):
         return not any(iter_diffs(obj, other, strict=strict))
 
     @classmethod
-    def as_str(cls, obj: Any, **kwds: Any) -> str:
+    def stringify(cls, obj: Any, **kwds: Any) -> str:
         """Convert ``obj`` to string.
 
         If ``obj`` exposes ``to_str()`` then it is used
         with keyword arguments passed in ``**kwds``.
         Otherwise the plain ``__repr__()`` is used.
         """
-        if (to_str := getattr(obj, "to_str", None)):
-            return to_str(**kwds)
-        return repr(obj)
+        return stringify(obj, **kwds)
 
     def equal(self, other: Any, *, strict: bool = True) -> bool:
         """Are ``self`` and ``other`` equal.
@@ -135,29 +157,7 @@ class SegramABC(ABC):
 
 @iter_diffs.register
 def _(obj: SegramABC, other: Any, *, strict: bool = True) -> IDiffType:
-    def _iter():
-        if strict and type(obj) is not type(other):
-            yield "TYPE", obj.ppath(), obj.ppath(other)
-            return
-        if isinstance(other, SegramABC):
-            if (sn1 := obj.slot_names) != (sn2 := other.slot_names):
-                yield "SLOT NAMES", sn1, sn2
-                return
-            yield from iter_diffs(obj.data, other.data, strict=strict)
-        else:
-            yield from iter_diffs(obj, other, strict=strict)
-    seen = set()
-    for *_, msg, obj1, obj2 in _iter():
-        data = (obj1, obj2)
-        try:
-            if data in seen:
-                continue
-            seen.add(data)
-        except TypeError:
-            pass
-        yield obj.cname(obj1), msg, obj1, obj2
-        if msg in ("TYPE", "SLOT NAMES"):
-            return
+    yield from iter_diffs(obj.to_data(), other.to_data())
 
 
 class SegramWithDocABC(SegramABC):
@@ -184,7 +184,7 @@ class SegramWithDocABC(SegramABC):
 
     @property
     @abstractmethod
-    def doc(self) -> "DocABC":
+    def doc(self) -> "Doc":
         raise NotImplementedError
 
     # Properties --------------------------------------------------------------
@@ -194,6 +194,7 @@ class SegramWithDocABC(SegramABC):
         """Language code of the document."""
         return self.doc.lang
 
-    @property
-    def hashdata(self) -> tuple[Any, ...]:
-        return (self.ppath(), id(self.doc))
+    # Methods -----------------------------------------------------------------
+
+    def get_hashdata(self) -> tuple[Any, ...]:
+        return (hash(self.ppath()), id(self.doc))

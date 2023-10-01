@@ -1,117 +1,89 @@
-from __future__ import annotations
-from typing import Any, Iterator
-from collections import ChainMap
-from collections.abc import Iterable, Sequence, Mapping
-from .abc import Semantic
-from .frame import Frame
-from .elements import FrameElement
-from .elements import Actor, Action, Description, Complement
-from .relations import Relation
-from ..grammar import Sent, Phrase, Conjuncts
-from ..nlp import DocABC
-from ..utils.types import ChainGroup
+from typing import Self, Any, Callable
+from spacy.language import Language
+from .frames import Frame, Actants, Events
+from ..grammar import Doc, Sent, Phrase
+from ..nlp import Corpus
+from ..datastruct import DataIterator
 
 
-class Story(Sequence, Semantic):
-    """Story semantic class."""
-    __slots__ = ("_doc", "frames", "emap", "_pmap")
+class Story:
+    """Story class.
 
+    Attributes
+    ----------
+    corpus
+        Document corpus.
+    """
     def __init__(
         self,
-        doc: DocABC,
-        frames: Iterable[Frame] = ()
+        corpus: Corpus | None = None,
+        **kwds: Frame
     ) -> None:
-        self._doc = doc
-        self.frames = tuple(frames)
-        self.emap = {}
-        self._pmap = ChainMap()
+        self.corpus = corpus
+        self.frames = {
+            "actants": Actants(self),
+            "events": Events(self),
+            **kwds
+        }
 
-    def __repr__(self) -> str:
-        nframes = len(self)
-        text = "frame" if nframes == 1 else "frames"
-        return f"<{self.ppath()} with {nframes} {text} at {hex(id(self))}>"
+    def __getitem__(self, key: str) -> Frame:
+        return self.frames[key]
 
-    def __hash__(self) -> int:
-        return super().__hash__()
+    def __setitem__(self, key: str, value: Frame) -> None:
+        if isinstance(value, Callable) \
+        and not isinstance(value, Frame):
+            value = Frame.subclass(value)(self)
+        self.frames[key] = value
 
-    def __eq__(self, other: Story) -> bool:
-        if (res := super().__eq__(other)) is NotImplemented:
-            return res
-        return res and self.frames == other.frames
+    def __delitem__(self, key: str) -> None:
+        del self.frames[key]
 
     def __len__(self) -> int:
-        return len(self.frames)
-
-    def __getitem__(self, idx: int | slice) -> Frame | tuple[Frame, ...]:
-        return self.frames[idx]
+        return len(self.corpus)
 
     # Properties --------------------------------------------------------------
 
     @property
-    def doc(self) -> DocABC:
-        return self._doc
+    def docs(self) -> DataIterator[Doc]:
+        """Grammar documents in the story."""
+        return self.corpus.docs
 
     @property
-    def hashdata(self) -> tuple[Any, ...]:
-        return (*super().hashdata, id(self))
+    def sents(self) -> DataIterator[Sent]:
+        """Grammar sentences in the story."""
+        return DataIterator(doc.sents for doc in self.docs).flat
 
     @property
-    def pmap(self) -> Mapping[int, Phrase]:
-        return self._pmap
-
-    @property
-    def elements(self) -> Iterator[FrameElement]:
-        for frame in self:
-            yield from frame.elements
-
-    @property
-    def actors(self) -> ChainGroup:
-        return Conjuncts.get_chain(
-            e for e in self.elements
-            if isinstance(e, Actor)
-        )
-
-    @property
-    def actions(self) -> ChainGroup:
-        return Conjuncts.get_chain(
-            e for e in self.elements
-            if isinstance(e, Action) and not e.phrase.adesc
-        )
-
-    @property
-    def descriptions(self) -> ChainGroup:
-        return Conjuncts.get_chain(
-            e for e in self.elements
-            if isinstance(e, Description)
-        )
-
-    @property
-    def complements(self) -> ChainGroup:
-        return Conjuncts.get_chain(
-            e for e in self.elements
-            if isinstance(e, Complement)
-        )
+    def phrases(self) -> DataIterator[Phrase]:
+        """Phrase in the story."""
+        return DataIterator(s.phrases for s in self.sents).flat
 
     # Methods -----------------------------------------------------------------
 
-    def copy(self, **kwds: Any) -> Story:
-        return self.__class__(**{ "doc": self.doc, **self.data, **kwds })
-
-    def is_comparable_with(self, other: Story) -> bool:
-        return isinstance(other, Story)
-
-    def to_str(self, **kwds: Any) -> str:
-        # pylint: disable=unused-argument
-        return super().__repr__()
-
-    def iter_relations(self) -> Iterator[Relation]:
-        """Iterate over semantic relations."""
-        for frame in self:
-            yield from frame.iter_relations()
+    def copy(self) -> Self:
+        obj = self.__class__(self.corpus.copy())
+        obj.frames = { n: f.copy(story=obj) for n, f in self.frames.copy() }
+        return obj
 
     @classmethod
-    def from_sents(cls, doc: DocABC, sents: Iterable[Sent]) -> Story:
-        """Construct from a document and sequence of grammar sentences."""
-        obj = cls(doc)
-        obj.frames = tuple(Frame(obj, sent) for sent in sents)
-        return obj
+    def from_texts(cls, nlp: Language, *texts: str, **kwds: Any) -> Self:
+        """Construct from texts.
+
+        All arguments are passed to :meth:`segram.nlp.Corpus`.
+        """
+        corpus = Corpus.from_texts(nlp, *texts, **kwds)
+        return cls(corpus)
+
+    def to_data(self) -> dict[str, Any]:
+        """Dump to data dictionary."""
+        return {
+            "corpus": self.corpus.to_data(),
+            "frames": self.frames.copy()
+        }
+
+    @classmethod
+    def from_data(cls, data: dict[str, Any]) -> Self:
+        """Construct from data dictionary."""
+        data = data.copy()
+        data["corpus"] = Corpus.from_data(data["corpus"])
+        return cls(**data)

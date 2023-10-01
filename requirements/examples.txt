@@ -1,0 +1,4 @@
+matplotlib>=3.7
+scikit-learn>=1.2
+xgi>=0.7
+jupyterlab

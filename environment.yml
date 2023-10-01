@@ -1,0 +1,15 @@
+name: segram
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python>=3.11
+  - spacy>=3.4
+  - more-itertools>=8.0
+  # Testing dependencies
+  - ipython
+  - ipdb
+  - ipywidgets
+  - pylint>=2.14
+  - pytest>=7.2
+  - coverage

@@ -1,60 +1,55 @@
-"""Base classes for which ABCs of concret grammar classes are derived.
+"""Base classes from which ABCs of concret grammar classes are derived.
 
 Grammar classes provide building blocks for representing complex
 syntactical relationships within sentences which go beyond simple
 syntax tree links and can be used to perform various tasks such as
 component and phrase detection.
 """
-from __future__ import annotations
-from typing import Any, Optional, Iterable, MutableMapping
-from typing import Type, ClassVar, Final
+# pylint: disable=no-name-in-module
+from typing import Any, Self, Callable, ClassVar, Final
+from typing import MutableMapping, Container, Sequence
 from abc import abstractmethod
+import re
 from functools import total_ordering
 from catalogue import Registry
-from ..nlp import DocABC, SpanABC, TokenABC
+import numpy as np
+from ..nlp.tokens import Doc, Span, Token
 from ..utils.registries import grammars
 from ..abc import SegramWithDocABC
-from ..utils.types import Namespace
+from ..datastruct import Namespace, DataTuple
+from ..utils.misc import cosine_similarity
 
 
 class GrammarNamespace(Namespace):
-    Grammar: Type["Grammar"]
-    Component: Type["Component"]
-    Verb: Type["Verb"]
-    Noun: Type["Noun"]
-    Prep: Type["Prep"]
-    Desc: Type["Desc"]
-    Phrase: Type["Phrase"]
-    VP: Type["VerbPhrase"]
-    NP: Type["NounPhrase"]
-    DP: Type["DescPhrase"]
-    PP: Type["PrepPhrase"]
-    Sent: Type["Sent"]
+    Grammar: type["Grammar"]
+    Component: type["Component"]
+    Verb: type["Verb"]
+    Noun: type["Noun"]
+    Prep: type["Prep"]
+    Desc: type["Desc"]
+    Phrase: type["Phrase"]
+    VP: type["VerbPhrase"]
+    NP: type["NounPhrase"]
+    DP: type["DescPhrase"]
+    PP: type["PrepPhrase"]
+    Sent: type["Sent"]
+    Doc: type["Doc"]
 
 
-class Grammar(SegramWithDocABC):
+class Grammar(SegramWithDocABC, Container):
     """Abstract base class for grammar classes.
 
-    All grammar classes must be defined as **slots** classes,
-    which is necessary for ensuring low-memory footprint
+    All grammar classes must be defined as **slots** classes.
+    This is necessary for ensuring low-memory footprint
     and better computational efficiency. Even classes with no
     new slots need to declare ``__slots__ = ()``.
-    This requirement is checked at class construction by
-    :class:`~GrammarMeta` metaclass. Other class-specific
-    requirements of this sort as well as their related validation
-    checks may be implemented as class methods ``cls_init_hook``
-    on specialized grammar classes. This allows abstract base classes
-    further down the inheritance chain to check for more complex
-    requirements as well as apply dynamic class customizations.
-
-    Notes
-    -----
-    The main general rule for creating abstract and concrete grammar
-    classes is that any method can, and if possible should, be defined
-    on an abstract class, unless it is a constructor-like method
-    creating any new concrete grammar objects. Such methods must be
-    declared as abstract methods on abstract base classes and implemented
-    on concrete classes.
+    This requirement is checked during class construction.
+    Other class-specific requirements of this sort as well as
+    their related validation checks may be implemented on specialized grammar
+    classes using the standard ``__init_subclass__`` interface.
+    This allows abstract base classes further down the inheritance chain
+    to check for more complex requirements as well as apply dynamic class
+    customizations.
     """
     __slots__ = ()
     alias: ClassVar[str] = "Grammar"
@@ -65,18 +60,12 @@ class Grammar(SegramWithDocABC):
     def __hash__(self) -> int:
         return super().__hash__()
 
-    def __eq__(self, other: Grammar) -> bool:
+    def __eq__(self, other: Self) -> bool:
         if isinstance(other, Grammar):
             return id(self.doc) == id(other.doc)
         return NotImplemented
 
-    def __contains__(self, other: Any) -> bool:
-        raise TypeError(
-            f"'{self.cname(other)}' objects cannot "
-            f"be contained in '{self.cname()}' instances"
-        )
-
-    def __init_subclass__(cls, *, register: Optional[str] = None) -> None:
+    def __init_subclass__(cls, *, register: str | None = None) -> None:
         super().__init_subclass__()
         if register:
             cls.types = GrammarNamespace()
@@ -93,25 +82,16 @@ class Grammar(SegramWithDocABC):
     # Methods -----------------------------------------------------------------
 
     @abstractmethod
-    def to_str(self, **kwds: Any) -> str:
-        """Represent as a string."""
-        raise NotImplementedError
-
-    @abstractmethod
     def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary."""
         raise NotImplementedError
 
 
-@total_ordering
-class GrammarElement(Grammar):
-    """Grammar element is any group of one or more tokens
-    linked together by well-defined syntactic relationships.
-
-    It is used to derive component classes.
-    """
+class GrammarElement(Grammar, Sequence):
+    """Abstract base class for grammar elements."""
     __slots__ = ()
     alias: ClassVar[str] = "GElem"
+    Similarity: ClassVar[type["GrammarSimilarity"]] = type
 
     def __repr__(self) -> str:
         return self.to_str(color=True)
@@ -119,37 +99,15 @@ class GrammarElement(Grammar):
     def __hash__(self) -> int:
         return super().__hash__()
 
-    def __eq__(self, other: GrammarElement) -> bool:
+    def __eq__(self, other: Self) -> bool:
         if self.is_comparable_with(other):
             return self.idx == other.idx
-        return NotImplemented
-
-    def __lt__(self, other: GrammarElement) -> bool:
-        if self.is_comparable_with(other):
-            return self.idx < other.idx
-        return NotImplemented
+        return False
 
     def __bool__(self) -> bool:
         return self.idx is not None
 
-    # Abstract methods --------------------------------------------------------
-
-    @abstractmethod
-    def __iter__(self) -> Iterable[GrammarElement]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __len__(self) -> int:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __getitem__(self, i: int) -> GrammarElement:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __contains__(self, other: TokenABC | GrammarElement) -> bool:
-        """Check whether ``self`` contains ``other``."""
-        raise NotImplementedError
+    # Properties --------------------------------------------------------------
 
     @property
     @abstractmethod
@@ -159,77 +117,258 @@ class GrammarElement(Grammar):
 
     @property
     @abstractmethod
-    def sent(self) -> SpanABC:
-        """NLP sentence containing the element."""
-        raise NotImplementedError
-
-    # Properties --------------------------------------------------------------
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        """Word vector."""
 
     @property
-    def hashdata(self) -> tuple[Any, ...]:
-        return (*super().hashdata, self.idx)
-
-
-class DocElement(GrammarElement):
-    """Document element class."""
-    __slots__ = ("_doc",)
-    alias: ClassVar[str] = "DocElem"
-
-    def __init__(self, doc: DocABC) -> None:
-        self._doc = doc
-
-    # Abstract methods --------------------------------------------------------
-
-    @classmethod
-    @abstractmethod
-    def from_data(cls, doc: DocABC, data: dict[str, Any]) -> Grammar:
-        """Construct from sentence and a data dictionary."""
-        # pylint: disable=arguments-renamed
-        raise NotImplementedError
-
-    # Properties --------------------------------------------------------------
+    def tokens(self) -> DataTuple[Token]:
+        """Tokens sequence of the element."""
+        return DataTuple(self)
 
     @property
-    def doc(self) -> DocABC:
-        return self._doc
+    def text(self) -> str:
+        """Raw text of element."""
+        return self.to_str()
+
+    @property
+    def lemma(self) -> str:
+        return "".join(t.lemma+t.whitespace for t in self.tokens).strip()
 
     # Methods -----------------------------------------------------------------
 
-    def copy(self, **kwds: Any) -> SentElement:
-        return self.__class__(**{ "doc": self.doc, **self.data, **kwds })
-
-
-class SentElement(GrammarElement):
-    """Sentence element class."""
-    __slots__ = ("_sent",)
-    alias: ClassVar[str] = "SentElem"
-
-    def __init__(self, sent: "Sent") -> None:
-        self._sent = sent
-
-    # Abstract methods --------------------------------------------------------
-
-    @classmethod
     @abstractmethod
-    def from_data(cls, sent: "Sent", data: dict[str, Any]) -> Grammar:
-        """Construct from sentence and a data dictionary."""
+    def to_str(self, **kwds: Any) -> str:
+        """Represent as a string."""
         raise NotImplementedError
+
+    def get_hashdata(self) -> tuple[Any, ...]:
+        return (*super().get_hashdata(), self.idx)
+
+    def match(
+        self,
+        _pattern: str | None = None,
+        _flag: re.RegexFlag = re.NOFLAG,
+        _ignore_missing: bool = False,
+        **kwds: Any | Callable[[Any], bool]
+    ) -> re.Pattern | None:
+        """Match element text against a regex pattern
+        using :func:`re.search` function.
+
+        Parameters
+        ----------
+        _pattern
+            Regular expression pattern used for matching.
+            No matching is done when ``None``.
+        _flag
+            Regex flag.
+        _ignore_missing_fields
+            Should missing fields on ``self`` be ignored.
+        **kwds
+            Other keyword arguments can be used for testing
+            values of different attributes on ``self``.
+            If callables are passed as values then they are
+            expected to be predicate functions returning
+            boolean values.
+        """
+        is_match = True
+        if _pattern is not None:
+            is_match &= bool(re.search(_pattern, self.text, _flag))
+        for field, test in kwds.items():
+            try:
+                attr = getattr(self, field)
+            except AttributeError as exc:
+                if _ignore_missing:
+                    continue
+                raise exc
+            if isinstance(test, Callable):
+                is_match &= bool(test(attr))
+            else:
+                is_match &= attr == test
+        return is_match
+
+    def similarity(self, other: Self) -> float:
+        """Cosine similarity between word vectors."""
+        return cosine_similarity(self.vector, other.vector)
+
+
+class DocElement(GrammarElement, Sequence):
+    """Document element class."""
+    __slots__ = ("doc",)
+    alias: ClassVar[str] = "DocElem"
+
+    def __init__(self, doc: Doc) -> None:
+        super().__init__()
+        self.doc = doc
+
+    def __getitem__(self, idx: int | slice) -> Token | Span:
+        return self.doc[idx]
+
+    def __len__(self) -> int:
+        return len(self.doc)
 
     # Properties --------------------------------------------------------------
 
     @property
-    def sent(self) -> "Sent":
+    def idx(self) -> int:
+        """Fast document id.
+
+        It is stable for an instance, and allows for hashing,
+        but is not stable for different objects with the same data,
+        e.g. an element initialized from the same data twice may have
+        differen ``.idx`` values each time.
+        """
+        return hash(self.doc)
+
+    @property
+    def id(self) -> int:
+        """Slow persistent document id.
+
+        It will be always the same for documents based
+        on the same exact data.
+        """
+        return self.doc.id
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.doc.vector
+
+    # Methods -----------------------------------------------------------------
+
+    @classmethod
+    @abstractmethod
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
+        """Construct NLP document and data dictionary."""
+
+
+@total_ordering
+class SentElement(GrammarElement):
+    """Grammar element based on a sentence span."""
+    __slots__ = ("sent", "_doc")
+    alias: ClassVar[str] = "SentElem"
+
+    def __init__(self, sent: Span) -> None:
+        super().__init__()
+        if sent.root.sent is not sent:
+            raise ValueError("'sent' has to be a proper sentence span object")
+        self.sent = sent
+        self._doc = None
+
+    def __lt__(self, other: Self) -> bool:
+        if self.is_comparable_with(other):
+            return self.idx < other.idx
+        return NotImplemented
+
+    def __getitem__(self, idx: int | slice) -> Token | Span:
+        return self.sent[idx]
+
+    def __len__(self) -> int:
+        return len(self.sent)
+
+    # Properties --------------------------------------------------------------
+
+    @property
+    def doc(self) -> DocElement:
+        if not self._doc:
+            self._doc = self.sent.doc.grammar
+        return self._doc
+
+    @property
+    def root(self) -> Token:
+        return self.sent.root
+
+    @property
+    def start(self) -> int:
+        return self.sent.start
+
+    @property
+    def end(self) -> int:
+        return self.sent.end
+
+    @property
+    def idx(self) -> tuple[int, int]:
+        """Sentence index equal to ``(self.start, self.end)``
+        allowing for identification/hashing and sorting within
+        the parent document.
+        """
+        return (self.start, self.end)
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.sent.vector
+
+    @property
+    def is_correct(self) -> bool:
+        """Indicates whether the sentence has been parsed correctly
+        and has a well-defined root token.
+        """
+        try:
+            self.root
+        except KeyError:
+            return False
+        return True
+
+    # Methods -----------------------------------------------------------------
+
+    @classmethod
+    @abstractmethod
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
+        """Construct from document and data dictionary."""
+
+
+@total_ordering
+class TokenElement(GrammarElement):
+    """Grammar element based on a token."""
+    __slots__ = ("tok", "_sent", "_doc")
+    alias: ClassVar[str] = "TokElem"
+
+    def __init__(self, tok: Token) -> None:
+        super().__init__()
+        self.tok = tok
+        self._sent = None
+        self._doc = None
+
+    def __lt__(self, other: Self) -> bool:
+        if self.is_comparable_with(other):
+            return self.idx < other.idx
+        return NotImplemented
+
+    def __getitem__(self, idx: int | slice) -> Token | tuple[Token, ...]:
+        return self.tokens[idx]
+
+    def __len__(self) -> int:
+        return len(self.tokens)
+
+    # Properties --------------------------------------------------------------
+
+    @property
+    def doc(self) -> DocElement:
+        if not self._doc:
+            self._doc = self.tok.doc.grammar
+        return self._doc
+
+    @property
+    def sent(self) -> SentElement:
+        if not self._sent:
+            self._sent = self.tok.sent.grammar
         return self._sent
 
     @property
-    def doc(self) -> DocABC:
-        return self.sent.doc
+    def idx(self) -> int:
+        """Token index within the parent document."""
+        return self.tok.i
 
     @property
-    def hashdata(self) -> tuple[Any, ...]:
-        return (self.ppath(), id(self.doc), id(self.sent), self.idx)
+    @abstractmethod
+    def tokens(self) -> tuple[Token, ...]:
+        pass
+
+    @property
+    def vector(self) -> np.ndarray[tuple[int], np.floating]:
+        return self.tok.vector
 
     # Methods -----------------------------------------------------------------
 
-    def copy(self, **kwds: Any) -> SentElement:
-        return self.__class__(**{ "sent": self.sent, **self.data, **kwds })
+    @classmethod
+    @abstractmethod
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
+        """Construct from document and data dictionary."""

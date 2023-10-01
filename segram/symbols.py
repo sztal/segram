@@ -3,13 +3,13 @@ of entities of a given class, for instance semantic roles
 such as subjects or direct objects of verb.
 
 The advantage of using symbols, implemented based on :class:`enum.Flag`,
-is that it allows combining and filtering based on symbols using simple
-boolean logic.
+is that it allows combining and filtering based on symbols using binary
+boolean operators.
 """
-from __future__ import annotations
+from typing import Self
 from enum import Flag, auto
 
-__all__ = ("POS", "Role", "Tense")
+__all__ = ("POS", "Role", "Tense", "Modal", "Mood")
 
 
 class Symbol(Flag):
@@ -25,12 +25,16 @@ class Symbol(Flag):
         return str(self).lower() or None
 
     @classmethod
-    def from_name(cls, name: str) -> Symbol:
+    def from_name(cls, name: str) -> Self:
+        neg = False
+        if name.startswith("~"):
+            name = name[1:]
+            neg = True
         parts = name.split("|")
         sym =  cls(0)
         for part in parts:
             sym |= getattr(cls, part)
-        return sym
+        return ~sym if neg else sym
 
 
 class POS(Symbol):
@@ -62,7 +66,7 @@ class POS(Symbol):
     OTHER    = X
 
     @classmethod
-    def from_name(cls, name: str) -> POS:
+    def from_name(cls, name: str) -> Self:
         return super().from_name(name.upper())
 
 
@@ -110,6 +114,9 @@ class Role(Symbol):
         and adjectival and adverbial modifiers as well as
         any other sort of construction used to directly
         describe nouns, verbs and prepositions.
+    BG
+        Background element that should be not emphasized
+        visually when printing, e.g. printed in gray.
     NEG
         Negation.
     QMARK
@@ -128,7 +135,8 @@ class Role(Symbol):
     PREP   = auto()
     POBJ   = auto()
     PROOT  = auto()
-    DESC  = auto()
+    DESC   = auto()
+    BG     = auto()
     # Fixed roles
     NEG    = auto()
     QMARK  = auto()
@@ -145,9 +153,44 @@ class Dep(Symbol):
 
     Attributes
     ----------
+    root
+        Sentence root.
     subj
         Subject.
+    dobj
+        Direct object.
+    iobj
+        Indirect object.
+    pobj
+        Prepositional object.
+    prep
+        Preposition.
+    subcl
+        Subclause.
+    relcl
+        Relative clause.
+    acl
+        Clausal modifier of noun (adnominal clause).
+    xcomp
+        Open clausal complement.
+    desc
+        Description.
+    cdesc
+        Clausal description.
+    adesc
+        Adjectival complement description.
+    nmod
+        Modifier of nominal.
+    appos
+        Appositional modifier.
+    agent
+        Agent token (introducing passive subjects).
+    conj
+        Conjunct.
+    misc
+        Miscellaneous (all other dependency roles).
     """
+    # pylint: disable=invalid-name
     root   = auto()
     subj   = auto()
     dobj   = auto()

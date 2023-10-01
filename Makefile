@@ -46,26 +46,35 @@ lint:
 	py.test --pylint -m pylint
 
 test:
-	python setup.py test
+	python -m pytest
 
 test-all:
 	tox
 
-coverage:
-	coverage run --source segram setup.py test
-	coverage report -m
+cov-run:
+	coverage run
+cov-report:
+	coverage report
 	coverage html
 	xdg-open htmlcov/index.html
 	# open htmlcov/index.html
 
+coverage: cov-run cov-report
+
 docs:
-	rm -f docs/segram.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ segram
+	rm -rf docs/_build/
+	rm -rf docs/api/
+	mkdir -p docs/_static
+	sphinx-apidoc --module-first --separate -o docs/api/ segram
+	sed -i 's/:undoc-members:/:no-undoc-members:/g' docs/api/*.rst
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
-	xdg-open docs/_build/html/index.html
-	# open docs/_build/html/index.html
+	xdg-open docs/_build/html/index.html || open docs/_build/html/index.html
+
+build: gzip-jsons clean
+	git diff-index --quiet HEAD -- || echo "\n\033[1;31mThere are untracked/uncommited files!!!\033[0m\n" && exit 1
+	python -m build
+	twine check dist/*
 
 release: clean
 	python setup.py sdist upload

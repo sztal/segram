@@ -3,15 +3,17 @@
 Grammar components are groups of associated tokens controlled
 by a root token, e.g. a verb with its auxiliary verbs.
 """
-from __future__ import annotations
-from typing import Any, Optional, Iterable, Iterator, ClassVar, Type
-from .abc import SentElement
+from typing import Any, Iterable, ClassVar, Self
+from .abc import TokenElement
 from .conjuncts import Conjuncts
-from ..nlp.tokens import TokenABC
+from ..nlp.tokens import Token
 from ..symbols import POS, Role, Tense, Modal, Mood, Symbol
+from ..utils.misc import cosine_similarity
+from ..datastruct import DataTuple
+from ..nlp.tokens import Doc
 
 
-class Component(SentElement):
+class Component(TokenElement):
     """Abstract base class for grammar components.
 
     Components consists of a root token associated with (optional)
@@ -30,6 +32,8 @@ class Component(SentElement):
     not defining any new controlled token slots have to define
     ``__tokens__ = ()``. The same rules apply to defining component
     attributes through ``__attrs__`` class attributes.
+
+    The above requirements are checked at runtime during class creation.
 
     Attributes
     ----------
@@ -54,57 +58,50 @@ class Component(SentElement):
     """
     __role__ = None
     __tokens__ = ("qmark", "exclam", "intj", "neg")
-    __slots__ = ("_tid", "tok", "role", "sub", *__tokens__)
+    __slots__ = ("_tid", "role", "sub", *__tokens__)
     alias: ClassVar[str] = "Component"
     token_names: ClassVar[tuple[str, ...]] = ()
     attr_names: ClassVar[tuple[str, ...]] = ()
 
     def __init__(
         self,
-        sent: "Sent",
-        tok: TokenABC,
+        tok: Token,
         *,
-        role: Optional[Role] = None,
-        sub: Iterable[TokenABC] = (),
-        qmark: Optional[TokenABC] = None,
-        exclam: Optional[TokenABC] = None,
-        intj: Optional[TokenABC] = None,
-        neg: Optional[TokenABC] = None
+        role: Role | None = None,
+        sub: Iterable[Token] = (),
+        qmark: Token | None = None,
+        exclam: Token | None = None,
+        intj: Token | None = None,
+        neg: Token | None = None
     ) -> None:
-        super().__init__(sent)
-        self._tid = None
-        self.tok = tok
+        super().__init__(tok)
+        self._tid = ()
         role = role or self.__role__
         self.role = Role.from_name(role) if isinstance(role, str) else role
         self.qmark = qmark
         self.exclam = exclam
         self.intj = intj
         self.neg = neg
-        self.sub = tuple(sub)
+        self.sub = DataTuple(sub)
 
     def __new__(cls, *args: Any, **kwds: Any) -> None:
         obj = super().__new__(cls)
         obj.__init__(*args, **kwds)
         if (cur := obj.sent.cmap.get(obj.idx)):
-            cur.__init__(obj.sent, **obj.data)
+            data = { k: v for k, v in obj.data.items() if k in cur.slot_names }
+            cur.__init__(**data)
             return cur
         obj.sent.cmap[obj.idx] = obj
         obj.sent.pmap[obj.idx] = obj.phrase
         return obj
 
-    def __iter__(self) -> Iterator[TokenABC]:
-        yield from self.tokens
+    def __getitem__(self, idx: int | slice) -> Token | tuple[Token, ...]:
+        if isinstance(idx, int):
+            return self.doc[self.tid[idx]]
+        return tuple(self.doc[i] for i in self.tid)
 
     def __len__(self) -> int:
-        return len(self.tid)
-
-    def __getitem__(self, idx: int) -> TokenABC | tuple[TokenABC, ...]:
-        return self.tokens[idx]
-
-    def __contains__(self, other: TokenABC) -> bool:
-        if isinstance(other, TokenABC):
-            return other in self.tokens or other in self.sub
-        return super().__contains__(other)
+        return len(self._tid)
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
@@ -138,22 +135,26 @@ class Component(SentElement):
 
     @property
     def idx(self) -> int:
+        """Index of the component head token."""
         return self.tok.i
 
     @property
-    def head(self) -> TokenABC:
+    def head(self) -> Token:
+        """Component head token."""
         return self.tok
 
     @property
-    def lead(self) -> Component:
+    def lead(self) -> Self:
+        """Head component of the lead phrase."""
         return self.phrase.lead.head
 
     @property
     def is_lead(self) -> bool:
+        """Is the controlling phrase of the component a lead phrase."""
         return self.phrase.is_lead
 
     @property
-    def conjuncts(self) -> Conjuncts:
+    def conjuncts(self) -> Conjuncts[Self]:
         return (conjs := self.phrase.conjuncts).copy(
             members=tuple(m.head for m in conjs.members)
         )
@@ -166,16 +167,16 @@ class Component(SentElement):
 
     @property
     def tid(self) -> tuple[int, ...]:
-        if self._tid is None:
+        if not self._tid:
             self._tid = self.get_tid()
         return self._tid
 
     @property
-    def tokens(self) -> tuple[TokenABC, ...]:
+    def tokens(self) -> tuple[Token, ...]:
         return tuple(self.doc[i] for i in self.tid)
 
     @property
-    def subtokens(self) -> tuple[TokenABC, ...]:
+    def subtokens(self) -> tuple[Token, ...]:
         return sorted((*self.tokens, *self.sub))
 
     @property
@@ -196,16 +197,11 @@ class Component(SentElement):
     # Methods -----------------------------------------------------------------
 
     @classmethod
-    def from_data(
-        cls,
-        sent: "Sent",
-        data: dict[str, Any]
-    ) -> Component:
-        """Construct from :class:`~segram.nlp.DocABC` and a data dict."""
+    def from_data(cls, doc: Doc, data: dict[str, Any]) -> Self:
+        """Construct from :class:`~segram.nlp.Doc` and a data dict."""
         data = data.copy()
         alias = data.pop("@class")
         typ = cls.types[alias]
-        doc = sent.doc
         for name in ("tok", *typ.token_names, "sub"):
             if name not in data:
                 continue
@@ -214,7 +210,7 @@ class Component(SentElement):
                 data[name] =  doc[idx]
             else:
                 data[name] = [ doc[i] for i in idx ]
-        return typ(sent, **data)
+        return typ(**data)
 
     def to_data(self) -> dict[str, Any]:
         """Dump to data dictionary."""
@@ -223,7 +219,7 @@ class Component(SentElement):
         for name, tok in self.data.items():
             if name not in slots or not tok:
                 continue
-            if isinstance(tok, TokenABC):
+            if isinstance(tok, Token):
                 data[name] = tok.i
             else:
                 data[name] = [ t.i for t in tok ]
@@ -237,12 +233,12 @@ class Component(SentElement):
     def get_comp_type(
         cls,
         role: Role = None,
-        pos: Optional[POS] = None
-    ) -> Type[Component]:
+        pos: POS | None = None
+    ) -> type[Self]:
         """Get component type from role or POS tag."""
         return cls.roles.get(role, cls.roles.get(pos, cls))
 
-    def to_str(self, *, color: bool = False, role: Optional[Role] = None, **kwds: Any) -> str:
+    def to_str(self, *, color: bool = False, role: Role | None = None, **kwds: Any) -> str:
         """Represent as a string.
 
         Parameters
@@ -261,7 +257,7 @@ class Component(SentElement):
         def _iter():
             for name in ("tok", *self.token_names):
                 if (value := getattr(self, name, None)):
-                    if isinstance(value, TokenABC):
+                    if isinstance(value, Token):
                         yield value
                     else:
                         yield from value
@@ -270,21 +266,32 @@ class Component(SentElement):
     def iter_token_roles(
         self,
         *,
-        role: Optional[Role] = None
-    ) -> Iterable[tuple[TokenABC, Optional[Role]]]:
+        role: Role | None = None,
+        bg: bool = False
+    ) -> Iterable[tuple[Token, Role | None]]:
         """Iterate over token-role pairs.
 
         Parameters
         ----------
         role
             Overrides head token role.
+        bg
+            Should tokens be marked as a background token
+            (e.g. as a part of a subclause).
+            This is used for graying out subclauses when printing.
         """
         role = role or self.role
+        if bg:
+            role = Role.BG
         for tok in self.tokens:
             yield tok, role if tok == self.tok else tok.role
 
     def is_comparable_with(self, other: Any) -> None:
         return isinstance(other, Component)
+
+    def similarity(self, other: Self | Token) -> float:
+        """Cosine similarity to other component."""
+        return cosine_similarity(self.vector, other.vector)
 
 
 # pylint: disable=abstract-method
@@ -321,7 +328,13 @@ class Verb(Component):
 
 
 class Noun(Component):
-    """Abstract base class for noun components."""
+    """Abstract base class for noun components.
+
+    Attributes
+    ----------
+    mod
+        Modifier tokens.
+    """
     __role__ = Role.NOUN
     __tags__ = POS.NOUN | POS.PROPN | POS.PRON
     __slots__ = ()
@@ -345,7 +358,7 @@ class Prep(Component):
     def __init__(
         self,
         *args: Any,
-        preps: Iterable[TokenABC] = (),
+        preps: Iterable[Token] = (),
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)
@@ -369,7 +382,7 @@ class Desc(Component):
     def __init__(
         self,
         *args: Any,
-        mod: Iterable[TokenABC] = (),
+        mod: Iterable[Token] = (),
         **kwds: Any
     ) -> None:
         super().__init__(*args, **kwds)

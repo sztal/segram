@@ -4,38 +4,57 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "segram"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 version = "0.0.0"
 authors = [{name = "Szymon Talaga", email = "stalaga@protonmail.com"}]
-readme = "README.rst"
-dependencies = [
-    "spacy>=3.4,<3.5",
-    "spacy-experimental>=0.6"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["natural language processing", "NLP", "narratives", "narrative analysis", "semantics", "syntax", "grammar"]
+description = "A framework for semantic grammar and narrative analysis."
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Environment :: GPU",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Visualization"
 ]
+dependencies = [
+    "spacy>=3.4",
+    "more-itertools>=8.0"
+]
+
+[project.urls]
+documentation = "https://segram.readthedocs.io/en/latest/"
+repository = "https://github.com/sztal/segram"
+changelog = "https://github.com/sztal/segram/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
-test = [
-    "ipython",
-    "ipdb",
-    "pylint>=2.14",
-    "pytest>=7.2"
+coref = [
+    "spacy>=3.4,<3.5",
+    "spacy-experimental==0.6.3"
 ]
+gpu = ["cupy"]
 
 [project.entry-points.spacy_factories]
-segram = "segram.nlp.spacy.pipeline.factories:create_base"
+segram = "segram.nlp.pipeline.factories:create_base"
 
 [tool.setuptools]
 include-package-data = true
 package-dir = { segram = "segram" }
 
-[tool.setuptools.packages.find]
-where = ["segram"]
-
 [tool.setuptools.package-data]
-nlp = ["*.json", ".json.gz"]
+segram = ["nlp/**/*.json", "nlp/**/*.json.gz"]
 
 [tool.pytest.ini_options]
-minversion = "7.0"
+minversion = "7.2"
 addopts = [
     "--verbose",
     "--tb=no",
@@ -48,3 +67,50 @@ testpaths = [
 python_files = ["test_*.py", "benchmark_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.coverage.run]
+branch = true
+command_line = "-m pytest"
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_also = [
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+    ]
+
+ignore_errors = true
+
+[tool.coverage.html]
+directory = "coverage_html_report"
+
+[tool.bumpver]
+current_version = "0.0.0"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "bump version {old_version} -> {new_version}"
+tag_message = "{new_version}"
+tag_scope = "default"
+pre_commit_hook = ""
+post_commit_hook = ""
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"',
+    'version = "{version}"'
+]
+"segram/about.py" = ["{version}"]

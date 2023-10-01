@@ -1,14 +1,13 @@
 """Test sets for grammar classes."""
-from __future__ import annotations
-from typing import Any, Optional, Iterable, Callable
+from typing import Any, Iterable, Callable, Self
 from pathlib import Path
 from copy import deepcopy
 import json
 from murmurhash import hash_unicode
 from segram import settings
-from segram.grammar import Sent
-from segram.nlp import DocABC, SpanABC
-from segram.utils.types import Namespace
+from segram.grammar import Sent, Doc as GrammarDoc
+from segram.nlp.tokens import Doc, Span
+from segram.datastruct import Namespace
 from segram.utils.meta import get_cname
 from segram.utils.resources import JSONResource
 from .diffs import GrammarDiff
@@ -30,7 +29,7 @@ class TestSet:
         nlp: Callable,
         resource: JSONResource,
         *,
-        callback: Optional[Callable] = None,
+        callback: Callable | None = None,
         **kwds: Any
     ) -> None:
         """Initialization method.
@@ -39,14 +38,14 @@ class TestSet:
         ----------
         nlp
             Callable converting raw texts into
-            :class:`~segram.nlp.DocABC` instances.
+            :class:`~segram.nlp.Doc` instances.
         resource
             Resource handler.
         callback
             Callback function to be called on documents
             produced by ``self.nlp()``. It can be used to
             postprocess documents to ensure that they are
-            really :class:`~segram.nlp.DocABC` instances.
+            really :class:`~segram.nlp.Doc` instances.
         **kwds
             Additional metadata saved as a namesapce object
             under the ``self.ns`` attribute.
@@ -67,7 +66,7 @@ class TestSet:
     def __len__(self) -> int:
         return len(self.cmap)
 
-    def __getitem__(self, key: int | str) -> DocTestCase:
+    def __getitem__(self, key: int | str) -> "DocTestCase":
         key = self.hash_key(key)
         data = self.cmap[key]
         if "expected" not in data:
@@ -82,7 +81,7 @@ class TestSet:
     def __delitem__(self, key: int | str) -> None:
         del self.cmap[self.hash_key(key)]
 
-    def __iter__(self) -> Iterable[DocABC]:
+    def __iter__(self) -> Iterable[GrammarDoc]:
         for key in self.cmap:
             yield self[key]
 
@@ -96,7 +95,7 @@ class TestSet:
         return Path(self.resource.path)
 
     @property
-    def cases(self) -> list[DocTestCase]:
+    def cases(self) -> list[Self]:
         return list(self.cmap.values())
 
     @property
@@ -116,25 +115,25 @@ class TestSet:
         package: str,
         filename: str,
         **kwds: Any
-    ) -> TestSet:
+    ) -> Self:
         """Construct from package and resource names."""
         resource = JSONResource.from_package(package, filename)
         return cls(nlp, resource, **kwds)
 
-    def make_doc(self, text: str) -> DocABC:
+    def make_doc(self, text: str) -> GrammarDoc:
         """Make document object."""
         doc = self.nlp(text)
         if self.callback:
             doc = self.callback(doc)
-        return doc
+        return GrammarDoc.from_doc(doc)
 
     def add(
         self,
         text: str,
-        index: Optional[int] = None,
+        index: int | None = None,
         *,
         expected: Iterable[dict[str, Any]] = ()
-    ) -> DocABC:
+    ) -> "DocTestCase":
         """Add new test case.
 
         Parameters
@@ -265,9 +264,9 @@ class DocTestCase:
         self,
         tests: TestSet,
         key: int,
-        doc: DocABC,
+        doc: GrammarDoc,
         *,
-        bad: Optional[Iterable[int]] = None
+        bad: Iterable[int] | None = None
     ) -> None:
         self.tests = tests
         self.key = key
@@ -275,12 +274,12 @@ class DocTestCase:
         self.bad = set(bad or ())
 
     def __repr__(self) -> str:
-        return str(self.doc)
+        return f"{self.__class__.__name__}({self.doc})"
 
     def __len__(self) -> int:
         return len(self.expected)
 
-    def __iter__(self) -> Iterable[SentTestCase]:
+    def __iter__(self) -> Iterable["SentTestCase"]:
         yield from self.cases
 
     # Properties --------------------------------------------------------------
@@ -302,11 +301,11 @@ class DocTestCase:
         return self.data["text"]
 
     @property
-    def sents(self) -> Iterable[SpanABC]:
+    def sents(self) -> Iterable[Span]:
         yield from self.doc.sents
 
     @property
-    def cases(self) -> Iterable[SentTestCase]:
+    def cases(self) -> Iterable["SentTestCase"]:
         for i, sent in enumerate(self.sents):
             yield SentTestCase(self, i, sent)
 
@@ -325,7 +324,7 @@ class DocTestCase:
         text: str,
         offset: int = 0,
         **kwds: Any
-    ) -> DocTestCase:
+    ) -> Self:
         """Insert new document case after ``self``.
 
         Parameters
@@ -357,11 +356,10 @@ class SentTestCase:
         Results.
     """
     # pylint: disable=too-many-public-methods
-    def __init__(self, parent: DocTestCase, i: int, sent: SpanABC) -> None:
+    def __init__(self, parent: DocTestCase, i: int, sent: Span) -> None:
         self.parent = parent
         self.i = i
-        self.sent = sent
-        self.results = self.sent.grammar(use_data=None)
+        self.results = sent
 
     def __repr__(self) -> str:
         msg = settings.printer.get()
@@ -395,8 +393,12 @@ class SentTestCase:
         )
 
     @property
-    def doc(self) -> DocABC:
-        return self.sent.doc
+    def doc(self) -> Doc:
+        return self.parent.doc
+
+    @property
+    def sent(self) -> Span:
+        return self.results.sent
 
     @property
     def tests(self) -> TestSet:
@@ -452,16 +454,16 @@ class SentTestCase:
 
     def serialize(self) -> Sent:
         """Get diff for serialized doc."""
-        serialized = self.results.from_data(self.doc, self.results.to_data())
+        serialized = self.results.from_data(self.doc.doc, self.results.to_data())
         return GrammarDiff(self.results, serialized, strict=False)
 
     def simple_conversion(self) -> Sent:
         """Conversion to generic :mod:`segram` NLP document
         and generic language class without NLP backend is correct.
         """
-        doc = self.doc.simple
-        grammar = self.results.grammars.get(doc.lang)
-        other = grammar.types.Sent.from_data(doc, self.results.to_data())
+        data = self.doc.to_data()
+        doc = self.doc.from_data(self.doc.doc, data)
+        other = doc.smap[self.results.idx]
         return GrammarDiff(self.results, other, strict=False)
 
     def rprint(self) -> None:

@@ -1,11 +1,11 @@
-from typing import Any, Iterator
-from collections.abc import Sized, Iterable, Mapping
+from typing import Any, Sized, Iterable
+from collections.abc import Mapping
 from functools import singledispatch
 from .meta import get_ppath
 
 
 DiffType = tuple[str, Any, Any]
-IDiffType = Iterator[DiffType]
+IDiffType = Iterable[DiffType]
 
 
 @singledispatch

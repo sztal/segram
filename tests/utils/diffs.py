@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 from itertools import zip_longest
 from textwrap import shorten
 import re
@@ -38,11 +38,9 @@ class GrammarDiff:
     def __call__(self) -> dict[str, Any]:
         """Compute diff between ``self.res`` and ``self.exp``."""
         diff = []
-        for name, msg, r, e \
-        in self.results.iter_diffs(self.expected, strict=self.strict):
+        for name, r, e in self.results.iter_diffs(self.expected, strict=self.strict):
             diff.append({
                 "name": name,
-                "message": msg,
                 "res": r,
                 "exp": e
             })
@@ -60,9 +58,8 @@ class GrammarDiff:
         """
         s = ""
         for diff in self():
-            name, message, r, e = diff.values()
+            name, r, e = diff.values()
             name = str(name)
-            message = str(message)
             if "PhraseGraph" in name:
                 r = r.to_str() if r else r
                 e = e.to_str() if e else e
@@ -72,7 +69,7 @@ class GrammarDiff:
             else:
                 r = repr(r)
                 e = repr(e)
-            div = self.msg.divider(message).lstrip()
+            div = self.msg.divider(name).lstrip()
             s += div+"\n\n"
             s += self.side_by_side(r, e)
             s += "\n"
@@ -99,7 +96,7 @@ class GrammarDiff:
         """Lengths of ``s`` with and without ANSI escape characters."""
         return len(self.rx_ansi_escape.sub(r"", s)), len(s)
 
-    def rpad(self, s: str, width: Optional[int] = None) -> str:
+    def rpad(self, s: str, width: int | None = None) -> str:
         """Right-pad string to be consistent with ``width``."""
         width = width or self.max_width
         l, _ = self.strlens(s)

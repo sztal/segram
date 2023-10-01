@@ -1,13 +1,11 @@
 """Module-level configuration."""
 import pytest
-import spacy
 
 
 @pytest.fixture(scope="session")
-def nlp():
-    spacy.prefer_gpu()
+def nlp(spacy):
     model = spacy.load("en_core_web_trf")
     model.add_pipe("segram", config={
-        "store_data": "none"
+        "vectors": None
     })
     return model

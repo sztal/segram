@@ -1,14 +1,9 @@
-"""Generic NLP backend.
+"""Wrapper classes for injecting :mod:`segram`
+functionalities into :mod:`spacy` tokens.
 
-Generic classes providing minimal implementations
-of third-party classes used by NLP backends required
-for interoperability with :mod:`segram.nlp.grammar`.
-
-All other backend need to provide token, span and doc
-classes comaptibile with the minimal generic interface
-defined here.
+They implemented using composition by wrapping
+around a :mod:`spacy` token object.
 """
-from .abc import DocABC, SpanABC, TokenABC
 from .doc import Doc
 from .span import Span
-from .token import Token, TokenData
+from .token import Token

@@ -1,6 +1,6 @@
 """Printing methods for visualization."""
 # pylint: disable=redefined-outer-name
-from typing import Any, Optional
+from typing import Any
 from wasabi import color, Printer as WasabiPrinter
 from .settings import Settings
 from ..symbols import Role
@@ -11,8 +11,8 @@ class Printer(WasabiPrinter):
     def color(
         self,
         text: str,
-        fg: Optional[int | str] = None,
-        bg: Optional[int | str] = None,
+        fg: int | str | None = None,
+        bg: int | str | None = None,
         bold: bool = False,
         underline: bool = False
     ) -> str:
@@ -56,6 +56,8 @@ printer_settings = Settings(
         "prep":   191, # yellowish-greenish
         "neg":    256, # white
         "intj":   215, # orange
+        "bg":  245, # gray
+        "relcl":  245, # gray
         # Grammar background colors
         "bg_neg": 196, # red
     }, no_print=True),
@@ -72,6 +74,8 @@ printer_settings = Settings(
         "prep":    90, # yellowish-greenish
         "neg":    256, # white
         "intj":   210, # orangish
+        "bg":  245, # gray
+        "relcl":  245, # gray
         # Grammar background colors
         "bg_neg": 196, # red
     }, no_print=True)
@@ -80,10 +84,10 @@ printer_settings = Settings(
 
 def color_role(
     text: str,
-    role: Optional[str | Role] = None,
+    role: str | Role | None = None,
     *,
     color: bool = True,
-    cmap: Optional[str] = None,
+    cmap: str | None = None,
     **kwds: Any
 ) -> str:
     """Color token based on its syntactic role.
