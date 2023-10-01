@@ -425,6 +425,20 @@ class SentSimilarity(PhraseSimilarity, register_with=Sent):
 
 
 class DocSimilarity(GrammarSimilarity, register_with=Doc):
-    """Structured similarity between documents."""
+    """Structured similarity between documents.
+
+    .. warning::
+
+        Currently only doc-doc comparisons based on average token vectors
+        are implemented.
+    """
     # pylint: disable=protected-access
     __doc__ += PhraseSimilarity._get_docstring()
+
+    def get_similarity(self, element: Doc, spec: Doc) -> float:
+        if not isinstance(spec, Doc):
+            raise NotImplementedError(
+                "'Doc.similarity' is currently implemented only "
+                "for comparisons with other documents"
+            )
+        return element.doc.similarity(spec.doc)
