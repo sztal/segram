@@ -12,7 +12,6 @@
 # serve to show the default.
 
 import sys, os, datetime
-from importlib.metadata import version
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -23,10 +22,11 @@ cwd = os.getcwd()
 parent = os.path.dirname(cwd)
 sys.path.insert(0, parent)
 
+from segram.about import __version__
+
 # General information about the project.
 project = "Segram"
 copyright = f"{datetime.date.today().year}, Szymon Talaga"
-__version__ = version("segram")
 
 # -- General configuration -----------------------------------------------------
 
