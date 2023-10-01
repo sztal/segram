@@ -52,7 +52,7 @@
     Stories </api/segram.semantic.story.rst>
     Frames </api/segram.semantic.frames.rst>
     Segram pipeline component </api/segram.nlp.pipeline.base.rst>
-    Segram coref components </api/segram.nlp.pipeline.coref.rst>
+    Segram coref component </api/segram.nlp.pipeline.coref.rst>
     Data collections </api/segram.datastruct.rst>
 
 
