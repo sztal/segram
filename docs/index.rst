@@ -5,30 +5,31 @@
 
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Home
-   :hidden:
+    :maxdepth: 2
+    :caption: Home
+    :hidden:
 
     /sections/about
     /sections/installation
     /sections/langs
     /sections/authors
     /sections/contributing
+    /sections/license
 
 
 .. include:: /sections/about.rst
 .. include:: /sections/installation.rst
 .. include:: /sections/langs.rst
-.. include:: /sections/quickstart.rst
 .. include:: /sections/authors.rst
 .. include:: /sections/contributing.rst
 .. include:: /sections/license.rst
 
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
     :caption: API Reference
     :hidden:
 
-    /api/module
+    /api/modules
+
 
