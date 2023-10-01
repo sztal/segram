@@ -3,7 +3,7 @@ segram.nlp.grammar package
 
 .. automodule:: segram.nlp.grammar
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Submodules

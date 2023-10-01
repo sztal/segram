@@ -3,5 +3,5 @@ segram.utils.misc module
 
 .. automodule:: segram.utils.misc
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

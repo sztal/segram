@@ -3,5 +3,5 @@ segram.semantic.frames module
 
 .. automodule:: segram.semantic.frames
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

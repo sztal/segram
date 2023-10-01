@@ -3,5 +3,5 @@ segram.symbols module
 
 .. automodule:: segram.symbols
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

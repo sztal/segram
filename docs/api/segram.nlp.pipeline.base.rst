@@ -3,5 +3,5 @@ segram.nlp.pipeline.base module
 
 .. automodule:: segram.nlp.pipeline.base
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

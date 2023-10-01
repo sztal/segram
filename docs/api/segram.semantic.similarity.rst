@@ -3,5 +3,5 @@ segram.semantic.similarity module
 
 .. automodule:: segram.semantic.similarity
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

@@ -3,5 +3,5 @@ segram.utils.registries module
 
 .. automodule:: segram.utils.registries
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

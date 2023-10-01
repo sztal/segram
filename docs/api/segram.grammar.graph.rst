@@ -3,5 +3,5 @@ segram.grammar.graph module
 
 .. automodule:: segram.grammar.graph
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

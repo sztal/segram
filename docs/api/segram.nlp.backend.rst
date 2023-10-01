@@ -3,7 +3,7 @@ segram.nlp.backend package
 
 .. automodule:: segram.nlp.backend
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Subpackages

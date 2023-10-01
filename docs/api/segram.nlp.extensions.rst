@@ -3,7 +3,7 @@ segram.nlp.extensions package
 
 .. automodule:: segram.nlp.extensions
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Submodules

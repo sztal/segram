@@ -3,7 +3,7 @@ segram.nlp.backend.rulebased.lang.en.grammar package
 
 .. automodule:: segram.nlp.backend.rulebased.lang.en.grammar
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Submodules

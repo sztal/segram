@@ -3,5 +3,5 @@ segram.datastruct.namespace module
 
 .. automodule:: segram.datastruct.namespace
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

@@ -3,7 +3,7 @@ segram.nlp.pipeline package
 
 .. automodule:: segram.nlp.pipeline
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Submodules

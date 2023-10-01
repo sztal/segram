@@ -3,5 +3,5 @@ segram.grammar.conjuncts module
 
 .. automodule:: segram.grammar.conjuncts
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

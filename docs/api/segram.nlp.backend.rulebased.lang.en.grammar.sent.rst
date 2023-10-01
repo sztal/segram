@@ -3,5 +3,5 @@ segram.nlp.backend.rulebased.lang.en.grammar.sent module
 
 .. automodule:: segram.nlp.backend.rulebased.lang.en.grammar.sent
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

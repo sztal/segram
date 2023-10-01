@@ -3,5 +3,5 @@ segram.utils.meta module
 
 .. automodule:: segram.utils.meta
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

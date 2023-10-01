@@ -3,7 +3,7 @@ segram.datastruct package
 
 .. automodule:: segram.datastruct
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Submodules

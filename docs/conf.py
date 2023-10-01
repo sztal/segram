@@ -39,7 +39,7 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.mathjax",
     "sphinx.ext.doctest",
-    "sphinxcontrib.bibtex"
+    # "sphinxcontrib.bibtex"
 ]
 
 # Napoleon settings
@@ -69,7 +69,7 @@ extlinks = {
 }
 
 # Sphinx-Bibtex
-bibtex_bibfiles = ["sections/refs.bib"]
+# bibtex_bibfiles = ["refs.bib"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

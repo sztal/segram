@@ -3,5 +3,5 @@ segram.nlp.tokens.doc module
 
 .. automodule:: segram.nlp.tokens.doc
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

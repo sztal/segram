@@ -3,5 +3,5 @@ segram.grammar.phrases module
 
 .. automodule:: segram.grammar.phrases
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

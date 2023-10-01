@@ -3,7 +3,7 @@ segram.nlp.tokens package
 
 .. automodule:: segram.nlp.tokens
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Submodules

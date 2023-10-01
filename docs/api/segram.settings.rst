@@ -3,5 +3,5 @@ segram.settings module
 
 .. automodule:: segram.settings
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

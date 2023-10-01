@@ -3,5 +3,5 @@ segram.nlp.pipeline.merger module
 
 .. automodule:: segram.nlp.pipeline.merger
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

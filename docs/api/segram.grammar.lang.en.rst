@@ -3,7 +3,7 @@ segram.grammar.lang.en package
 
 .. automodule:: segram.grammar.lang.en
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Submodules

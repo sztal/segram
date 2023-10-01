@@ -3,5 +3,5 @@ segram.utils.diff module
 
 .. automodule:: segram.utils.diff
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

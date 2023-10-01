@@ -91,8 +91,8 @@ class Role(Symbol):
     also selected, most important, roles are defined. Moreover,
     it is still an open question what roles should be defined.
 
-    Class Attributes
-    ----------------
+    Attributes
+    ----------
     VERB
         Verb or a verb-like predicate.
     NOUN

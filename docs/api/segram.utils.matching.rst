@@ -3,5 +3,5 @@ segram.utils.matching module
 
 .. automodule:: segram.utils.matching
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

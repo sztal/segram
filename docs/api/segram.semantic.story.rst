@@ -3,5 +3,5 @@ segram.semantic.story module
 
 .. automodule:: segram.semantic.story
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

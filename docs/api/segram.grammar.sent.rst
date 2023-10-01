@@ -3,5 +3,5 @@ segram.grammar.sent module
 
 .. automodule:: segram.grammar.sent
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

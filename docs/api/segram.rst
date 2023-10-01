@@ -3,7 +3,7 @@ segram package
 
 .. automodule:: segram
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Subpackages

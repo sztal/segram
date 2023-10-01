@@ -3,5 +3,5 @@ segram.utils.versioning module
 
 .. automodule:: segram.utils.versioning
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:

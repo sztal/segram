@@ -3,7 +3,7 @@ segram.nlp.backend.rulebased.lang.en package
 
 .. automodule:: segram.nlp.backend.rulebased.lang.en
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Subpackages

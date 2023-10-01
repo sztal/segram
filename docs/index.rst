@@ -61,5 +61,5 @@
     :caption: API Reference
     :hidden:
 
-    /api/segram.rst
+    /api/modules.rst
 

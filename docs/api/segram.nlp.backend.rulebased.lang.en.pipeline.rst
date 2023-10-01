@@ -3,7 +3,7 @@ segram.nlp.backend.rulebased.lang.en.pipeline package
 
 .. automodule:: segram.nlp.backend.rulebased.lang.en.pipeline
    :members:
-   :undoc-members:
+   :no-undoc-members:
    :show-inheritance:
 
 Subpackages
