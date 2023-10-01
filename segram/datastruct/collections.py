@@ -153,12 +153,12 @@ class DataIterator(Iterator, DataIterable):
         return next(self.__data__)
 
     def __getitem__(self, idx: int | slice) -> Any | Self:
-        if isinstance(idx, int):
-            return next(islice(self, idx, idx+1))
-        start = idx.start
-        stop = idx.stop
-        step = idx.step
-        return self.__class__(islice(self, start, stop, step))
+        if isinstance(idx, slice):
+            start = idx.start
+            stop = idx.stop
+            step = idx.step
+            return self.__class__(islice(self, start, stop, step))
+        return next(islice(self, idx, idx+1))
 
 
 @total_ordering
@@ -208,6 +208,8 @@ class DataSequence(Sequence, DataIterable):
             Alternatively a callable. Further positional arguments
             are passed to the key function. If no positional arguments
             are used then standard data item sorting is used.
+            Alternatively, an iterable of values used for sorting
+            can be passed.
         show_keys
             Should sorting key values be returned
             together with the objects (so 2-tuples are returned).
@@ -216,12 +218,30 @@ class DataSequence(Sequence, DataIterable):
         """
         if args:
             key, *args = args
-            keyfunc = self._get_keyfunc(key, *args, **kwds)
+            if isinstance(key, str | Callable):
+                keyfunc = self._get_keyfunc(key, *args, **kwds)
+            else:
+                keyfunc = key
         else:
             keyfunc = None
-        data = sorted(self, key=keyfunc, reverse=reverse)
-        if keyfunc and show_keys:
-            data = zip(sorted(self.map(keyfunc), reverse=reverse), data)
+        if isinstance(keyfunc, Callable):
+            data = sorted(self, key=keyfunc, reverse=reverse)
+            if show_keys:
+                data = zip(sorted(self.map(keyfunc), reverse=reverse), data)
+        elif isinstance(keyfunc, Iterable):
+            keyfunc = DataTuple(keyfunc)
+            if len(self) != len(keyfunc):
+                raise ValueError(
+                    "sequence used for sorting must be of the same length as data"
+                )
+            data = sorted(zip(keyfunc, self), key=lambda x: x[0], reverse=reverse)
+            if not show_keys:
+                data = [ x[1] for x in data ]
+        else:
+            raise ValueError(
+                "'key' must be a callable or its name or "
+                "an iterable of sorting values"
+            )
         return self.__class__(data)
 
 
