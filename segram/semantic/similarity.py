@@ -51,6 +51,8 @@ class GrammarSimilarity(ABC):
     @property
     def similarity(self) -> float:
         sim = self.get_similarity(self.element, self.spec)
+        if isinstance(sim, np.ndarray) and sim.size == 1:
+            sim = float(sim)
         return max(-1, min(sim, 1))
 
     @property

@@ -41,8 +41,8 @@ class Doc(DocElement):
         if smap is None:
             self.smap = {}  # Little trick to make 's.grammar' work
             smap = {
-                sent.idx: sent
-                for s in doc.sents if (sent := s.grammar).text.strip()
+                sent.idx: sent for s in doc.sents
+                if (sent := s.grammar).text.strip() and sent.is_correct
             }
         self.smap = sort_map(smap)
 

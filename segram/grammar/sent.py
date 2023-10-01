@@ -1,5 +1,4 @@
 from typing import Any, ClassVar, Self, Mapping
-import numpy as np
 from .conjuncts import PhraseGroup, Conjuncts
 from .abc import SentElement
 from .components import Component
@@ -120,10 +119,6 @@ class Sent(SentElement):
     @property
     def coverage(self) -> float:
         return sum(1 for _ in self.iter_token_roles()) / len(self.sent)
-
-    @property
-    def vector(self) -> np.ndarray[tuple[int], np.floating]:
-        return self.sent.vector
 
     # Methods -----------------------------------------------------------------
 

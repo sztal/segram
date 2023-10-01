@@ -296,6 +296,17 @@ class SentElement(GrammarElement):
     def vector(self) -> np.ndarray[tuple[int], np.floating]:
         return self.sent.vector
 
+    @property
+    def is_correct(self) -> bool:
+        """Indicates whether the sentence has been parsed correctly
+        and has a well-defined root token.
+        """
+        try:
+            self.root
+        except KeyError:
+            return False
+        return True
+
     # Methods -----------------------------------------------------------------
 
     @classmethod

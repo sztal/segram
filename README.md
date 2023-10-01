@@ -104,7 +104,7 @@ python -m download en_core_web_lg  # skip if word vectors are not needed
 pip install segram[coref]
 python -m download en_core_web_trf
 python -m download en_core_web_lg  # skip if word vectors are not needed
-pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.4.1/en_core_web_lg-3.4.1-py3-none-any.whl
+pip install https://github.com/explosion/spacy-experimental/releases/download/v0.6.1/en_coreference_web_trf-3.4.0a2-py3-none-any.whl
 ```
 
 #### With GPU acceleration
